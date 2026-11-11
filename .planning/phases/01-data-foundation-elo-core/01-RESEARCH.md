@@ -466,7 +466,7 @@ $ uv run fgs elo --season 2026 --week 9 --top 5
 | A4 | Package legitimacy (slopcheck unavailable) | Audit | Very low: all are major packages |
 | A5 | Playoff-team counts (12 ≤2019, 14 ≥2020) | Season config | Low; well known and not used by Phase 1 logic. Could be checked against WC game counts (4/season ≤2019, 6/season ≥2020) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should playoff games count in the snapshot W/L/T?**
    - What we know: CONTEXT says REG-only counts for data checks. The Phase 2 schema lists wins/losses/ties.
