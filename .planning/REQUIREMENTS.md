@@ -22,11 +22,11 @@
 - [x] **MODEL-03**: Factor: current-season record
 - [x] **MODEL-04**: Factor: rolling last-16-games record across season boundaries
 - [ ] **MODEL-05**: Factor: efficiency trajectory (EWMA of opponent-adjusted EPA vs season-to-date level) as the "WAR improvement" proxy
-- [ ] **MODEL-06**: Factor: strength of win — margin of victory, as its own input
-- [ ] **MODEL-07**: Factor: opponent quality — opponent's pre-game rating, as its own input
+- [x] **MODEL-06**: Factor: strength of win — margin of victory, as its own input
+- [x] **MODEL-07**: Factor: opponent quality — opponent's pre-game rating, as its own input
 - [ ] **MODEL-08**: Factor: performance vs preseason expectation (model-derived expected wins; Vegas win totals override where available, with source tagged)
-- [ ] **MODEL-09**: Factor: current win/loss streak
-- [ ] **MODEL-10**: Factor: close-game luck (one-score game results)
+- [x] **MODEL-09**: Factor: current win/loss streak
+- [x] **MODEL-10**: Factor: close-game luck (one-score game results)
 - [ ] **MODEL-11**: Factor: QB play trend for the current starting QB
 - [ ] **MODEL-12**: Factor: playoff-odds trend
 - [ ] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
@@ -49,13 +49,13 @@
 - [ ] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
 - [ ] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
 - [ ] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
-- [ ] **INSIGHT-05**: Each team gets an auto-generated plain-English one-liner explaining its biggest score drivers
+- [x] **INSIGHT-05**: Each team gets an auto-generated plain-English one-liner explaining its biggest score drivers
 - [ ] **INSIGHT-06**: Week-over-week biggest movers are computed
 
 ### Site
 
 - [x] **SITE-01**: User sees a league-wide mood board of all 32 teams ranked by feel-good score, with record, mood label, and weekly change
-- [ ] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
+- [x] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
 - [x] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
 - [x] **SITE-04**: User can scrub the mood board to any season/week since 1999
 - [ ] **SITE-05**: User sees a biggest-movers strip for the current week
@@ -117,11 +117,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODEL-03 | Phase 3 | Complete |
 | MODEL-04 | Phase 3 | Complete |
 | MODEL-05 | Phase 5 | Pending |
-| MODEL-06 | Phase 4 | Pending |
-| MODEL-07 | Phase 4 | Pending |
+| MODEL-06 | Phase 4 | Complete |
+| MODEL-07 | Phase 4 | Complete |
 | MODEL-08 | Phase 5 | Pending |
-| MODEL-09 | Phase 4 | Pending |
-| MODEL-10 | Phase 4 | Pending |
+| MODEL-09 | Phase 4 | Complete |
+| MODEL-10 | Phase 4 | Complete |
 | MODEL-11 | Phase 5 | Pending |
 | MODEL-12 | Phase 5 | Pending |
 | MODEL-13 | Phase 5 | Pending |
@@ -138,10 +138,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INSIGHT-02 | Phase 8 | Pending |
 | INSIGHT-03 | Phase 8 | Pending |
 | INSIGHT-04 | Phase 8 | Pending |
-| INSIGHT-05 | Phase 4 | Pending |
+| INSIGHT-05 | Phase 4 | Complete |
 | INSIGHT-06 | Phase 8 | Pending |
 | SITE-01 | Phase 2 | Complete |
-| SITE-02 | Phase 4 | Pending |
+| SITE-02 | Phase 4 | Complete |
 | SITE-03 | Phase 3 | Complete |
 | SITE-04 | Phase 2 | Complete |
 | SITE-05 | Phase 8 | Pending |
