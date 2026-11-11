@@ -92,6 +92,10 @@ def test_build_prints_data_through(derived, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "team_game_epa", lambda plays: tge)
     monkeypatch.setattr(cli, "load_win_totals", lambda: "wt")
     monkeypatch.setattr(cli, "vegas_expectations", lambda wt: None)
+    monkeypatch.setattr(cli.draft, "load_draft_picks", lambda refresh=False: pl.DataFrame(
+        {"season": [2024], "round": [1], "pick": [1], "team": ["BUF"]}))
+    monkeypatch.setattr(cli.draft, "load_draft_values", lambda: pl.DataFrame(
+        {"pick": list(range(1, 263)), "stuart": [1.0] * 262}))
     seen = {}
     monkeypatch.setattr(cli, "derive", lambda raw, pbp_games=None, **kw: (
         seen.update(kw), {**derived, "team_game_epa": pbp_games})[1])
@@ -102,6 +106,7 @@ def test_build_prints_data_through(derived, tmp_path, monkeypatch, capsys):
     assert "pbp: 1 team-games, seasons 1999-2024" in out
     assert (tmp_path / "team_game_epa.parquet").exists()
     assert seen["sim_cache_dir"] == cli.sim_cache_dir() and "vegas" in seen
+    assert seen["draft_picks"]["franchise_id"].to_list() == ["BUF"] and len(seen["draft_values"]) == 263
 
 
 # --- fgs refresh: check-then-write (network mocked by reading the caches) -------------------
@@ -145,6 +150,18 @@ def _current(raw):
 
 
 CACHE_FILES = ("schedules.parquet", "teams.parquet")
+FROZEN_FILES = ("win_totals.csv", "draft_values.csv")
+
+
+def _fake_draft_picks(refresh=False, cache_dir=None, write_cache=True):
+    """Network mock for the draft picks 'download': the real cache, else a failed download."""
+    import polars as pl
+
+    from fgs.paths import CACHE_DIR
+    path = CACHE_DIR / "draft_picks.parquet"
+    if not path.exists():
+        raise OSError("no network in tests")
+    return pl.read_parquet(path)
 
 
 @pytest.fixture
@@ -157,8 +174,10 @@ def refresh_dirs(tmp_path, monkeypatch):
     for f in CACHE_FILES:  # stand-ins for the last good raw cache
         (cache_dir / f).write_bytes(b"good cache: " + f.encode())
     from fgs.paths import CACHE_DIR as REAL_CACHE
-    if (REAL_CACHE / "win_totals.csv").exists():  # frozen file; refresh must not hit the network
-        shutil.copy(REAL_CACHE / "win_totals.csv", cache_dir / "win_totals.csv")
+    for frozen in FROZEN_FILES:  # frozen files; refresh must not hit the network
+        if (REAL_CACHE / frozen).exists():
+            shutil.copy(REAL_CACHE / frozen, cache_dir / frozen)
+    monkeypatch.setattr(cli.draft, "load_draft_picks", _fake_draft_picks)
     monkeypatch.setattr(cli, "DERIVED_DIR", derived_dir)
     monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
     monkeypatch.setattr(cli, "CACHE_DIR", cache_dir)
@@ -180,7 +199,7 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     for d in (derived_dir, web_dir):
         assert [p.name for p in d.iterdir()] == ["SENTINEL"]
         assert (d / "SENTINEL").read_bytes() == b"untouched\n"
-    assert sorted(p.name for p in cache_dir.iterdir() if p.name != "win_totals.csv") == list(CACHE_FILES)  # no pbp/
+    assert sorted(p.name for p in cache_dir.iterdir() if p.name not in FROZEN_FILES) == list(CACHE_FILES)  # no pbp/ or picks
     for f in CACHE_FILES:  # the bad download never replaced the good raw cache
         assert (cache_dir / f).read_bytes() == b"good cache: " + f.encode()
 
@@ -202,6 +221,8 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     import polars as pl
     assert pl.read_parquet(cache_dir / "schedules.parquet").equals(raw)  # cache saved only after checks
     assert pl.read_parquet(cache_dir / "teams.parquet").equals(teams)
+    if (CACHE_DIR / "draft_picks.parquet").exists():  # picks saved only after checks pass
+        assert (cache_dir / "draft_picks.parquet").exists()
     for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet", "features.parquet"):
         assert (derived_dir / f).exists()
     if cached_seasons(CACHE_DIR):  # pbp saved only after checks pass
@@ -216,6 +237,8 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
     assert "all checks passed" in out and re.search(r"refreshed in \d+\.\ds: exported", out)
+    if (CACHE_DIR / "draft_picks.parquet").exists():
+        assert re.search(r"^ok\s+draft_coverage$", out, re.M) and re.search(r"^ok\s+draft_sum$", out, re.M)
     assert not (cache_dir / cli.REFRESH_MARKER).exists()  # write sequence completed
 
 
@@ -304,7 +327,8 @@ def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkey
 
     monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", tmp_path / "missing.yaml")
     out = cli.derive_games(synthetic_games, scored=False)
-    assert set(out) == {"games", "team_games", "snapshots", "team_game_epa", "sim", "vegas"}
+    assert set(out) == {"games", "team_games", "snapshots", "team_game_epa", "sim", "vegas", "draft", "draft_values"}
+    assert out["draft"] is None and out["draft_values"] is None  # no draft inputs given
     assert out["sim"].height == out["snapshots"].height  # sims run even when unscored
     assert out["team_game_epa"] is None
 

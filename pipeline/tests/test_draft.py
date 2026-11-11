@@ -269,3 +269,112 @@ def test_equiv_pick_smallest_at_or_below():
 ])
 def test_equiv_pick_noun_buckets(p, noun):
     assert draft.pick_noun(p) == noun
+
+
+# ---------- DATA-06 checks (synthetic) ----------
+
+def test_checks_draft_coverage_and_sum():
+    from fgs import checks
+
+    rows = [(y, f"T{i}", 1, 0.0, 0.0, 0.0) for y in (2000, 2001) for i in range(31)]
+    rows += [(2002, f"T{i}", 1, 0.0, 0.0, 0.0) for i in range(32)]
+    ok = pl.DataFrame(rows, schema=draft.SURPLUS_SCHEMA, orient="row")
+    assert checks.check_draft_coverage(ok) == []
+    assert checks.check_draft_sum(ok) == []
+    short = ok.filter(~((pl.col("season") == 2002) & (pl.col("franchise_id") == "T0")))
+    assert any("2002" in m for m in checks.check_draft_coverage(short))
+    plus = ok.with_columns(pl.when(pl.col("franchise_id") == "T0").then(1.0).otherwise(0.0).alias("surplus"))
+    assert len(checks.check_draft_sum(plus)) == 3
+    # no draft cache -> both checks pass vacuously (synthetic fixtures carry no draft)
+    run = {n: f(None, {"draft": None}, None) for n, f in checks.CHECKS if n.startswith("draft")}
+    assert run == {"draft_coverage": [], "draft_sum": []}
+
+
+# ---------- real cache (skips without it) ----------
+
+@pytest.fixture(scope="module")
+def real_draft():
+    from fgs.games import build_games
+    from fgs.paths import CACHE_DIR
+
+    need = [CACHE_DIR / f for f in ("draft_picks.parquet", "draft_values.csv", "schedules.parquet")]
+    if not all(p.exists() for p in need):
+        pytest.skip("no cached draft data; run `uv run fgs build` first")
+    raw_picks = pl.read_parquet(need[0])
+    picks = draft.normalize_picks(raw_picks)
+    values = draft.value_table(pl.read_csv(need[1]))
+    tg = build_team_games(build_games(pl.read_parquet(need[2])))  # standings need outcomes only, no Elo
+    return {"raw": raw_picks, "picks": picks, "values": values, "tg": tg,
+            "surplus": draft.surplus_table(tg, picks, values)}
+
+
+def test_coverage_real(real_draft):
+    picks, sur = real_draft["picks"], real_draft["surplus"]
+    years = sorted(set(picks["season"].to_list()))
+    assert years[0] == 1999 and years == list(range(1999, years[-1] + 1))
+    n = dict(picks.group_by("season").agg(pl.col("franchise_id").n_unique()).iter_rows())
+    for y in years:
+        assert n[y] == (31 if y <= 2001 else 32), y
+    assert int(picks["pick"].max()) <= draft.MAX_PICK
+    assert not np.isnan(real_draft["values"][1:]).any()
+    assert sorted(set(sur["season"].to_list())) == list(range(2000, years[-1] + 1))
+
+
+def _slot1_untraded(tg, picks, y) -> tuple[str, bool]:
+    """(slot-1 franchise, True when all its aligned picks are its own and it gained no regular picks)."""
+    order = draft.original_order(tg, y)
+    t = order[0][0]
+    dy = picks.filter(pl.col("season") == y)
+    for r in range(1, draft.N_ROUNDS + 1):
+        if t in draft.FORFEITS_R12.get((y, r), []):
+            return t, False
+        pr = dy.filter(pl.col("round") == r).sort("pick")
+        act = pr["franchise_id"].to_list()
+        o = [x for x in order[r - 1] if x not in draft.FORFEITS_R12.get((y, r), [])]
+        for si, pj in draft.align(o, act, free_tail=r >= 3):
+            owner = o[si] if si is not None else None
+            user = act[pj] if pj is not None and si is not None else None
+            if (owner == t) != (user == t) or (owner == t and pj is None):
+                return t, False
+    return t, True
+
+
+def test_acceptance_slot1_untraded_zero(real_draft):
+    tg, picks, sur = real_draft["tg"], real_draft["picks"], real_draft["surplus"]
+    s = {(y, f): v for y, f, v in sur.select("season", "franchise_id", "surplus").iter_rows()}
+    clean = []
+    for y in sorted(set(sur["season"].to_list())):
+        t, untraded = _slot1_untraded(tg, picks, y)
+        if untraded:
+            assert s[(y, t)] == 0.0, (y, t, s[(y, t)])
+            clean.append((y, t))
+    assert (2020, "CIN") in clean
+    assert s[(2020, "CIN")] == 0.0
+
+
+def test_acceptance_sum_nonpositive(real_draft):
+    sums = real_draft["surplus"].group_by("season").agg(pl.col("surplus").sum())
+    assert (sums["surplus"] <= 1e-9).all()
+
+
+def test_acceptance_slot_neutral(real_draft):
+    from fgs.backtest import spearman  # tests may use the harness; draft.py may not
+
+    t = real_draft["surplus"].filter(pl.col("season").is_between(2000, 2021))
+    rho = spearman(t["surplus"].to_numpy(), t["slot"].to_numpy())
+    assert -0.15 <= rho <= 0.15
+
+
+def test_acceptance_known_trades(real_draft):
+    s = {(y, f): v for y, f, v in real_draft["surplus"].select("season", "franchise_id", "surplus").iter_rows()}
+    assert s[(2020, "MIA")] > 20
+    assert s[(2018, "CLE")] > 20
+    assert s[(2012, "LV")] < -20
+    assert s[(2022, "LA")] < -15
+
+
+def test_winsor_real(real_draft):
+    sur = real_draft["surplus"]
+    lo, hi = draft.winsor_bounds(sur)
+    assert abs(lo - -17.29) <= 0.5 and abs(hi - 16.19) <= 0.5
+    assert sur.filter(pl.col("season") == 1999).is_empty()

@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 import polars as pl
 
-from fgs import pbp, season_config
+from fgs import draft, pbp, season_config
 from fgs.elo import EloParams
 from fgs.franchises import CANONICAL, unknown_codes
 
@@ -327,6 +327,34 @@ def check_vegas_coverage(games: pl.DataFrame, vegas: pl.DataFrame | None) -> lis
     return [f"{s}: no Vegas win totals; expectations would be model-sourced" for s in missing]
 
 
+DRAFT_SUM_TOL = 1e-9
+
+
+def check_draft_coverage(surplus: pl.DataFrame) -> list[str]:
+    """DATA-06: every draft FIRST_DRAFT..latest has a surplus row for each franchise (31 before HOU
+    joined in 2002, 32 after) and no null surplus."""
+    if surplus.is_empty():
+        return ["draft surplus table is empty"]
+    fails = []
+    counts = dict(surplus.group_by("season").agg(pl.col("franchise_id").n_unique()).iter_rows())
+    for y in range(draft.FIRST_DRAFT, int(surplus["season"].max()) + 1):
+        want = 31 if y < 2002 else 32
+        if counts.get(y, 0) != want:
+            fails.append(f"draft {y}: {counts.get(y, 0)} franchises with surplus, expected {want}")
+    nulls = surplus.filter(pl.col("surplus").is_null() | pl.col("surplus").is_nan())
+    if nulls.height:
+        fails.append(f"{nulls.height} null/NaN surplus rows, e.g. {nulls.row(0)}")
+    return fails
+
+
+def check_draft_sum(surplus: pl.DataFrame) -> list[str]:
+    """MODEL-16 sanity: trades only move value between teams and forfeits only remove it, so each
+    draft's surplus sums to <= 0."""
+    sums = surplus.group_by("season").agg(pl.col("surplus").sum()).sort("season")
+    return [f"draft {y}: surplus sums to {v:+.4f} (> 0: value created from nothing)"
+            for y, v in sums.iter_rows() if v > DRAFT_SUM_TOL]
+
+
 # (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
 CheckFn = Callable[[pl.DataFrame, dict[str, pl.DataFrame], EloParams], list[str]]
 CHECKS: list[tuple[str, CheckFn]] = [
@@ -346,6 +374,8 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("sim_sums", lambda raw, d, p: [] if d.get("sim") is None else check_sim(d["sim"], d["games"])),
     ("sim_coverage", lambda raw, d, p: [] if d.get("sim") is None else check_sim_coverage(d["sim"], d["snapshots"])),
     ("vegas_coverage", lambda raw, d, p: check_vegas_coverage(d["games"], d.get("vegas"))),
+    ("draft_coverage", lambda raw, d, p: [] if d.get("draft") is None else check_draft_coverage(d["draft"])),
+    ("draft_sum", lambda raw, d, p: [] if d.get("draft") is None else check_draft_sum(d["draft"])),
 ]
 
 

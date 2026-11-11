@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest, freeze, holdout."""
+"""`fgs` command line: ingest, build, elo, draft, check, export, refresh, backtest, freeze, holdout."""
 
 import argparse
 import json
@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, export, features, freeze, holdout, paths, score, sim
+from fgs import checks, draft, export, features, freeze, holdout, paths, score, sim
 from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
@@ -25,7 +25,8 @@ from fgs.snapshots import build_grid
 def derive_games(
     games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
     scored: bool = True, *, pbp_games: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
-    sim_cache_dir=None, sim_write_cache: bool = True,
+    sim_cache_dir=None, sim_write_cache: bool = True, draft_picks: pl.DataFrame | None = None,
+    draft_values=None,
 ) -> dict:
     """Pure (apart from reading weights.yaml when weights is None and the sim cache): normalized games ->
     games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
@@ -38,7 +39,10 @@ def derive_games(
     The season simulator always runs (derived["sim"], also when scored=False), reusing
     sim_cache_dir/{model_version}.parquet when given; sim_write_cache=False leaves that cache
     untouched (refresh saves it after the checks pass). vegas (expectation.vegas_expectations
-    frame, or None) is carried through as derived["vegas"]."""
+    frame, or None) is carried through as derived["vegas"]. With draft_picks (draft.normalize_picks
+    frame) and draft_values (draft.value_table array) both given, derived["draft"] is the
+    draft.surplus_table frame (else None; also when scored=False, the backtest needs it), and
+    derived["draft_values"] carries the value array for pick-equivalent text."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
@@ -46,6 +50,9 @@ def derive_games(
     base = {
         "games": games, "team_games": team_games, "snapshots": snapshots, "team_game_epa": pbp_games,
         "sim": sim_frame, "vegas": vegas,
+        "draft": (draft.surplus_table(team_games, draft_picks, draft_values)
+                  if draft_picks is not None and draft_values is not None else None),
+        "draft_values": draft_values,
     }
     if not scored:
         return base
@@ -58,12 +65,14 @@ def derive_games(
 def derive(
     raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
     scored: bool = True, *, pbp_games: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
-    sim_cache_dir=None, sim_write_cache: bool = True,
+    sim_cache_dir=None, sim_write_cache: bool = True, draft_picks: pl.DataFrame | None = None,
+    draft_values=None,
 ) -> dict:
     """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file and sim cache."""
     return derive_games(
         build_games(raw), params, weights, scored=scored, pbp_games=pbp_games, vegas=vegas,
-        sim_cache_dir=sim_cache_dir, sim_write_cache=sim_write_cache,
+        sim_cache_dir=sim_cache_dir, sim_write_cache=sim_write_cache, draft_picks=draft_picks,
+        draft_values=draft_values,
     )
 
 
@@ -104,14 +113,32 @@ def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
     return vegas_expectations(pl.read_csv(wt))
 
 
+DRAFT_FILES = ("draft_picks.parquet", "draft_values.csv")
+
+
+def _cached_draft(cache_dir) -> dict:
+    """{"draft_picks", "draft_values"} (normalized picks, value array) from the cache only; both None,
+    with a warning naming the missing file, when either is not cached."""
+    missing = [f for f in DRAFT_FILES if not (cache_dir / f).exists()]
+    if missing:
+        print(f"warning: {', '.join(missing)} not cached; no draft surplus. Run `uv run fgs build` to fetch it.",
+              file=sys.stderr)
+        return {"draft_picks": None, "draft_values": None}
+    return {
+        "draft_picks": draft.normalize_picks(pl.read_parquet(cache_dir / DRAFT_FILES[0])),
+        "draft_values": draft.value_table(pl.read_csv(cache_dir / DRAFT_FILES[1])),
+    }
+
+
 def cached_inputs(cache_dir=None) -> dict:
     """Optional derive() inputs read from the cache only (no network). None when not cached."""
     cache_dir = CACHE_DIR if cache_dir is None else cache_dir  # module global read at call time
     vegas = _cached_vegas(cache_dir)
+    dr = _cached_draft(cache_dir)
     seasons = cached_seasons(cache_dir)
     if not seasons:
-        return {"pbp_games": None, "vegas": vegas}
-    return {"pbp_games": team_game_epa(load_all_pbp(seasons, cache_dir, write_cache=False)), "vegas": vegas}
+        return {"pbp_games": None, "vegas": vegas, **dr}
+    return {"pbp_games": team_game_epa(load_all_pbp(seasons, cache_dir, write_cache=False)), "vegas": vegas, **dr}
 
 
 SIM_CACHE_DIR = None  # None -> DERIVED_DIR / "sim"; the test suite points it at a session tmp dir
@@ -138,13 +165,19 @@ def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
         plays = load_all_pbp(keep, CACHE_DIR)
     tge = team_game_epa(plays)
     vegas = vegas_expectations(load_win_totals())  # frozen file, downloaded once
-    out = derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sim_cache_dir())
+    picks = draft.normalize_picks(draft.load_draft_picks(refresh=refresh))
+    values = draft.value_table(draft.load_draft_values())  # frozen file, downloaded once
+    out = derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sim_cache_dir(), draft_picks=picks,
+                 draft_values=values)
     _write_derived(out)
     print(
         f"built: raw {raw.height} rows, games {out['games'].height}, "
         f"team_games {out['team_games'].height}, elo_snapshots {out['snapshots'].height}"
     )
     print(f"pbp: {tge.height} team-games, seasons {seasons[0]}-{seasons[-1]}")
+    if out.get("draft") is not None:
+        d = out["draft"]
+        print(f"draft: {picks.height} picks, surplus for drafts {d['season'].min()}-{d['season'].max()}")
     latest = _latest_played(out["games"])
     if latest is not None:
         print(f"latest: {latest[0]} week {latest[1]} (data through {_data_through(out['games'], *latest)})")
@@ -232,6 +265,34 @@ def _cmd_elo(args) -> int:
     return 0
 
 
+def _cmd_draft(args) -> int:
+    """Draft capital over original slots for one draft, ranked (fan sanity check)."""
+    derived = derive(load_schedules(), scored=False, **cached_inputs(), sim_cache_dir=sim_cache_dir(),
+                     sim_write_cache=False)
+    tbl, values = derived.get("draft"), derived.get("draft_values")
+    if tbl is None or values is None or tbl.is_empty():
+        print("no draft data cached; run `uv run fgs build` first", file=sys.stderr)
+        return 1
+    lo_y, hi_y = int(tbl["season"].min()), int(tbl["season"].max())
+    season = hi_y if args.season is None else args.season
+    if not lo_y <= season <= hi_y:
+        why = f"no {season - 1} standings" if season < lo_y else "no picks or prior-season standings"
+        print(f"draft {season} not derivable ({why}); available drafts: {lo_y}-{hi_y}", file=sys.stderr)
+        return 1
+    bounds = draft.winsor_bounds(tbl)
+    rows = (draft.draft_z(tbl, bounds).filter(pl.col("season") == season)
+            .sort(["surplus", "franchise_id"], descending=[True, False]))
+    print(f"{season} draft: capital over original slots (chart {draft.CHART}); "
+          f"winsor bounds 2000-2021 [{bounds[0]:+.2f}, {bounds[1]:+.2f}]")
+    print(f"{'#':>3}  {'Team':<4}  {'Slot':>4}  {'Surplus':>7}  {'Pick-equivalent':<24}  {'z':>5}")
+    for rank, r in enumerate(rows.iter_rows(named=True), start=1):
+        s = r["surplus"]
+        eq = "—" if abs(s) < 1e-9 else draft.pick_noun(draft.equiv_pick(s, values))
+        stxt = "0.0" if abs(s) < 0.05 else f"{s:+.1f}"
+        print(f"{rank:>3}  {r['franchise_id']:<4}  {r['slot']:>4}  {stxt:>7}  {eq:<24}  {r['draft_z']:>+5.2f}")
+    return 0
+
+
 def _checked_derive(
     raw: pl.DataFrame, pbp_games: pl.DataFrame | None = None, **derive_kw,
 ) -> tuple[bool, dict[str, pl.DataFrame] | None, EloParams]:
@@ -294,6 +355,30 @@ def _download_pbp(season: int, cache_dir) -> pl.DataFrame | None:
         return None
 
 
+def _refresh_draft(cache_dir) -> tuple[pl.DataFrame | None, dict]:
+    """Refresh's draft inputs: picks downloaded in memory (raw frame returned so it is saved only after
+    the checks pass), falling back to the cached file with a warning; the frozen value chart is
+    downloaded once if missing. Returns (raw picks to save or None, derive kwargs)."""
+    raw_picks = None
+    try:
+        raw_picks = draft.load_draft_picks(refresh=True, cache_dir=cache_dir, write_cache=False)
+    except Exception as e:  # noqa: BLE001 - network failure: fall back to the cache
+        print(f"warning: draft picks download failed ({type(e).__name__}: {e}); using the cached file if any",
+              file=sys.stderr)
+    if not (cache_dir / DRAFT_FILES[1]).exists():
+        try:
+            draft.load_draft_values(cache_dir=cache_dir)
+        except Exception as e:  # noqa: BLE001
+            print(f"warning: draft_values.csv download failed ({type(e).__name__}: {e})", file=sys.stderr)
+    if raw_picks is None:
+        return None, _cached_draft(cache_dir)
+    if not (cache_dir / DRAFT_FILES[1]).exists():
+        print(f"warning: {DRAFT_FILES[1]} not cached; no draft surplus", file=sys.stderr)
+        return raw_picks, {"draft_picks": None, "draft_values": None}
+    return raw_picks, {"draft_picks": draft.normalize_picks(raw_picks),
+                       "draft_values": draft.value_table(pl.read_csv(cache_dir / DRAFT_FILES[1]))}
+
+
 def _cmd_refresh(args) -> int:
     """D-09: re-download (in memory) -> derive -> check (abort, writing nothing) -> raw cache -> parquet -> JSON.
 
@@ -325,8 +410,10 @@ def _cmd_refresh(args) -> int:
     # Vegas comes from the cache (frozen file; downloaded only if missing). The sim cache is read
     # but only written after every check passes, so only changed seasons are re-simulated.
     vegas = _cached_vegas(cache_dir, download=True)
+    raw_picks, draft_kw = _refresh_draft(cache_dir)
     sims = sim_cache_dir()
-    ok, derived, _ = _checked_derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sims, sim_write_cache=False)
+    ok, derived, _ = _checked_derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sims, sim_write_cache=False,
+                                     **draft_kw)
     if not ok:
         print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
@@ -342,6 +429,8 @@ def _cmd_refresh(args) -> int:
     save_cache(teams, "teams.parquet", cache_dir)
     for s, df in sorted(fetched.items()):
         save_cache(df, f"{PBP_SUBDIR}/{s}.parquet", cache_dir)
+    if raw_picks is not None:
+        save_cache(raw_picks, DRAFT_FILES[0], cache_dir)
     _write_derived(derived)
     sim.save_sim_cache(derived["sim"], sims)
     export.write_export(files, WEB_DATA_DIR)
@@ -624,6 +713,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--week", type=int, default=None, help="default: latest played week of the season")
     p.add_argument("--top", type=int, default=None, help="show only the top N teams")
     p.set_defaults(func=_cmd_elo)
+
+    p = sub.add_parser("draft", help="draft capital over original slots for one draft (from the cache)")
+    p.add_argument("--season", type=int, default=None, help="draft year; default: latest derivable draft")
+    p.set_defaults(func=_cmd_draft)
 
     p = sub.add_parser("check", help="run all data-trust checks; exit 1 on any failure")
     p.set_defaults(func=_cmd_check)

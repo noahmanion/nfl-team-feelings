@@ -156,6 +156,6 @@ def test_backtest_not_imported_upstream():
     # backtest plus the Phase 6 dev-only modules built on it (freeze, holdout)
     imp = re.compile(r"^\s*(from|import)\s+[\w., ]*(backtest|freeze|holdout|bootstrap)", re.M)
     for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py",
-                 "sim.py", "expectation.py", "methodology.py"):
+                 "sim.py", "expectation.py", "methodology.py", "draft.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())
         assert not imp.search(code), f"{name} imports the backtest harness"
