@@ -2,73 +2,66 @@
 #
 # composite = sum over factors of weight * z, where z is the factor's z-score across the
 # teams in the same (season, week) snapshot. Units: points of opponent/venue-adjusted
-# margin per game (next 8 games) per standard deviation of the factor.
+# margin per game (next 8 games) per standard deviation of the factor. No intercept.
 #
-# How these numbers were produced:
-#   command: uv run fgs backtest --propose-weights   (2026-11-11)
-#   fit:     ridge on the per-snapshot z-scores, unpenalized intercept, alpha chosen by
-#            leave-one-season-out CV (picked alpha = 0.01 * n; it was 0.001 * n before vs_exp
-#            joined: the correlated season_record/vs_exp pair moved CV to more shrinkage, so
-#            every weight shifted once, e.g. elo 3.50 -> 2.59), n = 12331 snapshots
-#   seasons: 1999-2021 only; the 2022-2025 holdout was never read
-#   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
-#   then rounded to 2 decimals by hand. Code proposes; this file decides.
+# FROZEN (Phase 6): written by `uv run fgs freeze` on 2026-11-11. Refits are refused; see
+# pipeline/PREREGISTRATION.md. Do not hand-edit: the weekly refresh/export never refit (BACK-04).
 #
-# INTERIM: these 11 weights stand until the Phase 6 freeze (final interim fit, all Phase 5
-# factors in, ridge:+po_trend, N=8 Spearman 0.5262). The weekly refresh never refits
-# them (BACK-04). Phase 6 refits once all factors exist.
+# Procedure: Ridge on the per-snapshot z-scores, unpenalized intercept; alpha chosen by
+# choose_alpha (leave-one-season-out CV over 1999-2021, grid {0, 1e-3, 1e-2, 1e-1, 1}*n,
+# min pooled SSE): alpha = 0.01*n, n = 12331 snapshots; target = mean adjusted margin over
+# the next 8 games. Weights rounded to 2 dp; no clipping, pruning or sign constraint (MODEL-15).
+# The 2022-2025 holdout was never read.
 #
-# Negative weights, one line each (no positivity constraint is applied):
-#   last16  - given Elo, a hot recent record runs ahead of real strength and regresses
-#   sow     - given Elo and margins, results running ahead of margins regress
-#   streak  - given the rest, a hot streak slightly fades (~0 backtest gain, kept)
-#   luck    - close-game wins and losses are mostly coin flips, so they even out
-#   epa_traj - given the rest, an efficiency upswing slightly fades; trajectory has ≈0 backtest
-#              gain; kept per CONTEXT; the data sets its weight
-#   vs_exp  - ≈ season_record minus preseason expectation; read the pair together (corr 0.92)
-#   po_trend - ≈0; kept per CONTEXT so the weight is reported
+# Per factor: weight, unrounded fit, sign, and how many of the walk-forward folds
+# (test seasons 2003-2021, each refit on earlier seasons) agree with the final sign:
+#   elo              2.59  raw +2.5931  sign +  folds 19/19
+#   season_record    1.84  raw +1.8410  sign +  folds 19/19
+#   last16          -0.21  raw -0.2100  sign -  folds 14/19
+#       why -: given Elo, a hot recent record runs ahead of real strength and regresses
+#   mov              1.24  raw +1.2407  sign +  folds 19/19
+#   sow             -0.56  raw -0.5595  sign -  folds 14/19
+#       why -: given Elo and margins, results running ahead of margins regress
+#   streak          -0.03  raw -0.0320  sign -  folds 12/19
+#       why -: given the rest, a hot streak slightly fades (~0 backtest gain, kept)
+#   luck            -0.35  raw -0.3511  sign -  folds 19/19
+#       why -: close-game wins and losses are mostly coin flips, so they even out
+#   epa_traj        -0.33  raw -0.3274  sign -  folds 19/19
+#       why -: given the rest, an efficiency upswing slightly fades (~0 backtest gain, kept)
+#   qb_trend         0.63  raw +0.6315  sign +  folds 19/19
+#   vs_exp          -1.22  raw -1.2213  sign -  folds 18/19
+#       why -: ~ season_record minus preseason expectation; read the pair together (corr 0.92); beating expectations tends to fade
+#   po_trend        -0.05  raw -0.0513  sign -  folds 17/19
+#       why -: ~0; Elo's 3-week change already carries it (corr 0.70); kept so the weight is on record
 #
-# last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
-# record tends to run ahead of real strength, so it predicts slightly worse future margins.
-# No positivity constraint is applied. See pipeline/BACKTEST_LOG.md for each factor's delta.
-#
-# mov (margin of victory, last 8 games, capped at 24 per game) is positive: given Elo and the
-# records, bigger recent margins predict better future margins.
-#
-# sow (quality of results vs an average team's expected results) is negative on purpose.
-# Alone it is positive (univariate Spearman 0.43), but Elo already rewards beating good
-# teams; leftover sow means results running ahead of margins, which regress.
-#
-# streak (signed current win/loss streak, capped at 8) is slightly negative and adds ~0 to
-# the backtest; kept per the phase decision. Given the other factors a hot streak tends to fade.
-#
-# luck (one-score wins minus one-score losses, last 16 games) is negative, as expected: close
-# games are mostly coin flips, so a team winning lots of them is due to give some back.
-#
-# epa_traj (opponent-adjusted EPA/play: EWMA over ~4 games minus this season's mean) is slightly
-# negative (-0.23 with qb_trend in, -0.20 without; last walk-forward fold 2021: -0.20) and adds ≈0 to the backtest.
-#
-# qb_trend: current starting QB's recent EPA/dropback; positive (+0.63). Given everything else,
-# a QB playing well predicts better future margins (0 for a QB with under 2 starts / week 0).
-#
-# vs_exp (win % so far minus the preseason expectation's pace) is negative (-1.24) while
-# season_record rises 0.59 -> 1.83: the two correlate 0.92, so a team ahead of its record's
-# expectations gets a big + season_record bar and a moderate - vs_exp bar. Beating
-# expectations tends to fade (expectations usually catch up).
-# vs_exp's signal is Vegas-driven (2003–2020); 2021+ rows are model-sourced; Phase 6 holdout measures the cost
-#
-# po_trend (3-week change in simulated playoff odds, same season) is ≈0 (-0.01): it correlates
-# 0.70 with the 3-week Elo change, so Elo already carries it. Adding it moved last16 -0.19 -> -0.20
-# and vs_exp -1.24 -> -1.23 at 2 dp. Kept per CONTEXT so its weight is on record.
-weights:
+# Full walk-forward evidence (CIs, Brier, per-factor deltas): pipeline/FREEZE_RESULT.json.
+frozen: true
+fit_seasons: [1999, 2021]
+target: adjusted_margin_n8
+alpha: 0.01  # multiplied by n inside ridge_fit
+n: 12331
+fitted_at: "2026-11-11"
+weights:  # read by score.load_weights; must stay {factor: number}
   elo: 2.59
-  season_record: 1.83
-  last16: -0.20
+  season_record: 1.84
+  last16: -0.21
   mov: 1.24
   sow: -0.56
-  streak: -0.05
+  streak: -0.03
   luck: -0.35
   epa_traj: -0.33
   qb_trend: 0.63
-  vs_exp: -1.23
-  po_trend: -0.01
+  vs_exp: -1.22
+  po_trend: -0.05
+fit:  # per-factor evidence (ignored by load_weights)
+  elo: {raw: 2.593074, sign: "+", fold_sign: [19, 19]}
+  season_record: {raw: 1.841025, sign: "+", fold_sign: [19, 19]}
+  last16: {raw: -0.210033, sign: "-", fold_sign: [14, 19]}
+  mov: {raw: 1.240667, sign: "+", fold_sign: [19, 19]}
+  sow: {raw: -0.559506, sign: "-", fold_sign: [14, 19]}
+  streak: {raw: -0.031969, sign: "-", fold_sign: [12, 19]}
+  luck: {raw: -0.351085, sign: "-", fold_sign: [19, 19]}
+  epa_traj: {raw: -0.327402, sign: "-", fold_sign: [19, 19]}
+  qb_trend: {raw: 0.631521, sign: "+", fold_sign: [19, 19]}
+  vs_exp: {raw: -1.221338, sign: "-", fold_sign: [18, 19]}
+  po_trend: {raw: -0.051305, sign: "-", fold_sign: [17, 19]}
