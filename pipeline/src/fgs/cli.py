@@ -543,7 +543,10 @@ def _cmd_evidence(args) -> int:
     return 0
 
 
-FROZEN_MSG = "weights are frozen (fit 1999–2021); run `fgs freeze --unfreeze` to refit"
+FROZEN_MSG = ("weights are frozen (fit 1999–2021); `fgs freeze --unfreeze` can refit only until the "
+              "one-time holdout has been run")
+PERMANENT_FROZEN_MSG = ("weights are permanently frozen for v1 (fit 1999–2021; the 2022–2025 holdout has been "
+                        "evaluated). A new model version would need a new pre-registration and a fresh holdout")
 POST_HOLDOUT_MSG = ("refitting after the holdout breaks the pre-registration (pipeline/PREREGISTRATION.md); "
                     "a new holdout would be needed")
 SEALED_MSG = "the 2022–2025 holdout is sealed until the one-time `fgs holdout` result exists"
@@ -615,7 +618,8 @@ def _cmd_backtest(args) -> int:
     # Refusal guards run before any data load (Phase 6): no refit proposal once frozen, and no
     # look at 2022-2025 before the one-time holdout result exists.
     if args.propose_weights and _weights_frozen():
-        print(f"error: {FROZEN_MSG}", file=sys.stderr)
+        msg = PERMANENT_FROZEN_MSG if _holdout_artifacts() else FROZEN_MSG
+        print(f"error: {msg}", file=sys.stderr)
         return 1
     if args.include_holdout and not _holdout_artifacts(include_derived=False):
         print(f"error: {SEALED_MSG}", file=sys.stderr)
@@ -803,9 +807,10 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("ingest", help="download nflverse schedules into the local cache")
-    p.add_argument("--refresh", action="store_true", help="re-download even if cached")
-    p.add_argument("--all", action="store_true",
-                   help="re-download everything (same as --refresh for schedules, which is one file)")
+    p.add_argument("--refresh", action="store_true",
+                   help="re-download the schedules file even if cached (schedules only; `fgs refresh` "
+                        "re-downloads pbp, teams and draft too)")
+    p.add_argument("--all", action="store_true", help="same as --refresh (schedules are the only file ingest touches)")
     p.set_defaults(func=_cmd_ingest)
 
     p = sub.add_parser("build", help="ingest (cached) schedules + pbp, derive games, team_games, elo_snapshots, "
@@ -838,7 +843,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--include-holdout", action="store_true",
                    help="also test 2022–2025; refused until the one-time `fgs holdout` result (HOLDOUT_RESULT.md) exists")
     p.add_argument("--propose-weights", action="store_true",
-                   help="also print ridge weights fit on 1999–2021 (N=8) as a weights.yaml block")
+                   help="also print ridge weights fit on 1999–2021 (N=8) as a weights.yaml block; "
+                        "refused once weights.yaml is frozen (v1 weights are permanently frozen)")
     p.add_argument("--draft", action="store_true",
                    help="fit the offseason draft term on top of the frozen composite; training seasons only")
     p.set_defaults(func=_cmd_backtest)

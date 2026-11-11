@@ -237,6 +237,13 @@ def test_guard_propose_weights_refused_when_frozen(guard_paths, capsys):
     assert "frozen" in capsys.readouterr().err
 
 
+def test_guard_propose_weights_after_holdout_is_permanent(guard_paths, capsys):
+    (guard_paths / "HOLDOUT_RESULT.json").write_text("{}\n")
+    assert cli.main(["backtest", "--propose-weights"]) == 1
+    err = capsys.readouterr().err
+    assert "permanently frozen" in err and "--unfreeze" not in err
+
+
 def test_guard_freeze_refused_when_frozen(guard_paths, capsys):
     assert cli.main(["freeze"]) == 1
     assert "frozen" in capsys.readouterr().err
