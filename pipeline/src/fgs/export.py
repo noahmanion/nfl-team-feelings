@@ -61,6 +61,49 @@ def _preseason(r: dict, first_season: int) -> str:
     return "fresh" if int(r["season"]) == first_season else "carry"
 
 
+def _playoff_display(scored: pl.DataFrame, games: pl.DataFrame) -> pl.DataFrame:
+    """Add playoff_display: the integer playoff odds fans see (round(100 * raw sim value)).
+
+    A5 override (display only): once every REG game of a season is played with asof_week <= the
+    snapshot week, and the season has at least one non-REG game row, the snapshot shows the
+    actual result instead: 100 for franchises in any non-REG game that season, else 0. The raw
+    playoff_prob column (the po_trend input) is left untouched (RESEARCH Pitfall 8)."""
+    g = games.with_columns(pl.col("season").cast(pl.Int32))
+    reg = g.filter(pl.col("is_reg")).group_by("season").agg(
+        pl.col("played").all().alias("_reg_done"), pl.col("asof_week").max().cast(pl.Int32).alias("_reg_end"),
+    )
+    post = g.filter(~pl.col("is_reg"))
+    post_teams = (
+        pl.concat([post.select("season", pl.col("home_id").alias("franchise_id")),
+                   post.select("season", pl.col("away_id").alias("franchise_id"))])
+        .unique()
+        .with_columns(pl.lit(True).alias("_in_post"))
+    )
+    has_post = post.select("season").unique().with_columns(pl.lit(True).alias("_has_post"))
+    done = (
+        pl.col("_reg_done").fill_null(False) & pl.col("_has_post").fill_null(False)
+        & (pl.col("week") >= pl.col("_reg_end"))
+    )
+    raw = (pl.col("playoff_prob") * 100).round(0).cast(pl.Int64)
+    return (
+        scored.with_columns(pl.col("season").cast(pl.Int32))
+        .join(reg, on="season", how="left")
+        .join(has_post, on="season", how="left")
+        .join(post_teams, on=["season", "franchise_id"], how="left")
+        .with_columns(
+            pl.when(done).then(pl.when(pl.col("_in_post").fill_null(False)).then(100).otherwise(0))
+            .otherwise(raw).cast(pl.Int64).alias("playoff_display")
+        )
+        .drop("_reg_done", "_reg_end", "_has_post", "_in_post")
+    )
+
+
+def _playoff_int(r: dict) -> int | None:
+    """Displayed playoff odds as an int 0-100; None when the frame has no sim (no column)."""
+    v = r.get("playoff_display")
+    return None if v is None else int(v)
+
+
 def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: int) -> dict:
     return {
         "franchise": r["franchise_id"], "rank": int(r["rank"]), "score": int(r["score"]),
@@ -75,6 +118,10 @@ def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: i
             r, factor_keys, nicks.get(r["franchise_id"], r["franchise_id"]), int(r["week"]),
             _preseason(r, first_season),
         ),
+        "playoff_prob": _playoff_int(r),
+        # display columns; None when the features frame lacks them
+        "expectation_source": r.get("expectation_source"),
+        "qb": r.get("qb_name"),
     }
 
 
@@ -126,6 +173,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
     ref = mood.reference_values(derived["features"])  # the same frozen reference score_frame used
     baseline = explain.baseline(ref)
     scored = explain.add_points(scored, factor_keys, ref)
+    if derived.get("sim") is not None and "playoff_prob" in scored.columns:
+        # restore the snapshot sort: the joins in _playoff_display may reorder rows
+        scored = _playoff_display(scored, games).sort(["season", "week", "rank"])
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
