@@ -25,15 +25,17 @@ export function loadSeason(meta: Meta, season: number): Promise<SeasonFile> {
   return p
 }
 
-// history.json is one file; cache a single promise for the session, evicted on failure.
-let historyCache: Promise<HistoryFile> | null = null
+// history.json is one file; cache a single promise per meta.generated_at (a new export
+// replaces it), evicted on failure.
+let historyCache: { key: string; p: Promise<HistoryFile> } | null = null
 
 export function loadHistory(meta: Meta): Promise<HistoryFile> {
-  if (historyCache) return historyCache
+  if (historyCache && historyCache.key === meta.generated_at) return historyCache.p
   const p = getJson<HistoryFile>(`history.json?v=${encodeURIComponent(meta.generated_at)}`)
-  historyCache = p
+  const entry = { key: meta.generated_at, p }
+  historyCache = entry
   p.catch(() => {
-    if (historyCache === p) historyCache = null
+    if (historyCache === entry) historyCache = null
   })
   return p
 }
