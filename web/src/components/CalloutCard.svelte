@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { tick } from 'svelte'
   import TeamChip from './TeamChip.svelte'
   import { calloutHref } from '../lib/callouts'
   import { copyText, deepLink } from '../lib/copyLink'
@@ -14,10 +15,21 @@
 
   let result = $state<'idle' | 'copied' | 'manual'>('idle')
   let url = $state('')
+  let manualInput = $state<HTMLInputElement | null>(null)
+  const status = $derived(result === 'copied' ? 'Link copied' : result === 'manual' ? 'Copy the link below' : '')
 
+  // WR-05: clear the live region first and let it render empty, so a repeated click re-announces
+  // the same message; in the manual case move focus to the link field for keyboard users.
   async function copy() {
+    result = 'idle'
+    await tick()
     url = deepLink(href)
-    result = await copyText(url)
+    const r = await copyText(url)
+    result = r
+    if (r === 'manual') {
+      await tick()
+      manualInput?.focus()
+    }
   }
 
   const selectAll = (e: Event) => (e.currentTarget as HTMLInputElement).select()
@@ -35,11 +47,11 @@
     <a class="see" {href}>See {name}</a>
     <button type="button" class="copy" onclick={copy}>Copy link</button>
   </div>
-  <p class="status" role="status">
-    {#if result === 'copied'}Link copied{:else if result === 'manual'}Copy the link below{/if}
-  </p>
+  <!-- always in the accessibility tree (WR-05); only visually hidden while empty -->
+  <p class="status" class:visually-hidden={!status} role="status">{status}</p>
   {#if result === 'manual'}
     <input
+      bind:this={manualInput}
       class="manual"
       type="text"
       readonly
@@ -53,6 +65,7 @@
 
 <style>
   .card {
+    position: relative; /* contains the visually hidden status */
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
@@ -130,9 +143,6 @@
     font-size: var(--text-label);
     line-height: var(--lh-label);
     color: var(--text-muted);
-  }
-  .status:empty {
-    display: none;
   }
   .manual {
     width: 100%;
