@@ -196,7 +196,40 @@ def check_league_mean(snapshots: pl.DataFrame) -> list[str]:
     ]
 
 
-# (name, callable(raw, derived) -> list[str]). Plan 03 appends check_snapshot_grid here.
+def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[str]:
+    """Dense (season, week, franchise) grid: n_teams x (last played week + 1) rows per season."""
+    out = []
+    keys = ["season", "week", "franchise_id"]
+    nulls = snapshots.filter(pl.col("elo").is_null())
+    for s, w, team in nulls.select(keys).head(10).iter_rows():
+        out.append(f"{s} week {w} {team}: null elo")
+    if nulls.height > 10:
+        out.append(f"... {nulls.height} null-elo rows in total")
+    dups = snapshots.group_by(keys).len().filter(pl.col("len") > 1).sort(keys)
+    for s, w, team, n in dups.head(10).iter_rows():
+        out.append(f"{s} week {w} {team}: {n} duplicate rows")
+    wmax = dict(
+        games.filter(pl.col("played")).group_by("season").agg(pl.col("week").max()).iter_rows()
+    )
+    rows = dict(snapshots.group_by("season").len().iter_rows())
+    for s in sorted(set(wmax) | set(rows)):
+        if s not in wmax:
+            out.append(f"{s}: snapshots present but no played games")
+            continue
+        expected = season_config.n_teams(s) * (wmax[s] + 1)
+        if rows.get(s, 0) != expected:
+            out.append(
+                f"{s}: {rows.get(s, 0)} snapshot rows, expected {expected} "
+                f"({season_config.n_teams(s)} teams x weeks 0-{wmax[s]})"
+            )
+    week0 = {(s, t) for s, t in snapshots.filter(pl.col("week") == 0).select("season", "franchise_id").iter_rows()}
+    for s, team in _season_teams(games).filter(pl.col("season").is_in(list(wmax))).sort("season", "franchise_id").iter_rows():
+        if (s, team) not in week0:
+            out.append(f"{s} {team}: no week-0 snapshot")
+    return out
+
+
+# (name, callable(raw, derived) -> list[str]).
 CHECKS: list[tuple[str, callable]] = [
     ("columns", lambda raw, d: check_columns(raw)),
     ("config_coverage", lambda raw, d: check_config_coverage(d["games"])),
@@ -207,6 +240,7 @@ CHECKS: list[tuple[str, callable]] = [
     ("result_consistency", lambda raw, d: check_result_consistency(d["games"])),
     ("elo_zero_sum", lambda raw, d: check_elo_zero_sum(d["games"])),
     ("league_mean", lambda raw, d: check_league_mean(d["snapshots"])),
+    ("snapshot_grid", lambda raw, d: check_snapshot_grid(d["snapshots"], d["games"])),
 ]
 
 
