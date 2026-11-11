@@ -40,17 +40,27 @@ def final_records(scored: pl.DataFrame) -> dict[tuple[int, str], tuple[int, int,
             last.select("season", "franchise_id", "wins", "losses", "ties").iter_rows()}
 
 
-def team_season_extremes(scored: pl.DataFrame, dates: pl.DataFrame) -> dict[str, list[dict]]:
+def in_progress_seasons(games: pl.DataFrame) -> set[int]:
+    """Seasons with at least one unplayed REG game (the current season until its REG ends)."""
+    reg = games.filter(pl.col("is_reg") & ~pl.col("played"))
+    return {int(s) for s in reg["season"].unique().to_list()}
+
+
+def team_season_extremes(
+    scored: pl.DataFrame, dates: pl.DataFrame, exclude_seasons: set[int] | frozenset[int] = frozenset(),
+) -> dict[str, list[dict]]:
     """Full ranked lists {"saddest": [...], "happiest": [...]}, one entry per team-season.
 
-    REG weeks only (1..reg_weeks); seeded expansion team-seasons (season_config.SEEDS) excluded.
+    REG weeks only (1..reg_weeks); seeded expansion team-seasons (season_config.SEEDS) excluded, and
+    so is every season in exclude_seasons (WR-08: build_records passes the in-progress season, whose
+    partial-season mean is not comparable with a full season's and would rank on a partial sample).
     Saddest: min score asc, REG mean asc, min composite asc, season, franchise. Happiest: max score
     desc, REG mean desc, max composite desc, season, franchise (scores clip at 0/100, so the chain
     is what decides). week/date = first week the min/max was reached; W-L-T = last REG-week row."""
     is_seed = pl.lit(False)
     for f, s in season_config.SEEDS:
         is_seed = is_seed | ((pl.col("franchise_id") == f) & (pl.col("season") == s))
-    reg = _reg_rows(scored).filter(~is_seed)
+    reg = _reg_rows(scored).filter(~is_seed & ~pl.col("season").is_in(sorted(exclude_seasons)))
     reg = reg.join(dates, on=["season", "week"], how="left").sort("season", "franchise_id", "week")
     agg = reg.group_by("season", "franchise_id").agg(
         pl.col("score").min().alias("min"), pl.col("score").max().alias("max"),
@@ -110,7 +120,7 @@ def build_records(scored: pl.DataFrame, games: pl.DataFrame, as_of: date) -> dic
     """The records.json contract (plan 08-03)."""
     dates = insights.snapshot_dates(games, as_of)
     run_df = insights.all_runs(insights.timelines(scored, dates), as_of)
-    ext = team_season_extremes(scored, dates)
+    ext = team_season_extremes(scored, dates, in_progress_seasons(games))
     recs = final_records(scored)
     latest = int(scored["season"].max())
     notable = []
@@ -167,7 +177,8 @@ def records_check_md(records: dict) -> str:
         "Rules: misery = score under 20, joy = score 80 or higher, measured in calendar days across season "
         "boundaries (week 0 dated at the draft's last day; week N at the last gameday of that week). Active "
         f"streaks count through {records['as_of']}. Team-season extremes use REG weeks only, one entry per "
-        "team-season; ties at the 0/100 clip break by REG mean score, then composite. Expansion seeds are excluded.",
+        "team-season; ties at the 0/100 clip break by REG mean score, then composite. Expansion seeds are excluded, "
+        "and a season in progress joins the team-season lists only once its last REG game is played.",
         "",
         f"## Saddest team-seasons (lowest score; top {len(records['saddest'])})",
         "",

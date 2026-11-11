@@ -116,6 +116,23 @@ def test_streak_records_tiebreak_start_then_franchise():
     assert [r["franchise"] for r in out] == ["AAA", "BBB", "CCC"]
 
 
+def test_extremes_skip_in_progress_season():
+    """WR-08: a season with unplayed REG games never ranks among the "ever" extremes."""
+    from conftest import make_games
+    games = make_games([("g1", 2020, 1, "REG", "2020-09-10", "AAA", "BBB", 1, 0, False),
+                        ("g1b", 2020, 2, "REG", "2020-09-17", "AAA", "BBB", 1, 0, False),
+                        ("g2", 2021, 1, "REG", "2021-09-09", "AAA", "BBB", 1, 0, False),
+                        ("g3", 2021, 2, "REG", "2021-09-16", "AAA", "BBB", None, None, False)])
+    assert records.in_progress_seasons(games) == {2021}
+    rows = _season("AAA", [30, 40], 2020) + _season("AAA", [0], 2021) + _season("BBB", [100], 2021)  # all dated
+    dates = pl.concat([_dates(2020, 2), _dates(2021, 1)])
+    ext = records.team_season_extremes(_scored(rows), dates, records.in_progress_seasons(games))
+    assert [(e["season"], e["franchise"]) for e in ext["saddest"]] == [(2020, "AAA")]
+    assert [(e["season"], e["franchise"]) for e in ext["happiest"]] == [(2020, "AAA")]
+    r = records.build_records(_scored(rows), games, D("2021-09-20"))
+    assert {e["season"] for e in r["saddest"] + r["happiest"]} == {2020}
+
+
 def _contract(scored, games, as_of):
     return records.build_records(scored, games, as_of)
 
@@ -162,6 +179,8 @@ def test_records_on_real_data_shape(real_inputs):
     assert all(len(r[k]) == 10 for k in ("saddest", "happiest", "misery", "joy"))
     seeds = {(1999, "CLE"), (2002, "HOU")}
     assert not any((e["season"], e["franchise"]) in seeds for e in r["saddest"] + r["happiest"])
+    live = records.in_progress_seasons(derived["games"])
+    assert not any(e["season"] in live for e in r["saddest"] + r["happiest"])
     assert {n["list"] for n in r["notable"]} == {"saddest", "happiest"} and len(r["notable"]) == 3
     json.dumps(r, allow_nan=False)
     md = records.records_check_md(r)
