@@ -37,9 +37,13 @@ describe('Sep separator', () => {
     expect(header).toMatch(/\.item\s*\{[^}]*white-space:\s*nowrap/)
   })
 
-  it('is used on every team page header meta line', () => {
+  it('is used on every team page header meta line and the past-week nav', () => {
     const team = sources['../components/TeamPage.svelte']
-    // three separators: when · Now, record · rank, odds · QB
-    expect(team.match(/<Sep \/>/g)?.length).toBe(3)
+    // three header separators (when · Now, record · rank, odds · QB) + two in the week nav
+    // (Prev week · Next week · See the board)
+    expect(team.match(/<Sep \/>/g)?.length).toBe(5)
+    const nav = /<nav class="week-nav"[\s\S]*?<\/nav>/.exec(team)?.[0] ?? ''
+    expect(nav.match(/<Sep \/>/g)?.length).toBe(2)
+    expect(nav).toContain('boardHash(season, week)')
   })
 })

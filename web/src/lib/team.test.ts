@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { barRows, findTeamRow, playoffText, recentGames, seasonSeries, signed, sparkDomain } from './team'
-import type { FactorMeta, GamesFile, Row, SeasonFile } from './types'
+import { barRows, findTeamRow, playoffText, recentGames, seasonSeries, signed, sparkDomain, stepWeek } from './team'
+import type { FactorMeta, GamesFile, Meta, Row, SeasonFile } from './types'
 
 type G = [week: number, asof: number, home: string, away: string, hs: number | null, as: number | null, day: string, neutral?: boolean]
 
@@ -166,5 +166,28 @@ describe('playoffText', () => {
   it('returns null when unknown', () => {
     expect(playoffText(null)).toBeNull()
     expect(playoffText(undefined)).toBeNull()
+  })
+})
+
+describe('stepWeek', () => {
+  const sm = (season: number, max_week: number) => ({ season, max_week, reg_weeks: 18, n_teams: 32, week_labels: {} })
+  const meta = { seasons: [sm(2025, 22), sm(2024, 22), sm(2026, 9)], latest: { season: 2026, week: 9 } } as unknown as Meta
+
+  it('steps within a season', () => {
+    expect(stepWeek(meta, 2025, 5, -1)).toEqual({ season: 2025, week: 4 })
+    expect(stepWeek(meta, 2025, 5, 1)).toEqual({ season: 2025, week: 6 })
+  })
+  it('crosses season boundaries both ways', () => {
+    expect(stepWeek(meta, 2025, 0, -1)).toEqual({ season: 2024, week: 22 })
+    expect(stepWeek(meta, 2025, 22, 1)).toEqual({ season: 2026, week: 0 })
+  })
+  it('stops at the first season and at meta.latest', () => {
+    expect(stepWeek(meta, 2024, 0, -1)).toBeNull()
+    expect(stepWeek(meta, 2026, 8, 1)).toEqual({ season: 2026, week: 9 })
+    expect(stepWeek(meta, 2026, 9, 1)).toBeNull()
+    expect(stepWeek({ ...meta, latest: { season: 2026, week: 4 } }, 2026, 4, 1)).toBeNull()
+  })
+  it('returns null for an unknown season', () => {
+    expect(stepWeek(meta, 1990, 3, 1)).toBeNull()
   })
 })

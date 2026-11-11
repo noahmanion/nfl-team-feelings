@@ -13,8 +13,8 @@
   import { findSeason, loadGames, loadRecords, loadSeason } from '../lib/data'
   import { formatRecord, weekLabel } from '../lib/format'
   import { formatDate, streakLine } from '../lib/records'
-  import { historyHash, teamHash } from '../lib/router'
-  import { findTeamRow, playoffText, recentGames, seasonSeries } from '../lib/team'
+  import { boardHash, historyHash, teamHash } from '../lib/router'
+  import { findTeamRow, playoffText, recentGames, seasonSeries, stepWeek } from '../lib/team'
   import type { ActiveStreak, GamesFile, Meta, SeasonFile } from '../lib/types'
 
   let { meta, team, season, week, latest }: { meta: Meta; team: string; season: number; week: number; latest: boolean } =
@@ -130,7 +130,23 @@
   const baseline = $derived(meta.baseline ?? 50)
   const odds = $derived(row ? playoffText(row.playoff_prob) : null)
   const qb = $derived(row?.qb ? `QB ${row.qb}` : null)
+
+  // Past weeks: step one week back/forward (across seasons); the step that reaches meta.latest
+  // goes to the team's latest page.
+  const stepHash = (s: { season: number; week: number } | null): string | null =>
+    !s ? null : s.season === meta.latest.season && s.week === meta.latest.week ? teamHash(team) : teamHash(team, s.season, s.week)
+  const prevHash = $derived(latest ? null : stepHash(stepWeek(meta, season, week, -1)))
+  const nextHash = $derived(latest ? null : stepHash(stepWeek(meta, season, week, 1)))
 </script>
+
+{#snippet weekNav()}
+  {#if !latest}
+    <nav class="week-nav" aria-label="Weeks">
+      {#if prevHash}<a href={prevHash}>← Prev week</a><Sep />{/if}{#if nextHash}<a href={nextHash}>Next week →</a
+        ><Sep />{/if}<a href={boardHash(season, week)}>See the board for this week</a>
+    </nav>
+  {/if}
+{/snippet}
 
 <article class="team-page" aria-labelledby="team-heading">
   {#if seasonFailed}
@@ -148,6 +164,7 @@
       We don’t have a {name} score for {when}.
       {#if !latest}<a href={teamHash(team)}>See {name} now →</a>{/if}
     </StatusPanel>
+    {@render weekNav()}
   {:else}
     <header class="head">
       <div class="who">
@@ -173,6 +190,7 @@
       </div>
       <div class="mood"><MoodLabel emoji={row.emoji} label={row.label} size="heading" /></div>
     </header>
+    {@render weekNav()}
 
     {#if streakText && activeStreak}
       <p class="streak">{streakText}, since {formatDate(activeStreak.start)}{asOfText}</p>
@@ -275,6 +293,18 @@
   .blurb {
     font-size: var(--text-body);
     line-height: var(--lh-body);
+  }
+  .week-nav {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    font-size: var(--text-label);
+    line-height: var(--lh-label);
+  }
+  .week-nav a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tap-min);
   }
   .streak {
     font-size: var(--text-body);

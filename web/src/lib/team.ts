@@ -1,5 +1,5 @@
 // Pure helpers for the team deep-dive page (SITE-02). No DOM, no fetch.
-import type { FactorMeta, GamesFile, Row, SeasonFile } from './types'
+import type { FactorMeta, GamesFile, Meta, Row, SeasonFile } from './types'
 
 export interface RecentGame {
   season: number
@@ -106,4 +106,24 @@ export function sparkDomain(series: { score: number }[]): { lo: number; hi: numb
 export function playoffText(p: number | null | undefined): string | null {
   if (typeof p !== 'number' || !Number.isFinite(p)) return null
   return `Playoff odds ${Math.round(p)}%`
+}
+
+/**
+ * The (season, week) one step before (dir -1) or after (dir +1) the given one, crossing season
+ * boundaries (week 0 <-> the previous season's last week). Never steps past meta.latest or before
+ * the first season. null when there is no such week.
+ */
+export function stepWeek(meta: Meta, season: number, week: number, dir: -1 | 1): { season: number; week: number } | null {
+  const seasons = [...meta.seasons].sort((a, b) => a.season - b.season)
+  const i = seasons.findIndex((s) => s.season === season)
+  if (i < 0) return null
+  let next: { season: number; week: number } | null
+  if (dir === -1) {
+    next = week > 0 ? { season, week: week - 1 } : i > 0 ? { season: seasons[i - 1].season, week: seasons[i - 1].max_week } : null
+  } else {
+    next = week < seasons[i].max_week ? { season, week: week + 1 } : i < seasons.length - 1 ? { season: seasons[i + 1].season, week: 0 } : null
+  }
+  if (!next) return null
+  const { season: ls, week: lw } = meta.latest
+  return next.season > ls || (next.season === ls && next.week > lw) ? null : next
 }
