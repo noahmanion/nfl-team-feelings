@@ -174,7 +174,7 @@ Plans:
 
 **Wave 3**
 
-- [ ] 05-04-PLAN.md — Simulator wired into derive/refresh/checks/leakage; vs_exp factor with three logged deltas (MODEL-13, MODEL-08)
+- [x] 05-04-PLAN.md — Simulator wired into derive/refresh/checks/leakage; vs_exp factor with three logged deltas (MODEL-13, MODEL-08)
 
 **Wave 4**
 
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
-| 5. Efficiency, QB Trend & Season Simulator | 3/5 | In Progress|  |
+| 5. Efficiency, QB Trend & Season Simulator | 4/5 | In Progress|  |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
 | 8. Callouts, Records & My Team | 0/TBD | Not started | - |
