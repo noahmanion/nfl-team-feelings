@@ -226,7 +226,22 @@ Plans:
   2. The week-0 post-draft snapshot moves each team by draft value *above* what its original slot would yield, capped. The worst team does not move up just for holding pick #1.
   3. The mood-over-time chart and board show offseason movement instead of a flat line. The draft term's fitted weight is reported, and if it shows no signal it falls back to display-only text.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 07-01-PLAN.md — Draft data (picks + stuart chart) and surplus-over-original-slot engine, `fgs draft`, DATA-06 checks, derived['draft']
+- [ ] 07-02-PLAN.md — Web: dashed offseason connector, week-0 "vs end of last season", draft line on team page (contract-first)
+
+**Wave 2** *(blocked on 07-01)*
+
+- [ ] 07-03-PLAN.md — Training-only draft walk-forward + gate on the frozen composite (`fgs backtest --draft`), offseason.draft in weights.yaml, scoring path (weight 0 = display only)
+
+**Wave 3** *(blocked on 07-02, 07-03)*
+
+- [ ] 07-04-PLAN.md — Cross-season week-0 deltas, draft fields/text/labels in export, methodology draft note, regenerate data, README
+
 **Research**: Needed. Surplus-over-slot formula, choice of draft-value chart (flatter stuart/otc), cap size, and how to backtest across the offseason.
 
 ### Phase 8: Callouts, Records & My Team
@@ -242,7 +257,26 @@ Plans:
   3. User can browse a records page with the saddest and happiest fanbases ever and the longest misery/joy streaks in calendar days ("miserable for 600 straight days"). The top 10 of each list has been hand-checked for data bugs.
   4. User can pin "my team". The pin is remembered after reload and highlights that team on the board, the mood-over-time chart, and the records.
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 08-01-PLAN.md — Pipeline: perception-gap callouts + movers (insights.py), frozen 1999–2021 evidence (`fgs evidence` → callout_evidence.json), callouts in the JSON contract
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 08-02-PLAN.md — Web: callout cards + Copy link and biggest-movers strip on the board (latest and scrubbed weeks), team callouts on the team page
+- [ ] 08-03-PLAN.md — Pipeline: snapshot dates, calendar-day misery/joy streaks, team-season extremes, records.json, streak callouts, RECORDS_CHECK.md
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 08-04-PLAN.md — Web: #/records page + "Records" nav, team-page active streak line
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 08-05-PLAN.md — Web: "my team" pin (localStorage) highlighted on board, chart, records and callouts
+
 **UI hint**: yes
 **Research**: Needed. Perception-gap baseline (record-implied rank, threshold, base-rate evidence line).
 
@@ -260,4 +294,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 1/5 | In Progress|  |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
-| 8. Callouts, Records & My Team | 0/TBD | Not started | - |
+| 8. Callouts, Records & My Team | 0/5 | Planned | - |

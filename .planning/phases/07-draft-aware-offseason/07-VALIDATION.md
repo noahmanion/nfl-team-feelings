@@ -49,3 +49,8 @@ created: 2026-11-11
 
 
 **Approval:** approved 2026-11-11 (autonomous)
+
+## Plan-checker notes for executors (2026-11-11)
+- 07-01: derivable draft years = years present in picks (skip e.g. 2027 with no picks); add test.
+- 07-03 T1: scope the allow_holdout grep to the draft_* function sources (inspect.getsource), not the whole file.
+- 07-03 T3: diff weights.yaml against a recorded pre-edit SHA/BEFORE snapshot, not HEAD~1.
