@@ -11,6 +11,8 @@
     effectText,
     foldText,
     formatCI,
+    formatDelta,
+    formatDeltaCI,
     formatMetric,
     formatWeight,
     verdictLead,
@@ -131,9 +133,9 @@
       {#if m.holdout && hoDiff}
         <p>
           On the holdout it won {hoDiff.seasons_won} of {hoDiff.of} seasons against Elo alone. Difference in rank
-          correlation: <span class="num">{formatMetric(hoDiff.value, 3)}</span>, interval
-          <span class="num">{formatCI(hoDiff.ci_season)}</span> by season blocks and
-          <span class="num">{formatCI(hoDiff.ci_cluster)}</span> by team-season.
+          correlation: <span class="num">{formatDelta(hoDiff.value, 3)}</span>, 95% interval
+          <span class="num">{formatDeltaCI(hoDiff.ci_season)}</span> by season blocks and
+          <span class="num">{formatDeltaCI(hoDiff.ci_cluster)}</span> by team-season.
         </p>
       {/if}
       <p class="muted">

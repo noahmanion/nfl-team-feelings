@@ -29,14 +29,24 @@ export function deltaText(delta: number | null, baseline: number | null): string
   return signed(delta, 4)
 }
 
+/** Unsigned metric value; a tiny negative that rounds to zero shows as 0.000, never −0.000. */
 export function formatMetric(x: number | null | undefined, dp = 3): string {
   if (x == null || !Number.isFinite(x)) return '—'
-  const s = x.toFixed(dp)
+  const s = (Number(x.toFixed(dp)) + 0).toFixed(dp)
   return s.startsWith('-') ? MINUS + s.slice(1) : s
 }
 
+/** Metric interval as "0.512 to 0.540" (no dash between bounds, so negative bounds stay readable). */
 export const formatCI = (ci: [number, number] | null | undefined, dp = 3): string =>
-  ci ? `${formatMetric(ci[0], dp)}–${formatMetric(ci[1], dp)}` : '—'
+  ci ? `${formatMetric(ci[0], dp)} to ${formatMetric(ci[1], dp)}` : '—'
+
+/** Signed difference: +0.004, −0.001, 0.000. */
+export const formatDelta = (x: number | null | undefined, dp = 3): string =>
+  x == null || !Number.isFinite(x) ? '—' : signed(x, dp)
+
+/** Signed difference interval: "−0.023 to +0.029". */
+export const formatDeltaCI = (ci: [number, number] | null | undefined, dp = 3): string =>
+  ci ? `${formatDelta(ci[0], dp)} to ${formatDelta(ci[1], dp)}` : '—'
 
 export type ChartMetric = 'spearman_n8' | 'brier'
 export interface ChartRow { period: string; key: string; label: string; value: number; lo: number; hi: number }

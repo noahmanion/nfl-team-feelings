@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  chartRows, deltaText, effectText, foldText, formatCI, formatMetric, formatWeight, HOLDOUT_PENDING, verdictLead, xDomain,
+  chartRows, deltaText, effectText, foldText, formatCI, formatDelta, formatDeltaCI, formatMetric, formatWeight, HOLDOUT_PENDING, verdictLead, xDomain,
 } from './methodology'
 import type { Methodology, PeriodMetrics } from './types'
 
@@ -48,7 +48,18 @@ describe('formatters', () => {
   })
   it('metrics and intervals', () => {
     expect(formatMetric(0.52653, 3)).toBe('0.527')
-    expect(formatCI([0.512, 0.54], 3)).toBe('0.512–0.540')
+    expect(formatCI([0.512, 0.54], 3)).toBe('0.512 to 0.540')
+    expect(formatMetric(-0.0004, 3)).toBe('0.000')
+    expect(formatMetric(-0.0123, 3)).toBe('−0.012')
+  })
+  it('signed differences and intervals', () => {
+    expect(formatDelta(0.003892, 3)).toBe('+0.004')
+    expect(formatDelta(-0.001355, 3)).toBe('−0.001')
+    expect(formatDelta(-0.0004, 3)).toBe('0.000')
+    expect(formatDelta(null)).toBe('—')
+    expect(formatDeltaCI([-0.022531, 0.029375], 3)).toBe('−0.023 to +0.029')
+    expect(formatDeltaCI([-0.03, -0.01], 3)).toBe('−0.030 to −0.010')
+    expect(formatDeltaCI(null)).toBe('—')
   })
 })
 
