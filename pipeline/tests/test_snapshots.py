@@ -133,10 +133,11 @@ def test_real_team_counts_and_final_weeks(real):
     _, d = real
     snap, games = d["snapshots"], d["games"]
     assert snap.filter(pl.col("season") == 1999)["franchise_id"].n_unique() == 31
-    max_season = games["season"].max()
+    # Seasons before the latest one with results are complete, whatever today's date is.
+    max_played = games.filter(pl.col("played"))["season"].max()
     last = snap.group_by("season").agg(pl.col("week").max().alias("w")).sort("season")
     for season, w in last.iter_rows():
-        if season < max_season:
+        if season < max_played:
             assert w == (21 if season <= 2020 else 22), season
             sb = games.filter((pl.col("season") == season) & (pl.col("game_type") == "SB"))
             assert sb["week"].to_list() == [w]
@@ -146,11 +147,16 @@ def test_real_team_counts_and_final_weeks(real):
 def test_real_current_season_ends_at_latest_played_week(real):
     _, d = real
     snap, games = d["snapshots"], d["games"]
-    cur = games["season"].max()
+    # Latest season with results (a newly published schedule with no results is week-0 only).
+    cur = games.filter(pl.col("played"))["season"].max()
     latest = games.filter((pl.col("season") == cur) & pl.col("played"))["week"].max()
     assert snap.filter(pl.col("season") == cur)["week"].max() == latest
-    if cur == 2026:
-        assert latest < 18
+    scheduled = games.filter(pl.col("season") == cur)["week"].max()
+    if games.filter((pl.col("season") == cur) & ~pl.col("played")).height:  # season in progress
+        assert latest < scheduled
+    for s in games.filter(~pl.col("played"))["season"].unique().to_list():
+        if s > cur:  # schedule published, nothing played: preseason week 0 only
+            assert snap.filter(pl.col("season") == s)["week"].to_list() == [0] * n_teams(s)
 
 
 def test_check_snapshot_grid(real):

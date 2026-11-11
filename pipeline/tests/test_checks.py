@@ -72,9 +72,10 @@ def test_games_per_team_detects_missing_game(real_derived):
 def test_continuity(real_derived):
     assert checks.check_continuity(real_derived["games"], real_derived["snapshots"]) == []
     w0 = real_derived["snapshots"].filter(pl.col("week") == 0)
+    max_season = real_derived["games"]["season"].max()  # every scheduled season has week-0 rows
     for team in ("LV", "LAC", "LA", "WAS"):
         seasons = set(w0.filter(pl.col("franchise_id") == team)["season"].to_list())
-        assert set(range(1999, 2027)) <= seasons, team
+        assert set(range(1999, max_season + 1)) <= seasons, team
 
 
 def test_continuity_detects_reset(real_derived):
@@ -102,11 +103,13 @@ def test_elo_sanity(real_derived):
     """Coarse plausibility: top-5 Elo teams are not losing, bottom-5 are not winning.
 
     Uses >= rather than > so a legitimately .500 or tied team cannot fail the test; the
-    human-style plausibility review happens in plan 03.
+    human-style plausibility review happens in plan 03. Evaluated at the final REG week of the
+    latest *completed* season (Super Bowl played), so early-season noise and the calendar
+    cannot make it fail.
     """
-    snaps = real_derived["snapshots"]
-    season = snaps["season"].max()
-    week = snaps.filter(pl.col("season") == season)["week"].max()
+    snaps, games = real_derived["snapshots"], real_derived["games"]
+    season = games.filter((pl.col("game_type") == "SB") & pl.col("played"))["season"].max()
+    week = season_config.reg_weeks(season)
     latest = snaps.filter((pl.col("season") == season) & (pl.col("week") == week)).sort("elo", descending=True)
     assert latest.height == season_config.n_teams(season)
     for r in latest.head(5).iter_rows(named=True):
