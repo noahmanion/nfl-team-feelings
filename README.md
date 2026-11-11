@@ -93,6 +93,7 @@ This target was written down before any score weights were fit. Weights get tune
 - **vs_exp diagnostic (pre-registered):** with vs_exp zeroed, Spearman N=8 is 0.485 and the gap over Elo is +0.003 (CI [−0.025, +0.032]). The vs_exp source switch doesn't explain the narrow margin.
 - Bottom line: the score ranks teams about as well as Elo, and a hair better at N=8. Nothing was re-tuned after the result.
 - Full result: `pipeline/HOLDOUT_RESULT.md`.
+- **Provenance gap.** The result records the sha256 of `PREREGISTRATION.md` and `weights.yaml`, the git HEAD and a clean `pipeline/src`. It does not fingerprint the input data (the nflverse cache and sim cache) or `uv.lock`, so it can't be re-verified against the exact bytes it ran on. Future `fgs holdout` runs record those hashes too.
 - `fgs holdout --force` exists but don’t: re-running the holdout breaks the pre-registration.
 
 **Status:** Phase 6 is done: weights frozen, 2022–2025 holdout evaluated once (verdict: slight), methodology page. Next is Phase 7: draft-aware offseason.

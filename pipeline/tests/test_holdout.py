@@ -413,6 +413,13 @@ def holdout_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(fgs.paths, "HOLDOUT_MD_PATH", tmp_path / "HOLDOUT_RESULT.md")
     monkeypatch.setattr(fgs.paths, "HOLDOUT_JSON_PATH", tmp_path / "HOLDOUT_RESULT.json")
     monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path / "derived")
+    cache = tmp_path / "cache"
+    (cache / "pbp").mkdir(parents=True)
+    (cache / "schedules.parquet").write_bytes(b"sched")
+    (cache / "pbp" / "pbp_2022.parquet").write_bytes(b"pbp")
+    monkeypatch.setattr(cli, "CACHE_DIR", cache)
+    monkeypatch.setattr(cli, "SIM_CACHE_DIR", tmp_path / "sim")
+    (tmp_path / "uv.lock").write_text("lock\n")
 
     def boom(*a, **k):
         raise AssertionError("a holdout guard let execution reach data loading / evaluation")
@@ -539,6 +546,11 @@ def test_holdout_happy_path_writes_files(happy, capsys):
     assert prov["git_head"] == GIT_OK["head"] and prov["prereg_commit"] == GIT_OK["prereg_commit"]
     assert prov["weights_commit"] == GIT_OK["weights_commit"] and prov["src_clean"] is True
     assert prov["prereg_last_commit"] == GIT_OK["prereg_last_commit"] and prov["prereg_unchanged"] is True
+    sha = lambda b: hashlib.sha256(b).hexdigest()  # noqa: E731
+    assert prov["inputs"] == {
+        "cache": {"pbp/pbp_2022.parquet": sha(b"pbp"), "schedules.parquet": sha(b"sched")},
+        "sim_cache": {}, "uv_lock_sha256": sha(b"lock\n"),
+    }
     assert data["evaluated_at"] and data["rerun"] is False and data["reruns"] == []
     assert (root / "HOLDOUT_RESULT.md").read_text().startswith("# Holdout result")
     assert json.loads((root / "derived" / "holdout.json").read_text()) == data

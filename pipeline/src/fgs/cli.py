@@ -554,6 +554,8 @@ def _cmd_holdout(args) -> int:
         "prereg_unchanged": gs.get("prereg_unchanged") if gs["available"] else None,
         "weights_commit": gs.get("weights_commit"),
         "src_clean": (not gs.get("src_dirty")) if gs["available"] else None,
+        # WR-08: input data + dependency lock, so the result can be checked against the exact bytes
+        "inputs": holdout.input_fingerprints(CACHE_DIR, sim_cache_dir(), paths.PIPELINE_ROOT / "uv.lock"),
     }
     result["rerun"] = prev is not None
     result["reruns"] = ([*(prev.get("reruns") or []),

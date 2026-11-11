@@ -312,6 +312,13 @@ def render_markdown(result: dict) -> str:
     ]
     if "src_clean" in prov:
         L.append(f"- pipeline/src clean at run time: {prov['src_clean']}")
+    if "prereg_unchanged" in prov:
+        L.append(f"- PREREGISTRATION.md unchanged since its adding commit: {prov['prereg_unchanged']}")
+    inputs = prov.get("inputs")
+    if inputs:
+        L.append(f"- input fingerprints (sha256, full list in HOLDOUT_RESULT.json): {len(inputs.get('cache') or {})} "
+                 f"cache files, {len(inputs.get('sim_cache') or {})} sim-cache files, uv.lock "
+                 f"`{inputs.get('uv_lock_sha256') or '—'}`")
     L += [
         f"- Brier logistic maps fit on seasons <= {result['fit_last']}; no refits on {lo}–{hi}",
         "",
@@ -396,6 +403,28 @@ def file_sha256(path) -> str:
         for chunk in iter(lambda: fh.read(1 << 16), b""):
             h.update(chunk)
     return h.hexdigest()
+
+
+def dir_sha256(root) -> dict[str, str]:
+    """{relative posix path: sha256} for every regular file under root (sorted); {} if root is missing.
+    Temp/marker files (dotfiles, *.tmp) are skipped."""
+    root = Path(root)
+    if not root.is_dir():
+        return {}
+    return {p.relative_to(root).as_posix(): file_sha256(p) for p in sorted(root.rglob("*"))
+            if p.is_file() and not p.name.startswith(".") and not p.name.endswith(".tmp")}
+
+
+def input_fingerprints(cache_dir, sim_dir, lock_path) -> dict:
+    """Fingerprints of the evaluation's inputs for provenance (WR-08): the nflverse cache (schedules,
+    pbp, win totals), the sim cache (po_trend) and uv.lock. nflverse revises data after the fact and a
+    dependency change can alter ties, so a result is only reproducible against these exact bytes."""
+    lock = Path(lock_path)
+    return {
+        "cache": dir_sha256(cache_dir),
+        "sim_cache": dir_sha256(sim_dir),
+        "uv_lock_sha256": file_sha256(lock) if lock.is_file() else None,
+    }
 
 
 def _git(root, *args) -> subprocess.CompletedProcess:
