@@ -14,6 +14,7 @@ SLIM_COLUMNS = [
     "game_id", "season", "week", "season_type", "posteam", "defteam", "play_type",
     "pass", "rush", "qb_dropback", "qb_kneel", "qb_spike", "epa", "wp", "success",
     "passer_id", "passer", "passer_player_id", "passer_player_name", "rusher_player_id",
+    "rusher_player_name",
 ]
 WP_LO, WP_HI = 0.05, 0.95  # garbage-time filter (inclusive)
 LOW_CONFIDENCE_LAST = 2000  # 1999-2000 pbp is thinner (null qb_dropback, missing games)
@@ -73,6 +74,8 @@ def load_all_pbp(
 
 def scrimmage(p: pl.DataFrame) -> pl.DataFrame:
     """Garbage-time-filtered scrimmage plays, with franchise codes, qb_id and qb_name."""
+    if "rusher_player_name" not in p.columns:  # slim caches written before IN-02
+        p = p.with_columns(pl.lit(None, pl.String).alias("rusher_player_name"))
     return p.filter(
         ((pl.col("pass") == 1) | (pl.col("rush") == 1))
         & (pl.col("qb_kneel").fill_null(0) == 0)
@@ -91,7 +94,11 @@ def scrimmage(p: pl.DataFrame) -> pl.DataFrame:
             "passer_id", "passer_player_id",
             pl.when(pl.col("qb_dropback") == 1).then(pl.col("rusher_player_id")),
         ).alias("qb_id"),
-        pl.coalesce("passer", "passer_player_name").alias("qb_name"),
+        # IN-02: a scramble-only dropback still names its QB (same dropback guard as qb_id)
+        pl.coalesce(
+            "passer", "passer_player_name",
+            pl.when(pl.col("qb_dropback") == 1).then(pl.col("rusher_player_name")),
+        ).alias("qb_name"),
     )
 
 

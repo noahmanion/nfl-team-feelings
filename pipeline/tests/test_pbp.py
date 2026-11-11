@@ -12,7 +12,8 @@ G2 = "2000_01_NYJ_NE"   # low-confidence season
 
 
 def _play(gid, off, dfn, epa, *, pass_=0, rush=0, db=0, wp=0.5, success=None, pt=None,
-          kneel=0, spike=0, passer_id=None, passer=None, ppid=None, ppname=None, rusher=None):
+          kneel=0, spike=0, passer_id=None, passer=None, ppid=None, ppname=None, rusher=None,
+          rusher_name=None):
     season = int(gid[:4])
     if success is None:
         success = None if epa is None else int(epa > 0)
@@ -23,6 +24,7 @@ def _play(gid, off, dfn, epa, *, pass_=0, rush=0, db=0, wp=0.5, success=None, pt
         play_type=pt, **{"pass": pass_}, rush=rush, qb_dropback=db, qb_kneel=kneel, qb_spike=spike,
         epa=epa, wp=wp, success=success, passer_id=passer_id, passer=passer,
         passer_player_id=ppid, passer_player_name=ppname, rusher_player_id=rusher,
+        rusher_player_name=rusher_name,
     )
 
 
@@ -33,7 +35,7 @@ def _plays(rows) -> pl.DataFrame:
         "pass": pl.Float64, "rush": pl.Float64, "qb_dropback": pl.Float64, "qb_kneel": pl.Float64,
         "qb_spike": pl.Float64, "epa": pl.Float64, "wp": pl.Float64, "success": pl.Float64,
         "passer_id": pl.String, "passer": pl.String, "passer_player_id": pl.String,
-        "passer_player_name": pl.String, "rusher_player_id": pl.String,
+        "passer_player_name": pl.String, "rusher_player_id": pl.String, "rusher_player_name": pl.String,
     }
     assert list(schema) == pbp.SLIM_COLUMNS
     return pl.DataFrame(rows, schema=schema)
@@ -136,6 +138,20 @@ def test_team_game_low_confidence_by_season():
     lc = dict(zip(t["game_id"], t["low_confidence"]))
     assert lc[G2] is True and lc[G1] is False
     assert t["season"].dtype == pl.Int32
+
+
+def test_scramble_only_qb_gets_name():
+    """IN-02: a QB whose only dropbacks were scrambles gets his name from rusher_player_name."""
+    plays = _plays([
+        _play(G1, "BUF", "MIA", 0.4, rush=1, db=1, rusher="Q7", rusher_name="Q.Seven", pt="run"),
+        _play(G1, "BUF", "MIA", 0.1, rush=1, rusher="R1", rusher_name="R.One", pt="run"),  # designed run
+        _play(G1, "MIA", "BUF", 0.2, pass_=1, db=1, passer_id="Q5", passer="Q.Five", ppid="Q5"),
+    ])
+    buf = _row(pbp.team_game_epa(plays), G1, "BUF")
+    assert buf["qb_id"] == "Q7" and buf["qb_name"] == "Q.Seven"
+    # an old slim cache without the column still works (name stays null)
+    old = pbp.team_game_epa(plays.drop("rusher_player_name"))
+    assert _row(old, G1, "BUF")["qb_id"] == "Q7" and _row(old, G1, "BUF")["qb_name"] is None
 
 
 def test_team_game_epa_rejects_unknown_codes():
