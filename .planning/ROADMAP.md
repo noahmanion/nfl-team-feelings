@@ -266,8 +266,8 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 08-02-PLAN.md — Web: callout cards + Copy link and biggest-movers strip on the board (latest and scrubbed weeks), team callouts on the team page
-- [ ] 08-03-PLAN.md — Pipeline: snapshot dates, calendar-day misery/joy streaks, team-season extremes, records.json, streak callouts, RECORDS_CHECK.md
+- [x] 08-02-PLAN.md — Web: callout cards + Copy link and biggest-movers strip on the board (latest and scrubbed weeks), team callouts on the team page
+- [x] 08-03-PLAN.md — Pipeline: snapshot dates, calendar-day misery/joy streaks, team-season extremes, records.json, streak callouts, RECORDS_CHECK.md
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -294,4 +294,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 5/5 | Complete    | 2026-11-11 |
 | 7. Draft-Aware Offseason | 4/4 | Complete    | 2026-11-11 |
-| 8. Callouts, Records & My Team | 1/5 | In Progress|  |
+| 8. Callouts, Records & My Team | 3/5 | In Progress|  |
