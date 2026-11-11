@@ -1,4 +1,5 @@
 <script lang="ts">
+  import CalloutCards from './CalloutCards.svelte'
   import Delta from './Delta.svelte'
   import FactorBars from './FactorBars.svelte'
   import MoodLabel from './MoodLabel.svelte'
@@ -7,6 +8,7 @@
   import Sparkline from './Sparkline.svelte'
   import StatusPanel from './StatusPanel.svelte'
   import TeamChip from './TeamChip.svelte'
+  import { cardCallouts, forTeam, forWeek } from '../lib/callouts'
   import { findSeason, loadGames, loadSeason } from '../lib/data'
   import { formatRecord, weekLabel } from '../lib/format'
   import { historyHash, teamHash } from '../lib/router'
@@ -80,6 +82,7 @@
   const ready = $derived(seasonFile?.season === season)
   const row = $derived(ready && seasonFile ? findTeamRow(seasonFile, team, week) : undefined)
   const series = $derived(ready && seasonFile ? seasonSeries(seasonFile, team).filter((p) => p.week <= week) : [])
+  const teamCallouts = $derived(ready && seasonFile ? cardCallouts(forTeam(forWeek(seasonFile, week), team)) : [])
   const games = $derived(gamesFiles?.key === gamesKey ? recentGames(gamesFiles.files, team, season, week) : null)
 
   const when = $derived(`${season} · ${seasonMeta ? weekLabel(week, seasonMeta) : `Week ${week}`}`)
@@ -135,6 +138,8 @@
 
     {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
     {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
+
+    <CalloutCards callouts={teamCallouts} {meta} heading="Callouts" />
 
     <div class="columns">
       <section class="block" aria-labelledby="why-heading">

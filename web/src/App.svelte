@@ -3,29 +3,42 @@
   import HistoryPage from './components/HistoryPage.svelte'
   import MethodologyPage from './components/MethodologyPage.svelte'
   import BoardHeading from './components/BoardHeading.svelte'
+  import CalloutCards from './components/CalloutCards.svelte'
+  import MoversStrip from './components/MoversStrip.svelte'
   import MoodBoard from './components/MoodBoard.svelte'
   import Scrubber from './components/Scrubber.svelte'
   import SiteFooter from './components/SiteFooter.svelte'
   import SiteHeader from './components/SiteHeader.svelte'
   import StatusPanel from './components/StatusPanel.svelte'
   import TeamPage from './components/TeamPage.svelte'
-  import { findSeason, isLatest as isLatestWeek, loadLatest, loadMeta, loadSeason } from './lib/data'
+  import { cardCallouts, forWeek, moverCallouts, orderCallouts } from './lib/callouts'
+  import { findSeason, isLatest as isLatestWeek, loadCallouts, loadLatest, loadMeta, loadSeason } from './lib/data'
   import { carryWeek } from './lib/format'
   import { go, replace, route } from './lib/route.svelte'
   import { boardHash, teamHash, type Route } from './lib/router'
-  import type { Meta, Row, SeasonFile, WeekFile } from './lib/types'
+  import type { Callout, Meta, Row, SeasonFile, WeekFile } from './lib/types'
 
   let meta = $state<Meta | null>(null)
   let latestFile = $state<WeekFile | null>(null)
+  let latestCallouts = $state<Callout[]>([])
   let status = $state<'loading' | 'ready' | 'error'>('loading')
 
   // Initial load: meta + latest in parallel. "Try again" on the fatal panel re-runs this.
   async function boot() {
     status = 'loading'
     try {
-      const [m, latest] = await Promise.all([loadMeta(), loadLatest()])
+      // callouts.json is non-fatal: a missing file must never take down the board
+      const [m, latest, callouts] = await Promise.all([
+        loadMeta(),
+        loadLatest(),
+        loadCallouts().catch((e) => {
+          console.error(e)
+          return [] as Callout[]
+        }),
+      ])
       meta = m
       latestFile = latest
+      latestCallouts = Array.isArray(callouts) ? callouts : []
       status = 'ready'
     } catch (err) {
       console.error(err)
@@ -142,11 +155,29 @@
     return undefined
   })
 
-  // Keep the previous board visible (dimmed) while a season file loads.
-  let shown = $state<{ rows: Row[]; season: number; week: number; latest: boolean } | null>(null)
-  $effect(() => {
-    if (currentRows && target) shown = { rows: currentRows, season: target.season, week: target.week, latest: target.latest }
+  // Callouts follow the same source as the rows: callouts.json for latest, the season file otherwise.
+  const currentCallouts = $derived.by((): Callout[] => {
+    if (!target) return []
+    if (target.latest) return latestCallouts
+    if (seasonFile?.season === target.season) return forWeek(seasonFile, target.week)
+    return []
   })
+
+  // Keep the previous board (and its callouts) visible, dimmed, while a season file loads.
+  let shown = $state<{ rows: Row[]; callouts: Callout[]; season: number; week: number; latest: boolean } | null>(null)
+  $effect(() => {
+    if (currentRows && target)
+      shown = {
+        rows: currentRows,
+        callouts: currentCallouts,
+        season: target.season,
+        week: target.week,
+        latest: target.latest,
+      }
+  })
+  // 08-05 replaces null with the pinned team.
+  const shownCards = $derived(shown ? orderCallouts(cardCallouts(shown.callouts), null) : [])
+  const shownMovers = $derived(shown ? moverCallouts(shown.callouts) : { up: [], down: [] })
 
   const seasonFailed = $derived(!!target && !target.latest && seasonError === target.season)
   const pending = $derived(!!target && !target.latest && currentRows === undefined && !seasonFailed)
@@ -243,6 +274,8 @@
             scoreKind={meta.score_kind}
             firstSeason={target.season === Math.min(...meta.seasons.map((s) => s.season))}
           />
+          <CalloutCards callouts={shownCards} {meta} />
+          <MoversStrip up={shownMovers.up} down={shownMovers.down} {meta} />
           <MoodBoard
             rows={shown.rows}
             {meta}
