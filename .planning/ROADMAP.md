@@ -108,7 +108,7 @@ Plans:
 
 **Wave 2** *(blocked on 03-01)*
 
-- [ ] 03-02-PLAN.md — score.py additive engine (per-snapshot z, contribs), walk-forward ridge composites, `--propose-weights`, weights.yaml, BACKTEST_LOG.md
+- [x] 03-02-PLAN.md — score.py additive engine (per-snapshot z, contribs), walk-forward ridge composites, `--propose-weights`, weights.yaml, BACKTEST_LOG.md
 
 **Wave 3** *(blocked on 03-02)*
 
@@ -204,7 +204,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Elo Core | 3/3 | Complete    | 2026-11-11 |
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
-| 3. Backtest Harness & Additive Score | 2/4 | In Progress|  |
+| 3. Backtest Harness & Additive Score | 3/4 | In Progress|  |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
 | 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
