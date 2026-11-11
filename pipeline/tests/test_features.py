@@ -210,3 +210,62 @@ def test_streak_follows_play_order_within_one_asof_key():
     g = _per_game(tg)
     assert g["game_id"].to_list() == ["2023_02_A_C", "2023_01_A_B"]
     assert _streak(g["franchise_id"].to_numpy(), g["outcome"].to_numpy()).tolist() == [1.0, -1.0]
+
+
+# --- vs_exp (MODEL-08) ----------------------------------------------------------------------
+
+def _vs_inputs():
+    """Hand-built snapshot grid + sim + vegas frames for BUF in 2003 (16 games) and 2022 (17)."""
+    S = {"season": pl.Int32, "week": pl.Int32, "franchise_id": pl.String}
+    snaps = pl.DataFrame(
+        [  # season, week, wins, losses, ties
+            dict(season=s, week=w, franchise_id="BUF", elo=1505.0, wins=wi, losses=lo, ties=ti,
+                 win_pct=None if wi + lo + ti == 0 else (wi + 0.5 * ti) / (wi + lo + ti))
+            for s, w, wi, lo, ti in [(2003, 0, 0, 0, 0), (2003, 4, 3, 1, 0), (2022, 0, 0, 0, 0), (2022, 4, 2, 1, 1)]
+        ],
+        schema={**S, "elo": pl.Float64, "wins": pl.Int64, "losses": pl.Int64, "ties": pl.Int64, "win_pct": pl.Float64},
+    )
+    sim = pl.DataFrame(
+        [dict(season=s, week=w, franchise_id="BUF", playoff_prob=0.5, exp_wins=e)
+         for s, w, e in [(2003, 0, 7.0), (2003, 4, 9.0), (2022, 0, 8.5), (2022, 4, 9.5)]],
+        schema={**S, "playoff_prob": pl.Float64, "exp_wins": pl.Float64},
+    )
+    vegas = pl.DataFrame(
+        {"season": [2003], "franchise_id": ["BUF"], "vegas_line": [10.5], "vegas_norm": [10.0]},
+        schema={"season": pl.Int32, "franchise_id": pl.String, "vegas_line": pl.Float64, "vegas_norm": pl.Float64},
+    )
+    tg = build_team_games(make_games([("g", 2003, 1, "REG", "2003-09-07", "BUF", "MIA", 20, 10, False)]))
+    return snaps, tg, sim, vegas
+
+
+def test_vs_exp_vegas_and_model():
+    snaps, tg, sim, vegas = _vs_inputs()
+    f = build_features(snaps, tg, sim=sim, vegas=vegas)
+    assert _v(f, 2003, 4, "BUF", "vs_exp") == pytest.approx((3 - 10 / 16 * 4) / 4)  # 0.125, Vegas 10 of 16
+    assert _v(f, 2003, 4, "BUF", "expectation_source") == "vegas"
+    assert _v(f, 2003, 4, "BUF", "exp_total") == 10.0
+    assert _v(f, 2022, 4, "BUF", "vs_exp") == pytest.approx((2.5 - 8.5 / 17 * 4) / 4)  # 0.125, model wk-0 8.5 of 17
+    assert _v(f, 2022, 4, "BUF", "expectation_source") == "model"
+    assert _v(f, 2022, 4, "BUF", "exp_total") == 8.5  # week-0 exp_wins, not the week-4 sim
+
+
+def test_vs_exp_week0_zero_and_source_set():
+    snaps, tg, sim, vegas = _vs_inputs()
+    f = build_features(snaps, tg, sim=sim, vegas=vegas)
+    w0 = f.filter(pl.col("week") == 0)
+    assert w0["vs_exp"].to_list() == [0.0, 0.0]
+    assert w0["expectation_source"].to_list() == ["vegas", "model"]
+    assert f["expectation_source"].null_count() == 0 and f["vs_exp"].null_count() == 0
+
+
+def test_vs_exp_without_vegas_is_model_sourced():
+    snaps, tg, sim, _ = _vs_inputs()
+    f = build_features(snaps, tg, sim=sim, vegas=None)
+    assert set(f["expectation_source"].to_list()) == {"model"}
+    assert _v(f, 2003, 4, "BUF", "vs_exp") == pytest.approx((3 - 7.0 / 16 * 4) / 4)
+
+
+def test_vs_exp_zero_without_sim():
+    snaps, tg, _, _ = _vs_inputs()
+    f = build_features(snaps, tg)
+    assert (f["vs_exp"] == 0.0).all() and f["expectation_source"].null_count() == f.height
