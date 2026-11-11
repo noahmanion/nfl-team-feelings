@@ -145,6 +145,13 @@ def test_reference_excludes_playoff_weeks():
     assert c.filter(pl.col("week") == 19)["score"].item() == 100
 
 
+def test_score_frame_independent_of_input_order():
+    rows = [(2023, w, f"T{i:03d}", 1300.0 + 40 * i + (w * 37 * (i + 1)) % 300) for w in range(4) for i in range(10)]
+    a = score_frame(_snap(rows))
+    b = score_frame(_snap(list(reversed(rows))))
+    assert a.equals(b)
+
+
 def test_rank_ties_broken_by_franchise_and_deltas():
     rows = [
         (2023, 0, "BBB", 1500.0), (2023, 0, "AAA", 1500.0), (2023, 0, "CCC", 1400.0),

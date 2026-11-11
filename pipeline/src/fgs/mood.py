@@ -95,13 +95,24 @@ def score_frame(snapshots: pl.DataFrame) -> pl.DataFrame:
         (pl.col("rank").shift(1).over(grp) - pl.col("rank")).alias("rank_delta"),
     )
 
-    bands: list[int] = []
-    for _, part in df.group_by(grp, maintain_order=True):
-        bands.extend(hysteresis(part["score"].to_list()))
-    labels = [b["label"] for b in BANDS]
-    emoji = [b["emoji"] for b in BANDS]
-    return df.with_columns(
-        pl.Series("band", bands, dtype=pl.Int32),
-        pl.Series("label", [labels[b] for b in bands], dtype=pl.String),
-        pl.Series("emoji", [emoji[b] for b in bands], dtype=pl.String),
-    ).sort(["season", "week", "rank"])
+    # Hysteresis per team-season, carried with its (franchise, season, week) keys and joined back,
+    # so the result never depends on df's row order.
+    keyed = (
+        df.select(grp + ["week", "score"])
+        .group_by(grp)
+        .agg(pl.col("week").sort_by("week"), pl.col("score").sort_by("week"))
+        .with_columns(
+            pl.col("score").map_elements(hysteresis, return_dtype=pl.List(pl.Int32)).alias("band")
+        )
+        .drop("score")
+        .explode(["week", "band"])
+    )
+    band_info = pl.DataFrame(
+        {"band": range(len(BANDS)), "label": [b["label"] for b in BANDS], "emoji": [b["emoji"] for b in BANDS]},
+        schema={"band": pl.Int32, "label": pl.String, "emoji": pl.String},
+    )
+    out = df.join(keyed, on=grp + ["week"], how="left", validate="1:1").join(
+        band_info, on="band", how="left", validate="m:1"
+    )
+    assert out["band"].null_count() == 0 and out.height == df.height, "hysteresis band missing for some rows"
+    return out.sort(["season", "week", "rank"])
