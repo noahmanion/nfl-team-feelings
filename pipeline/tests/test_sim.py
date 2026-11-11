@@ -173,6 +173,16 @@ def test_missing_elo_team_names_season_and_week():
         sim._simulate_one_season(g, ss, 10, 0.0, 1)
 
 
+def test_common_random_numbers_across_weeks():
+    """IN-04: weeks of a season share draws, so a week where nothing new is known (and Elo is
+    unchanged) reproduces the previous week exactly instead of adding fresh sampling noise."""
+    g, elo = _full_league(n_rounds=8, n_played=3)
+    w = int(g.filter(pl.col("played"))["asof_week"].max())
+    _, p1, e1 = sim.simulate_season(g, elo, w, n_sims=500)
+    _, p2, e2 = sim.simulate_season(g, elo, w + 1, n_sims=500)  # no game has asof_week w + 1 played
+    assert np.array_equal(p1, p2) and np.array_equal(e1, e2)
+
+
 # --- model_version + cache ---
 
 

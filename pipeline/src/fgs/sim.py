@@ -13,8 +13,11 @@ Each sim draws a per-team rating offset N(0, SIGMA) that stays fixed within that
                    met every other, as the NFL rule requires) -> conference win% -> random
 Ranking is by win%, not wins (BUF/CIN 2022 played 16).
 
-One RNG stream per snapshot, default_rng([seed, season, week]), so results do not depend
-on computation order or on incremental runs.
+One RNG stream per season, default_rng([seed, season]), with one uniform per (sim, game)
+indexed by the game's position in the season's fixed order: every snapshot week of a season
+reuses the same draws (common random numbers, IN-04), so week-to-week differences such as
+po_trend reflect changed inputs, not fresh sampling noise. Results do not depend on
+computation order or on incremental runs.
 
 Pure apart from cache I/O in simulate_all. This module must stay upstream of the backtest
 (never import it).
@@ -93,7 +96,7 @@ def simulate_season(
     teams = sorted(set(g["home_id"].to_list()) | set(g["away_id"].to_list()))
     idx, div_id, conf_id, n_div, n_conf = _static(season, teams)
     T = len(teams)
-    rng = np.random.default_rng([seed, season, week])
+    rng = np.random.default_rng([seed, season])  # same stream for every week (CRN)
 
     h = np.array([idx[t] for t in g["home_id"]], dtype=np.int64)
     a = np.array([idx[t] for t in g["away_id"]], dtype=np.int64)
@@ -106,7 +109,7 @@ def simulate_season(
     e = np.array([float(elo[t]) for t in teams])
     G = len(h)
 
-    u = rng.random((n_sims, int(rem.sum())))
+    u = rng.random((n_sims, G))[:, rem]  # column k = game k for every week
     noise = rng.normal(0.0, 1.0, (n_sims, T)) * sigma  # per-sim team offset (A2)
     diff = (e[h] - e[a] + np.where(neutral, 0.0, hfa))[None, :] + noise[:, h] - noise[:, a]
     p = 1.0 / (1.0 + 10 ** (-diff[:, rem] / 400.0))
