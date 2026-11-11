@@ -26,7 +26,7 @@
   {#if inProgress}
     <p class="note">Some {label} games haven’t been played yet. Teams that haven’t played keep last week’s score.</p>
   {:else if week === 0}
-    <p class="note">Before kickoff: last season’s mood, pulled back toward the middle.</p>
+    <p class="note">Before kickoff: last season’s mood, pulled back toward the middle. Change is vs the end of last season.</p>
   {/if}
 </div>
 

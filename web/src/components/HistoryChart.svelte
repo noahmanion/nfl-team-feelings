@@ -1,13 +1,14 @@
 <script lang="ts">
   import * as Plot from '@observablehq/plot'
   import { moodToken } from '../lib/format'
-  import { tickSeasons, type ChartRow, type SeasonStart } from '../lib/history'
+  import { tickSeasons, type ChartRow, type Connector, type SeasonStart } from '../lib/history'
   import type { Band } from '../lib/types'
 
   let {
     rows,
     xMax,
     starts,
+    connectors = [],
     team,
     teamName,
     color,
@@ -17,6 +18,7 @@
     rows: ChartRow[]
     xMax: number
     starts: SeasonStart[]
+    connectors?: Connector[]
     team: string
     teamName: string
     color: string
@@ -106,6 +108,17 @@
         strokeWidth: width >= 900 ? 0.75 : wide ? 0.6 : 0.5,
       }),
       Plot.line(highlightRows, { x: 'x', y: 'y', stroke: color, strokeWidth: 2.5 }),
+      // Offseason move (regression + draft): dashed, across the season gap, highlighted team only.
+      Plot.link(connectors, {
+        x1: 'x1',
+        y1: 'y1',
+        x2: 'x2',
+        y2: 'y2',
+        stroke: color,
+        strokeWidth: 1.5,
+        strokeDasharray: '3,3',
+        strokeOpacity: 0.8,
+      }),
       Plot.text(last, {
         x: 'x',
         y: 'y',
@@ -139,7 +152,7 @@
       marks,
     })
     plot.setAttribute('role', 'img')
-    plot.setAttribute('aria-label', `Mood score over time for all teams since ${starts[0]?.season ?? 1999}, ${teamName} highlighted`)
+    plot.setAttribute('aria-label', `Mood score over time for all teams since ${starts[0]?.season ?? 1999}, ${teamName} highlighted, dashed segments mark offseason changes`)
     container.replaceChildren(plot)
     return () => plot.remove()
   })

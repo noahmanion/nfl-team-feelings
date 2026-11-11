@@ -2,7 +2,7 @@
   import Delta from './Delta.svelte'
   import MoodLabel from './MoodLabel.svelte'
   import TeamChip from './TeamChip.svelte'
-  import { bandIndex, formatRecord, moodToken } from '../lib/format'
+  import { bandIndex, changeText, formatRecord, moodToken } from '../lib/format'
   import { teamHash } from '../lib/router'
   import type { Band, Row, TeamMeta } from '../lib/types'
 
@@ -30,16 +30,6 @@
   const elo = $derived(ok(row.elo) ? `Elo ${Math.round(row.elo)}` : '–')
 
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
-  function changeText(r: Row, wk: number): string {
-    if (wk === 0 || !ok(r.score_delta)) return 'No change, preseason.'
-    const sd = r.score_delta
-    const rd = ok(r.rank_delta) ? r.rank_delta : 0
-    if (sd === 0 && rd === 0) return 'No change from last week.'
-    const score = sd > 0 ? `Up ${plural(sd, 'point')}` : sd < 0 ? `Down ${plural(-sd, 'point')}` : 'Same score'
-    const rank = rd > 0 ? `up ${plural(rd, 'spot')}` : rd < 0 ? `down ${plural(-rd, 'spot')}` : 'same spot'
-    return `${score}, ${rank} from last week.`
-  }
 
   const recordText = $derived(
     ok(row.wins) && ok(row.losses)

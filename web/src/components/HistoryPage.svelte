@@ -4,6 +4,7 @@
   import { findSeason, loadHistory } from '../lib/data'
   import { weekLabel } from '../lib/format'
   import {
+    connectors,
     currentPoint,
     defaultTeam,
     lowPoint,
@@ -77,8 +78,10 @@
   const chart = $derived.by(() => {
     if (!history) return null
     const { rows, xs, xMax } = toRows(history)
-    return { rows, xMax, starts: seasonStarts(history, xs) }
+    return { rows, xs, xMax, starts: seasonStarts(history, xs) }
   })
+  // Dashed offseason segments for the highlighted team only.
+  const conn = $derived(history && chart ? connectors(history, chart.xs, selected) : [])
 
   function when(p: Point): string {
     const s = seasonOf(p.key)
@@ -127,6 +130,7 @@
       rows={chart.rows}
       xMax={chart.xMax}
       starts={chart.starts}
+      connectors={conn}
       team={selected}
       teamName={teamMeta.name}
       {color}

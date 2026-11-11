@@ -128,11 +128,13 @@
       <div class="score-cell">
         <span class="score"><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
         <Delta value={row.score_delta} kind="score" />
+        {#if week === 0 && ok(row.score_delta)}<span class="delta-note">vs end of last season</span>{/if}
       </div>
       <div class="mood"><MoodLabel emoji={row.emoji} label={row.label} size="heading" /></div>
     </header>
 
     {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
+    {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
 
     <div class="columns">
       <section class="block" aria-labelledby="why-heading">
@@ -227,6 +229,16 @@
   .blurb {
     font-size: var(--text-body);
     line-height: var(--lh-body);
+  }
+  .delta-note {
+    font-size: var(--text-label);
+    line-height: var(--lh-label);
+    color: var(--text-muted);
+  }
+  .draft-note {
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
   }
   .columns {
     display: flex;
