@@ -1,6 +1,7 @@
 """`fgs elo` as-of semantics on synthetic derived data in a tmp dir (no network, no real cache)."""
 
 import re
+import shutil
 
 import pytest
 
@@ -155,6 +156,9 @@ def refresh_dirs(tmp_path, monkeypatch):
     cache_dir.mkdir()
     for f in CACHE_FILES:  # stand-ins for the last good raw cache
         (cache_dir / f).write_bytes(b"good cache: " + f.encode())
+    from fgs.paths import CACHE_DIR as REAL_CACHE
+    if (REAL_CACHE / "win_totals.csv").exists():  # frozen file; refresh must not hit the network
+        shutil.copy(REAL_CACHE / "win_totals.csv", cache_dir / "win_totals.csv")
     monkeypatch.setattr(cli, "DERIVED_DIR", derived_dir)
     monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
     monkeypatch.setattr(cli, "CACHE_DIR", cache_dir)
@@ -176,7 +180,7 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     for d in (derived_dir, web_dir):
         assert [p.name for p in d.iterdir()] == ["SENTINEL"]
         assert (d / "SENTINEL").read_bytes() == b"untouched\n"
-    assert sorted(p.name for p in cache_dir.iterdir()) == list(CACHE_FILES)  # no pbp/ written
+    assert sorted(p.name for p in cache_dir.iterdir() if p.name != "win_totals.csv") == list(CACHE_FILES)  # no pbp/
     for f in CACHE_FILES:  # the bad download never replaced the good raw cache
         assert (cache_dir / f).read_bytes() == b"good cache: " + f.encode()
 

@@ -294,6 +294,24 @@ def check_sim(sim: pl.DataFrame, games: pl.DataFrame) -> list[str]:
     return out
 
 
+VEGAS_SEASONS = (2003, 2020)  # nflverse win_totals.csv coverage (expectation.py)
+
+
+def check_vegas_coverage(games: pl.DataFrame, vegas: pl.DataFrame | None) -> list[str]:
+    """WR-04: every scheduled season in 2003-2020 has Vegas win totals. Without them vs_exp
+    silently switches to model-sourced expectations, which changes scores and backtest fits."""
+    lo, hi = VEGAS_SEASONS
+    want = sorted(s for s in set(games["season"].to_list()) if lo <= s <= hi)
+    if not want:
+        return []
+    if vegas is None:
+        return [f"no Vegas win totals (win_totals.csv missing?): seasons {want[0]}-{want[-1]} "
+                "would use model-sourced expectations"]
+    have = set(vegas["season"].to_list())
+    missing = [s for s in want if s not in have]
+    return [f"{s}: no Vegas win totals; expectations would be model-sourced" for s in missing]
+
+
 # (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
 CheckFn = Callable[[pl.DataFrame, dict[str, pl.DataFrame], EloParams], list[str]]
 CHECKS: list[tuple[str, CheckFn]] = [
@@ -311,6 +329,7 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("pbp_coverage", lambda raw, d, p: [] if d.get("team_game_epa") is None
      else pbp.check_pbp(d["team_game_epa"], d["team_games"])),
     ("sim_sums", lambda raw, d, p: [] if d.get("sim") is None else check_sim(d["sim"], d["games"])),
+    ("vegas_coverage", lambda raw, d, p: check_vegas_coverage(d["games"], d.get("vegas"))),
 ]
 
 

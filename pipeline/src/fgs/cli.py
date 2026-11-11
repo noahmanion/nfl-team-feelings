@@ -85,10 +85,21 @@ def pbp_seasons(games: pl.DataFrame) -> list[int]:
     return list(range(PBP_FIRST_SEASON, _current_season(games) + 1))
 
 
-def _cached_vegas(cache_dir) -> pl.DataFrame | None:
-    """Normalized Vegas expectations from the cached win_totals.csv (never downloads)."""
+def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
+    """Normalized Vegas expectations from the cached win_totals.csv. download=True (refresh)
+    fetches the frozen file once when it is missing. When it is still missing, warn loudly (WR-04):
+    2003-2020 expectations would silently become model-sourced; the vegas_coverage check fails."""
     wt = cache_dir / "win_totals.csv"
-    return vegas_expectations(pl.read_csv(wt)) if wt.exists() else None
+    if not wt.exists() and download:
+        try:
+            load_win_totals(cache_dir=cache_dir)
+        except Exception as e:  # noqa: BLE001 - network failure: fall through to the warning
+            print(f"warning: win_totals.csv download failed ({type(e).__name__}: {e})", file=sys.stderr)
+    if not wt.exists():
+        print(f"WARNING: {wt} is missing; 2003-2020 expectations fall back to the model "
+              "(vs_exp and scores change). Run `uv run fgs build` to fetch it.", file=sys.stderr)
+        return None
+    return vegas_expectations(pl.read_csv(wt))
 
 
 def cached_inputs(cache_dir=None) -> dict:
@@ -308,9 +319,9 @@ def _cmd_refresh(args) -> int:
             cached.append(s)
     frames = ([load_all_pbp(cached, cache_dir, write_cache=False)] if cached else []) + list(fetched.values())
     tge = team_game_epa(pl.concat(frames, how="diagonal_relaxed")) if frames else None
-    # Vegas comes from the real cache (frozen file; never downloaded here). The sim cache is read
+    # Vegas comes from the cache (frozen file; downloaded only if missing). The sim cache is read
     # but only written after every check passes, so only changed seasons are re-simulated.
-    vegas = _cached_vegas(cache_dir)
+    vegas = _cached_vegas(cache_dir, download=True)
     sims = sim_cache_dir()
     ok, derived, _ = _checked_derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sims, sim_write_cache=False)
     if not ok:

@@ -189,3 +189,15 @@ def test_continuity_follows_params(real_raw):
     d = derive(real_raw, params)
     assert checks.check_continuity(d["games"], d["snapshots"], params) == []
     assert checks.check_continuity(d["games"], d["snapshots"]) != []  # default revert disagrees
+
+
+def test_vegas_coverage():
+    """WR-04: missing win_totals for 2003-2020 seasons fails loudly; out-of-range leagues pass."""
+    games = pl.DataFrame({"season": [2002, 2003, 2004, 2021]})
+    vegas = pl.DataFrame({"season": [2003, 2004], "franchise_id": ["BUF", "BUF"]})
+    assert checks.check_vegas_coverage(games, vegas) == []
+    assert checks.check_vegas_coverage(games, vegas.filter(pl.col("season") == 2003)) == [
+        "2004: no Vegas win totals; expectations would be model-sourced"]
+    fails = checks.check_vegas_coverage(games, None)
+    assert len(fails) == 1 and "2003-2004" in fails[0]
+    assert checks.check_vegas_coverage(pl.DataFrame({"season": [2023, 2024]}), None) == []
