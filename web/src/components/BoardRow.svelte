@@ -11,14 +11,20 @@
   const bandIdx = $derived(bandIndexForLabel(row.label, bands))
   const stripe = $derived(bandIdx < 0 ? 'var(--border)' : `var(--mood-${moodToken(bandIdx, bands.length)})`)
   const name = $derived(team?.name ?? row.franchise)
-  const record = $derived(formatRecord(row.wins, row.losses, row.ties))
+  // Defensive: malformed data renders "–", never "NaN"/"null"/"undefined".
+  const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
+  const num = (n: unknown): string => (ok(n) ? String(n) : '–')
+  const record = $derived(
+    ok(row.wins) && ok(row.losses) ? formatRecord(row.wins, row.losses, ok(row.ties) ? row.ties : 0) : '–',
+  )
+  const elo = $derived(ok(row.elo) ? `Elo ${Math.round(row.elo)}` : '–')
 
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
   function changeText(r: Row, wk: number): string {
-    if (wk === 0 || r.score_delta == null) return 'No change, preseason.'
+    if (wk === 0 || !ok(r.score_delta)) return 'No change, preseason.'
     const sd = r.score_delta
-    const rd = r.rank_delta ?? 0
+    const rd = ok(r.rank_delta) ? r.rank_delta : 0
     if (sd === 0 && rd === 0) return 'No change from last week.'
     const score = sd > 0 ? `Up ${plural(sd, 'point')}` : sd < 0 ? `Down ${plural(-sd, 'point')}` : 'Same score'
     const rank = rd > 0 ? `up ${plural(rd, 'spot')}` : rd < 0 ? `down ${plural(-rd, 'spot')}` : 'same spot'
@@ -26,16 +32,18 @@
   }
 
   const recordText = $derived(
-    `${row.wins} and ${row.losses}${row.ties > 0 ? ` and ${plural(row.ties, 'tie')}` : ''}`,
+    ok(row.wins) && ok(row.losses)
+      ? `${row.wins} and ${row.losses}${ok(row.ties) && row.ties > 0 ? ` and ${plural(row.ties, 'tie')}` : ''}`
+      : 'record unavailable',
   )
   const srText = $derived(
-    `${row.rank}. ${name}, ${recordText}. Score ${row.score}, ${row.label}. ${changeText(row, week)}`,
+    `${num(row.rank)}. ${name}, ${recordText}. Score ${ok(row.score) ? row.score : 'unavailable'}, ${row.label ?? ''}. ${changeText(row, week)}`,
   )
 </script>
 
 <li class="row" style:--stripe-color={stripe}>
   <span class="visually-hidden">{srText}</span>
-  <span class="rank" aria-hidden="true">{row.rank}</span>
+  <span class="rank" aria-hidden="true">{num(row.rank)}</span>
   <span class="team" aria-hidden="true">
     <TeamChip primary={team?.primary} secondary={team?.secondary} />
     <span class="abbr">{row.franchise}</span>
@@ -46,8 +54,8 @@
     <span class="mood"><MoodLabel emoji={row.emoji} label={row.label} /></span>
   </span>
   <span class="score-cell" aria-hidden="true">
-    <span class="score">{row.score}</span>
-    <span class="elo">{row.elo == null ? '–' : `Elo ${row.elo}`}</span>
+    <span class="score" class:missing={!ok(row.score)}>{num(row.score)}</span>
+    <span class="elo">{elo}</span>
   </span>
   <span class="change" aria-hidden="true">
     <Delta value={row.score_delta} kind="score" />
@@ -71,6 +79,7 @@
   }
   .rank {
     grid-column: 1;
+    white-space: nowrap;
     grid-row: 1;
     font-size: var(--text-label);
     line-height: var(--lh-label);
@@ -123,12 +132,16 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    white-space: nowrap;
   }
   .score {
     font-size: var(--text-display);
     line-height: var(--lh-display);
     font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
+  }
+  .score.missing {
+    color: var(--text-muted);
   }
   .elo,
   .rank-delta {
@@ -140,6 +153,7 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    white-space: nowrap;
   }
 
   @media (min-width: 1024px) {

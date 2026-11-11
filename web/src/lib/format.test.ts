@@ -25,6 +25,7 @@ describe('formatDelta', () => {
   it('down uses absolute value', () => expect(formatDelta(-7)).toEqual({ text: '▼ 7', dir: 'down' }))
   it('zero', () => expect(formatDelta(0)).toEqual({ text: '–', dir: 'none' }))
   it('null', () => expect(formatDelta(null)).toEqual({ text: '–', dir: 'none' }))
+  it('NaN never renders', () => expect(formatDelta(Number.NaN)).toEqual({ text: '–', dir: 'none' }))
 })
 
 describe('weekLabel', () => {

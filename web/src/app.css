@@ -123,6 +123,16 @@ select {
   color: inherit;
 }
 
+/* The only motion on the page: 120ms button color fades (off under reduced motion). */
+button {
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+/* Layout note: horizontal overflow is solved in component layout (min-width: 0 + ellipsis),
+   never hidden with an overflow-x guard on html/body. */
+
 a {
   color: var(--accent);
 }

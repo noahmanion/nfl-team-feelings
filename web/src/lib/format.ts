@@ -18,7 +18,7 @@ export function formatRecord(wins: number, losses: number, ties: number): string
 export type DeltaDir = 'up' | 'down' | 'none'
 
 export function formatDelta(value: number | null | undefined): { text: string; dir: DeltaDir } {
-  if (value == null || value === 0) return { text: '–', dir: 'none' }
+  if (value == null || !Number.isFinite(value) || value === 0) return { text: '–', dir: 'none' }
   return value > 0 ? { text: `▲ ${value}`, dir: 'up' } : { text: `▼ ${Math.abs(value)}`, dir: 'down' }
 }
 
