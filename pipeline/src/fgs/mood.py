@@ -46,8 +46,13 @@ def band_of(score: int) -> int:
 def hysteresis(scores: list[int], buf: int = HYSTERESIS) -> list[int]:
     """Band index per week for ONE team-season, chronological (week 0 first = raw band).
 
-    Entering band k from below needs score >= T[k] + buf; leaving band k downward needs
-    score <= T[k] - buf. Multi-band jumps go to the furthest band whose boundary is cleared.
+    Symmetric rule (D-04): scores are integers, so the edge between band k-1 and band k lies
+    between T[k]-1 and T[k]. The label changes only once the score is at least `buf` scores
+    deep into the new band, in either direction:
+      - up into band k:      score >= T[k] + buf - 1   (buf=2, T=60: 61 or more)
+      - down out of band k:  score <= T[k] - buf       (buf=2, T=60: 58 or less)
+    The first `buf - 1` scores on each side of an edge (59 and 60 for T=60) keep the previous
+    label. Multi-band jumps go to the furthest band whose edge is cleared.
     """
     t = THRESHOLDS
     out: list[int] = []
@@ -57,7 +62,7 @@ def hysteresis(scores: list[int], buf: int = HYSTERESIS) -> list[int]:
         if prev is None:
             prev = b
         elif b > prev:
-            prev = max([k for k in range(prev + 1, b + 1) if s >= t[k] + buf], default=prev)
+            prev = max([k for k in range(prev + 1, b + 1) if s >= t[k] + buf - 1], default=prev)
         elif b < prev:
             new = prev
             for k in range(prev, b, -1):  # leaving band k downward across T[k]

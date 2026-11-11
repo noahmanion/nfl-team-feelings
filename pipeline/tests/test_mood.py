@@ -52,18 +52,36 @@ def test_bands_config():
     "scores,bands",
     [
         ([58], [3]),
-        ([58, 61], [3, 3]),       # 61 = T+1: stays
-        ([58, 62], [3, 4]),       # 62 = T+2: enters
-        ([58, 62, 59], [3, 4, 4]),  # 59 = T-1: stays in 4
-        ([58, 62, 58], [3, 4, 3]),  # 58 = T-2: leaves
-        ([30, 97], [2, 6]),       # multi-band jump, top boundary cleared
-        ([30, 96], [2, 5]),       # 96 < 95+2, but 80+2 cleared
+        ([58, 60], [3, 3]),       # 60 = 1st score in band 4: stays
+        ([58, 61], [3, 4]),       # 61 = 2nd score in band 4: enters
+        ([58, 61, 59], [3, 4, 4]),  # 59 = 1st score in band 3: stays in 4
+        ([58, 61, 58], [3, 4, 3]),  # 58 = 2nd score in band 3: leaves
+        ([30, 96], [2, 6]),       # multi-band jump, top edge cleared (96 = 95+1)
+        ([30, 95], [2, 5]),       # 95 < 95+1, but 80+1 cleared
         ([97, 3], [6, 0]),        # multi-band drop
         ([62, 4], [4, 1]),        # 4 > 5-2: stops in band 1
+        ([62, 3], [4, 0]),        # 3 = 2nd score in band 0: drops all the way
     ],
 )
 def test_hysteresis(scores, bands):
     assert hysteresis(scores) == bands
+
+
+@pytest.mark.parametrize("t", [5, 20, 40, 60, 80, 95])
+def test_hysteresis_is_symmetric(t):
+    """Same overshoot (2nd score inside the new band) is needed in both directions at every edge."""
+    up = hysteresis([t - 2, t, t + 1])
+    down = hysteresis([t + 1, t - 1, t - 2])
+    lo, hi = band_of(t - 1), band_of(t)
+    assert up == [lo, lo, hi] and down == [hi, hi, lo]
+
+
+def test_hysteresis_oscillation():
+    # 58 <-> 61 straddles T=60 by two scores on each side: the label follows it both ways.
+    assert hysteresis([58, 61, 58, 61, 58]) == [3, 4, 3, 4, 3]
+    # 59 <-> 60 sits inside the dead zone: the starting label holds.
+    assert hysteresis([59, 60, 59, 60]) == [3, 3, 3, 3]
+    assert hysteresis([60, 59, 60, 59]) == [4, 4, 4, 4]
 
 
 def test_hysteresis_first_element_is_raw_band():
@@ -94,7 +112,7 @@ def test_score_frame_columns_and_types():
 
 
 def test_week0_hysteresis_is_fresh():
-    """Prior season ends in band 3 ('fine'); a week-0 score of 61 next season is band 4, no carry."""
+    """Prior season ends in band 3 ('fine'); a week-0 score of 60-61 next season is band 4, no carry."""
     base = _filler(2023, 0) + _filler(2024, 0)
     # Find Elo values that score ~58 and ~61 against the reference.
     probe = score_frame(_snap(base))
@@ -106,11 +124,11 @@ def test_week0_hysteresis_is_fresh():
                 return float(e)
         raise AssertionError(target)
 
-    rows = base + [(2023, 0, "ZZZ", elo_for(58)), (2024, 0, "ZZZ", elo_for(61))]
+    rows = base + [(2023, 0, "ZZZ", elo_for(58)), (2024, 0, "ZZZ", elo_for(60))]
     out = score_frame(_snap(rows)).filter(pl.col("franchise_id") == "ZZZ").sort("season")
     assert out["score"].to_list()[0] in (57, 58, 59)
     s24 = out["score"].to_list()[1]
-    assert 60 <= s24 <= 61  # in the dead zone above T=60
+    assert s24 == 60  # in the dead zone above T=60: a carried-over band 3 would stick
     assert out["band"].to_list() == [3, 4]
     assert out["label"].to_list()[1] == BANDS[4]["label"]
 

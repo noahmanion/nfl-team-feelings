@@ -39,7 +39,7 @@ uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = pr
 ## How the score works today
 
 - The score is an integer from 0 to 100: the percentile of a team's Elo against every preseason and regular-season team-week since 1999.
-- Seven mood bands turn the score into a label. A team has to move 2 points past a band edge to change label, so labels don't flicker.
+- Seven mood bands turn the score into a label. A team's label only changes once its score is 2 points into the new band, going up or down. For the 60 edge, a team rises to the higher label at 61 and drops to the lower one at 58. Scores of 59 and 60 keep whatever label it already had, so labels don't flicker.
 - The reference set includes the current season, so a historical score can shift by 1 point after a refresh.
 - A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
