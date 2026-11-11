@@ -54,6 +54,7 @@ def build_team_games(games: pl.DataFrame) -> pl.DataFrame:
         elo_post = pl.col(f"elo_post_{me}") if has_elo else pl.lit(None, pl.Float64)
         return games.select(
             "game_id", "season", "week", asof.cast(pl.Int32).alias("asof_week"), "game_type", "is_reg",
+            "gameday", "gametime",
             pl.col(f"{me}_id").alias("franchise_id"),
             pl.col(f"{opp}_id").alias("opponent_id"),
             pl.lit(home).alias("is_home"),

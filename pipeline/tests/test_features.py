@@ -191,3 +191,22 @@ def test_luck_boundary_and_window():
     # 17 one-score wins by week 18 (g1 + g3..g18); window holds g3..g18 -> 16
     assert _v(f, 2023, 18, "A", "luck") == 16
     assert _v(f, 2023, 18, "B", "luck") == -16
+
+
+def test_streak_follows_play_order_within_one_asof_key():
+    # Two games sharing one as-of key: the game played later (by gameday) must decide the streak,
+    # even when its game_id sorts first.
+    from fgs.features import _per_game, _streak
+
+    tg = pl.DataFrame({
+        "game_id": ["2023_01_A_B", "2023_02_A_C"], "season": [2023, 2023], "week": [2, 1],
+        "asof_week": [2, 2], "game_type": ["REG", "REG"], "is_reg": [True, True],
+        "gameday": ["2023-09-20", "2023-09-14"], "gametime": ["13:00", "13:00"],
+        "franchise_id": ["A", "A"], "opponent_id": ["B", "C"], "is_home": [True, True],
+        "neutral": [False, False], "played": [True, True],
+        "points_for": [10, 20], "points_against": [20, 10], "outcome": [0.0, 1.0],
+        "elo_pre": [1505.0, 1505.0], "elo_post": [1505.0, 1505.0],
+    })
+    g = _per_game(tg)
+    assert g["game_id"].to_list() == ["2023_02_A_C", "2023_01_A_B"]
+    assert _streak(g["franchise_id"].to_numpy(), g["outcome"].to_numpy()).tolist() == [1.0, -1.0]

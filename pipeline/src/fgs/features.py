@@ -94,6 +94,9 @@ def _hfa_table(seasons) -> pl.DataFrame:
     )
 
 
+_PLAY_ORDER = ["gameday", "gametime", "game_id"]  # same tiebreak order as the Elo replay
+
+
 def _per_game(team_games: pl.DataFrame) -> pl.DataFrame:
     """Played team-games in as-of order with per-game quantities (margin, capped margin,
     p_avg = chance a league-average team beats this opponent at this venue, sow_g)."""
@@ -117,7 +120,8 @@ def _per_game(team_games: pl.DataFrame) -> pl.DataFrame:
             ((pl.col("margin") > 0) & (pl.col("margin") <= ONE_SCORE)).cast(pl.Float64).alias("cw"),
             ((pl.col("margin") < 0) & (pl.col("margin") >= -ONE_SCORE)).cast(pl.Float64).alias("cl"),
         )
-        .sort("franchise_id", "key", "game_id")
+        # play order within one as-of key (a postponed game shares a key with a later one)
+        .sort(["franchise_id", "key", *_PLAY_ORDER], nulls_last=True)
     )
 
 
