@@ -152,3 +152,11 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
     assert "all checks passed" in out and "refreshed: exported" in out
+
+
+def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkeypatch):
+    import fgs.paths
+
+    monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", tmp_path / "missing.yaml")
+    out = cli.derive_games(synthetic_games, scored=False)
+    assert set(out) == {"games", "team_games", "snapshots"}

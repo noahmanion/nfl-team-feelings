@@ -18,14 +18,20 @@ from fgs.snapshots import build_grid
 
 
 def derive_games(
-    games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
+    games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
+    scored: bool = True,
 ) -> dict:
     """Pure (apart from reading weights.yaml when weights is None): normalized games ->
     games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
-    the exact weights dict that produced the contributions (export reports these, not a re-read)."""
+    the exact weights dict that produced the contributions (export reports these, not a re-read).
+
+    scored=False stops after the Elo grid (no features, no weights): the backtest rebuilds its
+    own features and must not need a valid weights.yaml to propose one."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
+    if not scored:
+        return {"games": games, "team_games": team_games, "snapshots": snapshots}
     feats = features.build_features(snapshots, team_games)
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
@@ -33,10 +39,11 @@ def derive_games(
 
 
 def derive(
-    raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
+    raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
+    scored: bool = True,
 ) -> dict:
     """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file."""
-    return derive_games(build_games(raw), params, weights)
+    return derive_games(build_games(raw), params, weights, scored=scored)
 
 
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
@@ -199,7 +206,9 @@ def _cmd_export(args) -> int:
 
 
 def _cmd_backtest(args) -> int:
-    derived = derive(load_schedules())  # cache only (downloads once if missing)
+    # cache only (downloads once if missing). Unscored: the backtest builds its own features,
+    # so a missing/invalid weights.yaml must not block proposing new weights.
+    derived = derive(load_schedules(), scored=False)
     report = run_backtest(derived, include_holdout=args.include_holdout)
     print(format_report(report))
     out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it

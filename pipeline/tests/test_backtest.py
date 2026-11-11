@@ -160,7 +160,11 @@ def test_baselines_real_cache(real_report):
 
 
 def test_cli_backtest_writes_json(real_cache, tmp_path, monkeypatch, capsys):
+    import fgs.paths
+
     monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path)
+    # WR-05: the backtest must not need a valid weights.yaml (it proposes them)
+    monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", tmp_path / "missing-weights.yaml")
     assert cli.main(["backtest"]) == 0
     out = capsys.readouterr().out
     assert "Spearman" in out and "spread" in out
