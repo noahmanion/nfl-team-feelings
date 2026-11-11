@@ -71,3 +71,12 @@ Add play-by-play efficiency data and four more factors — efficiency trajectory
 - Hand-entered 2021+ Vegas win totals (v2), free agency (v2), in-sim Elo hot updates (later).
 
 </deferred>
+
+<research_revisions>
+## Accepted research revisions (05-RESEARCH, autonomous approval 2026-11-11)
+- A1: `qb_trend` = current starting QB's recent dropback-EPA form LEVEL (EWMA over his last starts), not "minus team season-to-date". Log both variants' deltas in BACKTEST_LOG.
+- A2: simulator draws per-sim rating noise σ=100 Elo once per sim (ratings otherwise fixed within a run) — improves calibration.
+- A5: once the regular season is complete, playoff_prob = actual playoff participation (0/1).
+- `epa_traj` kept as CONTEXT defines it even though Δ≈0 (data decides weight); flag in log + methodology.
+- Flag for Phase 6: `vs_exp` signal is Vegas-dependent (2003–2020); 2021+ uses model expectation — holdout will measure the cost.
+</research_revisions>
