@@ -45,7 +45,7 @@
 
 ### Insights
 
-- [ ] **INSIGHT-01**: Every score maps to a playful mood label from historical percentile bands, with hysteresis so labels don't flicker week to week
+- [x] **INSIGHT-01**: Every score maps to a playful mood label from historical percentile bands, with hysteresis so labels don't flicker week to week
 - [ ] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
 - [ ] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
 - [ ] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
@@ -54,7 +54,7 @@
 
 ### Site
 
-- [ ] **SITE-01**: User sees a league-wide mood board of all 32 teams ranked by feel-good score, with record, mood label, and weekly change
+- [x] **SITE-01**: User sees a league-wide mood board of all 32 teams ranked by feel-good score, with record, mood label, and weekly change
 - [ ] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
 - [ ] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
 - [ ] **SITE-04**: User can scrub the mood board to any season/week since 1999
@@ -68,7 +68,7 @@
 ### Pipeline
 
 - [ ] **PIPE-01**: One command refreshes data and regenerates all JSON after each week's games (full replay), tested on a partial week
-- [ ] **PIPE-02**: The JSON contract (meta, latest, snapshots, teams, history, callouts) is the only interface between the pipeline and the site
+- [x] **PIPE-02**: The JSON contract (meta, latest, snapshots, teams, history, callouts) is the only interface between the pipeline and the site
 - [ ] **PIPE-03**: The site runs locally with a single command, and the README documents what the idea is, how to run it, and where it stands
 
 ## v2 Requirements
@@ -134,13 +134,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BACK-04 | Phase 6 | Pending |
 | BACK-05 | Phase 6 | Pending |
 | BACK-06 | Phase 6 | Pending |
-| INSIGHT-01 | Phase 2 | Pending |
+| INSIGHT-01 | Phase 2 | Complete |
 | INSIGHT-02 | Phase 8 | Pending |
 | INSIGHT-03 | Phase 8 | Pending |
 | INSIGHT-04 | Phase 8 | Pending |
 | INSIGHT-05 | Phase 4 | Pending |
 | INSIGHT-06 | Phase 8 | Pending |
-| SITE-01 | Phase 2 | Pending |
+| SITE-01 | Phase 2 | Complete |
 | SITE-02 | Phase 4 | Pending |
 | SITE-03 | Phase 3 | Pending |
 | SITE-04 | Phase 2 | Pending |
@@ -151,7 +151,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SITE-09 | Phase 8 | Pending |
 | SITE-10 | Phase 2 | Pending |
 | PIPE-01 | Phase 2 | Pending |
-| PIPE-02 | Phase 2 | Pending |
+| PIPE-02 | Phase 2 | Complete |
 | PIPE-03 | Phase 2 | Pending |
 
 **Coverage:**

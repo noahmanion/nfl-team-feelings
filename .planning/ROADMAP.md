@@ -71,7 +71,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — End-to-end slice: mood.py (percentile, bands, ±2 hysteresis) + export.py full JSON contract via `fgs export` + web/ scaffold rendering the latest board
+- [x] 02-01-PLAN.md — End-to-end slice: mood.py (percentile, bands, ±2 hysteresis) + export.py full JSON contract via `fgs export` + web/ scaffold rendering the latest board
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -188,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Elo Core | 3/3 | Complete    | 2026-11-11 |
-| 2. Elo Mood Board | 0/4 | Planned | - |
+| 2. Elo Mood Board | 1/4 | In Progress|  |
 | 3. Backtest Harness & Additive Score | 0/TBD | Not started | - |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
 | 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
