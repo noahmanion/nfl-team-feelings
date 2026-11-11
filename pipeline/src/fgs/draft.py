@@ -82,6 +82,7 @@ FORFEITS: dict[tuple[int, int], list[str]] = {
 # Rounds known to be one regular pick short whose owner we can't attribute: nobody is charged.
 UNATTRIBUTED_SHORT: set[tuple[int, int]] = {(2021, 7)}
 STD_EPS = 1e-12
+EVEN = 0.5  # |surplus| below this reads "about even with their original slots" (rounds to 0)
 
 SURPLUS_SCHEMA = {
     "season": pl.Int32, "franchise_id": pl.String, "slot": pl.Int32,
@@ -332,6 +333,17 @@ def draft_z(surplus: pl.DataFrame, winsor: tuple[float, float]) -> pl.DataFrame:
 
 def decay(week: int, weeks: int = DECAY_WEEKS) -> float:
     return max(0.0, 1.0 - week / weeks)
+
+
+def round_half_away(x: float) -> int:
+    """Magnitude rounded half away from zero (|0.5| -> 1, |2.5| -> 3), so it never prints as 0
+    unless |x| < EVEN. Python's round() is banker's rounding: round(0.5) == 0."""
+    return int(abs(float(x)) + 0.5)
+
+
+def is_even(surplus: float) -> bool:
+    """True when the surplus rounds to 0 (the text says "about even with their original slots")."""
+    return abs(float(surplus)) < EVEN
 
 
 def equiv_pick(amount: float, values: np.ndarray) -> int:

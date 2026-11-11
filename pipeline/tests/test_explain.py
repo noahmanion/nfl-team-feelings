@@ -232,11 +232,24 @@ def test_draft_text_forms():
     out = explain.draft_text(-29.0, v, False)
     assert out.startswith("Draft haul: −29 under their original slots (about one ")
     assert out.endswith(" given up) — doesn't move the score.")
-    assert explain.draft_text(0.2, v, False) == "Draft haul: right at their original slots — doesn't move the score."
-    assert explain.draft_text(-0.4, v, True) == "Draft haul: right at their original slots."
+    assert explain.draft_text(0.2, v, False) == \
+        "Draft haul: about even with their original slots — doesn't move the score."
+    assert explain.draft_text(-0.4, v, True) == "Draft haul: about even with their original slots."
     live = explain.draft_text(16.2, v, True)
     assert live.endswith("pick).") and "doesn't move" not in live
     assert explain.draft_text(None, v, False) is None
+
+
+def test_draft_text_half_rounds_away_from_zero():
+    """CR-02: round() is banker's (round(0.5) == 0), which shipped "+0 over" / "−0 under"."""
+    v = _values()
+    for s in (0.5, -0.5, 0.49, -0.49, 2.5, -2.5, 1.5):
+        t = explain.draft_text(s, v, False)
+        assert "+0 " not in t and "\u22120 " not in t, (s, t)
+    assert explain.draft_text(0.5, v, False).startswith("Draft haul: +1 over")
+    assert explain.draft_text(-0.5, v, False).startswith("Draft haul: \u22121 under")
+    assert explain.draft_text(2.5, v, False).startswith("Draft haul: +3 over")
+    assert explain.draft_text(0.49, v, False).startswith("Draft haul: about even")
 
 
 def test_draft_text_mid_first_round_example():

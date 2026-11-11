@@ -578,7 +578,7 @@ def test_export_with_live_draft_weight(monkeypatch):
             if r["franchise"] == "BUF":  # 50 >= values[64] (~45.6): the extra-capital lead
                 assert r["blurb"].startswith("Preseason, carrying last season's form plus extra draft capital: ")
             if r["franchise"] == "NE":
-                assert d["text"] == "Draft haul: right at their original slots."
+                assert d["text"] == "Draft haul: about even with their original slots."
         else:
             assert r["draft"] is None
     assert seen == 4
