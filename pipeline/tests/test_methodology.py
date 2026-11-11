@@ -39,7 +39,7 @@ FREEZE = {
 # made-up numbers (schema only; the real holdout is never computed here)
 HOLDOUT = {
     "seasons": [2022, 2025], "evaluated_at": "2099-01-01", "verdict": "slight", "headline": "Made-up headline.",
-    "pass": False, "rerun": False,
+    "pass": False, "rerun": False, "fit_last": 2021,
     "spearman_n8": {c: _m(0.3, 0.2, 0.4, 0.1, 0.5) for c in CANDS},
     "spearman_n4": {c: _m(0.3, 0.2, 0.4, 0.1, 0.5) for c in CANDS},
     "brier": {**{c: _m(0.22, 0.21, 0.23, 0.2, 0.24) for c in CANDS}, "spread": _m(0.21, 0.2, 0.22, 0.19, 0.23),
@@ -85,6 +85,15 @@ def test_synthetic_holdout():
     note = next(n for n in m["notes"] if n["key"] == "vs_exp")
     assert note["values"]["zeroed_spearman_n8"] == 0.2876
     assert fmt_metric(0.2876) in note["text"] and fmt_delta(-0.0123) in note["text"]
+
+
+def test_brier_map_disclosure():
+    # WR-02: only once a holdout exists; names the shared fit seasons
+    assert not any(n["key"] == "brier_maps" for n in build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)["notes"])
+    m = build_methodology(WEIGHTS, DOC, FREEZE, HOLDOUT, live=2026)
+    note = next(n for n in m["notes"] if n["key"] == "brier_maps")
+    assert note["values"] == {"fit_last": 2021, "fit_first": 1999, "fit_through": 2021}
+    assert "1999–21" in note["text"] and "overconfident" in note["text"] and "Elo" in note["text"]
 
 
 def test_frozen_without_freeze_raises():

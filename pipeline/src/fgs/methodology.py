@@ -251,6 +251,29 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
         )
     notes.append({"key": "not_betting", "text": nb + ".", "values": nb_values})
 
+    if holdout is not None and holdout.get("fit_last") is not None:
+        # WR-02: disclose the built-in asymmetry of the pre-registered holdout Brier maps.
+        fl = int(holdout["fit_last"])
+        fs = list((doc or {}).get("fit_seasons") or [])
+        lo, hi = holdout["seasons"]
+        same = len(fs) == 2 and int(fs[1]) <= fl
+        text = (
+            f"The holdout Brier maps (turning a rating gap into a single-game win chance) were fit once on seasons "
+            f"up to {fl}, as pre-registered."
+        )
+        if same:
+            text += (
+                f" The score’s weights were fit on those same seasons ({_span(*fs)}), so its map was fit on in-sample "
+                f"score values and is likely a little too steep: its single-game chances on {_span(lo, hi)} are "
+                "expected to be slightly overconfident. Elo’s map was fit on the same seasons, but Elo itself has no "
+                "weights fit to those results (fixed 538-style update constants and a market-implied home edge), so "
+                "only its two-number map is in-sample. Read the holdout Brier gap against Elo with that in mind. The "
+                "walk-forward Brier numbers don’t have this problem: each season’s weights and map use earlier "
+                "seasons only."
+            )
+        notes.append({"key": "brier_maps", "text": text,
+                      "values": {"fit_last": fl, **({"fit_first": int(fs[0]), "fit_through": int(fs[1])} if same else {})}})
+
     if holdout is None:
         notes.append({"key": "holdout_pending", "text": HOLDOUT_PENDING, "values": {}})
     return notes
