@@ -57,6 +57,12 @@ FACTORS: dict[str, dict[str, str]] = {
         "description": "Current starting QB's EPA per dropback over his recent starts, on any team; "
         "0 for a QB with under 2 starts or before week 1",
     },
+    "vs_exp": {
+        "label": "Vs preseason expectations",
+        "description": "Win % so far minus the win % expected before the season (Vegas win total 2003-2020, "
+        "otherwise the model's preseason projection); given the record, beating expectations tends to fade "
+        "(expectations usually catch up), so it lowers the score",
+    },
 }
 
 SNAPSHOT = ("season", "week")

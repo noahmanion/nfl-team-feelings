@@ -31,6 +31,11 @@ the dev-only evaluation harness (leakage firewall).
 - exp_total, expectation_source: the team-season's preseason expectation (fgs.expectation):
                  normalized Vegas win total ("vegas", 2003-2020) else the model's week-0 sim
                  exp_wins ("model"); null without sim
+- vs_exp:        win % so far minus the preseason expectation's pace (MODEL-08):
+                 ((wins + 0.5*ties) - exp_total / reg_games(season) * gp) / max(gp, 1), gp = the
+                 snapshot's as-of REG games; 0.0 at week 0 and without sim. Phase 6 flag (RESEARCH
+                 Pitfall 1): its signal is learned mostly on Vegas-sourced rows (2003-2020), while
+                 2021+ (holdout and live season) is always model-sourced.
 - qb_name, qb_new: display columns (not factors): the current QB's name (null at week 0 / no
                  pbp) and whether he has fewer than 2 starts (False without pbp)
 """
@@ -39,10 +44,10 @@ import numpy as np
 import polars as pl
 
 from fgs import efficiency, expectation
-from fgs.season_config import MEAN_ELO, hfa_for
+from fgs.season_config import MEAN_ELO, hfa_for, reg_games
 
 FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend",
-                   "playoff_prob", "exp_wins"]
+                   "playoff_prob", "exp_wins", "vs_exp"]
 GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
@@ -204,6 +209,7 @@ def _sim_columns(snap: pl.DataFrame, sim: pl.DataFrame | None, vegas: pl.DataFra
         return snap.with_columns(
             pl.lit(0.0).alias("playoff_prob"), pl.lit(0.0).alias("exp_wins"),
             pl.lit(None, pl.Float64).alias("exp_total"), pl.lit(None, pl.String).alias("expectation_source"),
+            pl.lit(0.0).alias("vs_exp"),
         )
     s = sim.select(
         pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32), "franchise_id",
@@ -213,7 +219,17 @@ def _sim_columns(snap: pl.DataFrame, sim: pl.DataFrame | None, vegas: pl.DataFra
         snap.join(s, on=["season", "week", "franchise_id"], how="left")
         .with_columns(pl.col("playoff_prob").fill_null(0.0), pl.col("exp_wins").fill_null(0.0))
         .join(expectation.expectations(sim, vegas), on=["season", "franchise_id"], how="left")
+        .with_columns(_vs_exp())
     )
+
+
+def _vs_exp() -> pl.Expr:
+    gp = (pl.col("wins") + pl.col("losses") + pl.col("ties")).cast(pl.Float64)
+    ng = pl.col("season").map_elements(lambda s: float(reg_games(s)), return_dtype=pl.Float64)
+    pace = pl.col("exp_total") / ng * gp
+    return (
+        ((pl.col("wins") + 0.5 * pl.col("ties")) - pace) / pl.max_horizontal(gp, pl.lit(1.0))
+    ).fill_null(0.0).alias("vs_exp")
 
 
 def build_features(
