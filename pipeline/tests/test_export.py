@@ -12,17 +12,18 @@ import fgs.cli as cli
 from fgs.asof import week_progress
 from fgs.cli import derive
 from fgs.explain import PHRASES
-from fgs.export import build_export, team_meta, write_export
+from fgs.export import _playoff_display, build_export, team_meta, write_export
 from fgs.franchises import CANONICAL, normalize_code
 from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
 from fgs.score import load_weights
-from fgs.season_config import SEEDS, n_teams
+from fgs.season_config import SEEDS, n_teams, playoff_teams
 from conftest import derive_inputs
 
 ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
-            "wins", "losses", "ties", "score_delta", "rank_delta", "contribs", "points", "blurb"}
+            "wins", "losses", "ties", "score_delta", "rank_delta", "contribs", "points", "blurb",
+            "playoff_prob", "expectation_source", "qb"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
              "seasons", "bands", "hysteresis", "teams", "factors", "baseline"}
 GEN = "2026-11-11T18:40:00+00:00"
@@ -110,7 +111,7 @@ def test_contract_rows(real_files):
         assert list(r["contribs"]) == factor_keys
         for v in r["contribs"].values():
             assert type(v) in (int, float) and math.isfinite(v) and round(v, 2) == v
-        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs", "points", "blurb"}:
+        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs", "points", "blurb", "expectation_source", "qb"}:
             assert r[k] is None or type(r[k]) is int, (season, week, k, r[k])
         assert 0 <= r["score"] <= 100
         assert r["label"] == meta["bands"][r["band"]]["label"]
@@ -356,3 +357,53 @@ def test_games_files(real_files):
         assert all((h is None) == (a is None) for h, a in zip(g["home_score"], g["away_score"])), path
         assert any(h is not None for h in g["home_score"]), f"{path}: no played games"
         assert set(g["home"]) | set(g["away"]) <= CANONICAL, path
+
+
+# --- playoff odds display (MODEL-13, A5 override) -------------------------------------------
+
+def test_playoff_display_unit():
+    """Season complete as of week 2 (REG asof <= 2) with a WC row: weeks >= 2 show 100/0, week 1 raw."""
+    scored = pl.DataFrame({
+        "season": [2010] * 6, "week": [1, 1, 2, 2, 3, 3], "franchise_id": ["A", "B"] * 3,
+        "playoff_prob": [0.876, 0.124, 0.40, 0.60, 0.5, 0.5],
+    })
+    games = pl.DataFrame({
+        "season": [2010] * 3, "game_type": ["REG", "REG", "WC"], "home_id": ["A", "B", "A"],
+        "away_id": ["B", "A", "C"], "played": [True, True, False], "asof_week": [1, 2, 3], "is_reg": [True, True, False],
+    })
+    out = _playoff_display(scored, games).sort("week", "franchise_id")
+    assert out["playoff_display"].to_list() == [88, 12, 100, 0, 100, 0]
+    assert out["playoff_prob"].to_list() == scored["playoff_prob"].to_list()  # raw value untouched
+    # no non-REG row yet -> no override
+    assert _playoff_display(scored, games.filter(pl.col("is_reg")))["playoff_display"].to_list() == [88, 12, 40, 60, 50, 50]
+    # an unplayed REG game -> no override
+    open_reg = games.with_columns(pl.when(pl.col("asof_week") == 2).then(False).otherwise(pl.col("played")).alias("played"))
+    assert _playoff_display(scored, open_reg)["playoff_display"].to_list()[2:4] == [40, 60]
+
+
+def test_playoff_prob_range(real_files):
+    _, files = real_files
+    for season, week, r in _all_rows(files):
+        p = r["playoff_prob"]
+        assert p is None or (type(p) is int and 0 <= p <= 100), (season, week, p)
+        assert r["expectation_source"] in ("vegas", "model", None)
+        if r["expectation_source"] == "vegas":
+            assert 2003 <= season <= 2020, (season, week)
+        assert r["qb"] is None or isinstance(r["qb"], str)
+
+
+def test_playoff_display_override(real_files):
+    _, files = real_files
+    meta = files["meta.json"]
+    for sm in meta["seasons"]:
+        season, rw = sm["season"], sm["reg_weeks"]
+        if season == meta["latest"]["season"]:
+            continue
+        rows = files[f"snapshots/{season}.json"]["weeks"][str(rw)]
+        probs = sorted(r["playoff_prob"] for r in rows)
+        assert set(probs) == {0, 100}, season
+        assert probs.count(100) == playoff_teams(season), season
+    latest = files["latest.json"]["rows"]
+    total = sum(r["playoff_prob"] for r in latest)
+    assert abs(total - 100 * playoff_teams(meta["latest"]["season"])) <= 32
+    assert {r["expectation_source"] for r in latest} == {"model"}
