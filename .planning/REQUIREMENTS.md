@@ -12,7 +12,7 @@
 - [x] **DATA-03**: A season-config table encodes era rules (31 teams 1999–2001, HOU from 2002, 16→17 games in 2021, 12→14 playoff teams in 2020, divisions)
 - [x] **DATA-04**: Ties (0.5), neutral sites, and cancelled games (BUF–CIN 2022) are handled without crashes or miscounts
 - [x] **DATA-05**: Per-team-game play-by-play aggregates (EPA/play, garbage-time filtered; QB EPA/dropback + success rate) are computed for 1999→present, with 1999–2000 flagged low-confidence
-- [ ] **DATA-06**: Draft picks and a draft-value chart are loaded for every season
+- [x] **DATA-06**: Draft picks and a draft-value chart are loaded for every season
 - [x] **DATA-07**: Data checks assert franchise counts per season, games per team-season, and no unmatched team abbreviations
 
 ### Rating Model
@@ -32,7 +32,7 @@
 - [x] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
 - [x] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
 - [x] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
-- [ ] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
+- [x] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
 
 ### Backtest & Tuning
 
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 5 | Complete |
-| DATA-06 | Phase 7 | Pending |
+| DATA-06 | Phase 7 | Complete |
 | DATA-07 | Phase 1 | Complete |
 | MODEL-01 | Phase 1 | Complete |
 | MODEL-02 | Phase 1 | Complete |
@@ -127,7 +127,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODEL-13 | Phase 5 | Complete |
 | MODEL-14 | Phase 3 | Complete |
 | MODEL-15 | Phase 6 | Complete |
-| MODEL-16 | Phase 7 | Pending |
+| MODEL-16 | Phase 7 | Complete |
 | BACK-01 | Phase 3 | Complete |
 | BACK-02 | Phase 3 | Complete |
 | BACK-03 | Phase 3 | Complete |
