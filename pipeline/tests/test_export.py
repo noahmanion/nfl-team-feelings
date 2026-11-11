@@ -18,6 +18,7 @@ from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
 from fgs.score import load_weights
+from fgs import season_config
 from fgs.season_config import SEEDS, n_teams, playoff_teams
 from conftest import derive_inputs
 
@@ -361,8 +362,10 @@ def test_games_files(real_files):
 
 # --- playoff odds display (MODEL-13, A5 override) -------------------------------------------
 
-def test_playoff_display_unit():
-    """Season complete as of week 2 (REG asof <= 2) with a WC row: weeks >= 2 show 100/0, week 1 raw."""
+def test_playoff_display_unit(monkeypatch):
+    """Season complete as of week 2 (REG asof <= 2) with the full post-season field known (2 spots
+    here): weeks >= 2 show 100/0, week 1 raw."""
+    monkeypatch.setattr(season_config, "playoff_teams", lambda season: 2)
     scored = pl.DataFrame({
         "season": [2010] * 6, "week": [1, 1, 2, 2, 3, 3], "franchise_id": ["A", "B"] * 3,
         "playoff_prob": [0.876, 0.124, 0.40, 0.60, 0.5, 0.5],
@@ -379,6 +382,22 @@ def test_playoff_display_unit():
     # an unplayed REG game -> no override
     open_reg = games.with_columns(pl.when(pl.col("asof_week") == 2).then(False).otherwise(pl.col("played")).alias("played"))
     assert _playoff_display(scored, open_reg)["playoff_display"].to_list()[2:4] == [40, 60]
+
+
+def test_playoff_display_bye_team_wildcard_only():
+    """CR-01: right after the REG season only wildcard rows exist; the bye team (B here, no
+    non-REG row yet) must keep its raw sim value, not show 0, until the field is fully known."""
+    scored = pl.DataFrame({
+        "season": [2024] * 3, "week": [18] * 3, "franchise_id": ["A", "B", "D"],
+        "playoff_prob": [1.0, 0.97, 0.02],
+    })
+    games = pl.DataFrame({
+        "season": [2024] * 3, "game_type": ["REG", "REG", "WC"], "home_id": ["A", "B", "A"],
+        "away_id": ["B", "D", "C"], "played": [True, True, False], "asof_week": [17, 18, 19],
+        "is_reg": [True, True, False],
+    })
+    out = {r["franchise_id"]: r["playoff_display"] for r in _playoff_display(scored, games).iter_rows(named=True)}
+    assert out == {"A": 100, "B": 97, "D": 2}  # field not known yet: non-WC teams keep raw values
 
 
 def test_playoff_prob_range(real_files):

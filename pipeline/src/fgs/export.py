@@ -65,9 +65,11 @@ def _playoff_display(scored: pl.DataFrame, games: pl.DataFrame) -> pl.DataFrame:
     """Add playoff_display: the integer playoff odds fans see (round(100 * raw sim value)).
 
     A5 override (display only): once every REG game of a season is played with asof_week <= the
-    snapshot week, and the season has at least one non-REG game row, the snapshot shows the
-    actual result instead: 100 for franchises in any non-REG game that season, else 0. The raw
-    playoff_prob column (the po_trend input) is left untouched (RESEARCH Pitfall 8)."""
+    snapshot week, franchises in any non-REG game row that season show 100. Everyone else shows 0
+    only once the post-season field is fully known (playoff_teams(season) distinct franchises in
+    non-REG rows); before that (e.g. wildcard week, when bye teams have no row yet) they keep the
+    raw sim value. The raw playoff_prob column (the po_trend input) is left untouched
+    (RESEARCH Pitfall 8)."""
     g = games.with_columns(pl.col("season").cast(pl.Int32))
     reg = g.filter(pl.col("is_reg")).group_by("season").agg(
         pl.col("played").all().alias("_reg_done"), pl.col("asof_week").max().cast(pl.Int32).alias("_reg_end"),
@@ -79,22 +81,26 @@ def _playoff_display(scored: pl.DataFrame, games: pl.DataFrame) -> pl.DataFrame:
         .unique()
         .with_columns(pl.lit(True).alias("_in_post"))
     )
-    has_post = post.select("season").unique().with_columns(pl.lit(True).alias("_has_post"))
-    done = (
-        pl.col("_reg_done").fill_null(False) & pl.col("_has_post").fill_null(False)
-        & (pl.col("week") >= pl.col("_reg_end"))
+    # looked up at call time (season_config.playoff_teams) so tests can monkeypatch it
+    n_post = post_teams.group_by("season").len().rename({"len": "_n_post"})
+    n_post = n_post.with_columns(
+        pl.Series("_spots", [season_config.playoff_teams(int(s)) for s in n_post["season"]], dtype=pl.Int64)
     )
+    reg_done = pl.col("_reg_done").fill_null(False) & (pl.col("week") >= pl.col("_reg_end"))
+    in_post = pl.col("_in_post").fill_null(False)
+    field_known = pl.col("_n_post").fill_null(0) >= pl.col("_spots").fill_null(1 << 30)
     raw = (pl.col("playoff_prob") * 100).round(0).cast(pl.Int64)
     return (
         scored.with_columns(pl.col("season").cast(pl.Int32))
         .join(reg, on="season", how="left")
-        .join(has_post, on="season", how="left")
+        .join(n_post, on="season", how="left")
         .join(post_teams, on=["season", "franchise_id"], how="left")
         .with_columns(
-            pl.when(done).then(pl.when(pl.col("_in_post").fill_null(False)).then(100).otherwise(0))
+            pl.when(reg_done & in_post).then(100)
+            .when(reg_done & field_known).then(0)
             .otherwise(raw).cast(pl.Int64).alias("playoff_display")
         )
-        .drop("_reg_done", "_reg_end", "_has_post", "_in_post")
+        .drop("_reg_done", "_reg_end", "_n_post", "_spots", "_in_post")
     )
 
 
