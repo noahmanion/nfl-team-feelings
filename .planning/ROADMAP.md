@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Elo Mood Board** - JSON contract, one-command weekly refresh, and a runnable site showing all 32 teams ranked with mood labels (completed 2026-11-11)
 - [x] **Phase 3: Backtest Harness & Additive Score** - Documented target, baselines, leakage test, additive combiner with record factors, and the mood-over-time chart (completed 2026-11-11)
 - [x] **Phase 4: Game-Result Factors & Team Deep-Dive** - Margin, opponent quality, streak, and close-game luck factors plus a team page with diverging-bar breakdown and one-liner (completed 2026-11-11)
-- [ ] **Phase 5: Efficiency, QB Trend & Season Simulator** - PBP-based efficiency and QB trajectory factors, Monte Carlo simulator, expectations and playoff-odds factors
+- [x] **Phase 5: Efficiency, QB Trend & Season Simulator** - PBP-based efficiency and QB trajectory factors, Monte Carlo simulator, expectations and playoff-odds factors (completed 2026-11-11)
 - [ ] **Phase 6: Weight Freeze & Methodology** - Ridge-fit, human-rounded weights, one-time 2022–2025 holdout, beats plain Elo, methodology page
 - [ ] **Phase 7: Draft-Aware Offseason** - Between seasons the score reacts to draft surplus over slot expectation, without rewarding tanking
 - [ ] **Phase 8: Callouts, Records & My Team** - Perception-gap callouts, calendar-day misery/joy streaks, historical extremes, movers strip, records page, "my team" pin
@@ -178,7 +178,7 @@ Plans:
 
 **Wave 4**
 
-- [ ] 05-05-PLAN.md — po_trend factor + final interim 11 weights; playoff odds stat on team page; README + phase gate (MODEL-12)
+- [x] 05-05-PLAN.md — po_trend factor + final interim 11 weights; playoff odds stat on team page; README + phase gate (MODEL-12)
 
 ### Phase 6: Weight Freeze & Methodology
 
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
-| 5. Efficiency, QB Trend & Season Simulator | 4/5 | In Progress|  |
+| 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete   | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
 | 8. Callouts, Records & My Team | 0/TBD | Not started | - |
