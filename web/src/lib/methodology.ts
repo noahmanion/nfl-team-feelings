@@ -4,8 +4,6 @@ import type { FoldSign, Effect, Methodology, PeriodMetrics } from './types'
 
 const MINUS = '−'
 
-export const HOLDOUT_PENDING = 'The 2022–25 holdout is evaluated once, after the weights were frozen. It hasn’t run yet.'
-
 function signed(x: number, dp: number): string {
   const r = Number(x.toFixed(dp))
   if (r === 0) return (0).toFixed(dp)
@@ -123,7 +121,13 @@ export function xDomain(rows: ChartRow[]): [number, number] {
   return [lo - pad, hi + pad]
 }
 
+export const RERUN_WARNING = '(Re-run with --force, which breaks the pre-registration.)'
+
+/** The holdout headline, or the pipeline's `holdout_pending` note (the only copy of that sentence). A
+ *  result re-run with --force carries a warning. */
 export function verdictLead(m: Methodology): string {
-  if (!m.holdout) return HOLDOUT_PENDING
-  return m.holdout.headline ?? HOLDOUT_PENDING
+  const pending = m.notes.find((n) => n.key === 'holdout_pending')?.text ?? ''
+  if (!m.holdout) return pending
+  const lead = m.holdout.headline ?? pending
+  return m.holdout.rerun ? `${lead} ${RERUN_WARNING}`.trim() : lead
 }

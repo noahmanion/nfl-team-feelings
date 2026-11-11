@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  chartRows, ciMethodText, deltaText, effectText, foldText, formatCI, formatDelta, formatDeltaCI, formatMetric, formatWeight, HOLDOUT_PENDING, intervalCaption, verdictLead, xDomain,
+  chartRows, ciMethodText, deltaText, effectText, foldText, formatCI, formatDelta, formatDeltaCI, formatMetric, formatWeight, intervalCaption, RERUN_WARNING, verdictLead, xDomain,
 } from './methodology'
 import type { Methodology, PeriodMetrics } from './types'
 
@@ -95,9 +95,20 @@ describe('chartRows', () => {
     expect(lo).toBeCloseTo(0.38)
     expect(hi).toBeCloseTo(0.62)
   })
-  it('verdict lead is the pending sentence while the holdout is null', () => {
-    expect(verdictLead(base)).toBe(HOLDOUT_PENDING)
-    expect(HOLDOUT_PENDING).toBe('The 2022–25 holdout is evaluated once, after the weights were frozen. It hasn’t run yet.')
+  it('verdict lead is the pipeline pending note while the holdout is null', () => {
+    const pending = { key: 'holdout_pending', text: 'Pending sentence from methodology.json.', values: {} }
+    expect(verdictLead({ ...base, notes: [pending] })).toBe('Pending sentence from methodology.json.')
+    expect(verdictLead(base)).toBe('')
+  })
+  it('flags a --force rerun', () => {
+    const m: Methodology = {
+      ...base,
+      holdout: {
+        seasons: [2022, 2025], label: 'Holdout', evaluated_at: 'x', verdict: 'slight', headline: 'H.', pass: true,
+        spearman_n8: {}, spearman_n4: {}, brier: {}, diff: null, diagnostic: null, rerun: true,
+      },
+    }
+    expect(verdictLead(m)).toBe(`H. ${RERUN_WARNING}`)
   })
 })
 

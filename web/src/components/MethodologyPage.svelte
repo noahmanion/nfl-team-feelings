@@ -134,7 +134,7 @@
 
     <section>
       <h2>Does it work?</h2>
-      <p class="strong">{verdictLead(m)}</p>
+      {#if verdictLead(m)}<p class="strong">{verdictLead(m)}</p>{/if}
       {#if wfDiff?.seasons_won != null && wfDiff.of != null}
         <p>
           In the walk-forward test the feel-good score ranked teams better than Elo alone in {wfDiff.seasons_won} of
