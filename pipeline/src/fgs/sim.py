@@ -9,7 +9,8 @@ Each sim draws a per-team rating offset N(0, SIGMA) that stays fixed within that
 (no hot updates). Simplified tiebreak chain:
   division winner: win% -> head-to-head win% among the tied set (0.5 if never met)
                    -> division win% -> random
-  wildcards (one at a time per conference): win% -> head-to-head -> random
+  wildcards (one at a time per conference): win% -> head-to-head (only when every tied team
+                   met every other, as the NFL rule requires) -> conference win% -> random
 Ranking is by win%, not wins (BUF/CIN 2022 played 16).
 
 One RNG stream per snapshot, default_rng([seed, season, week]), so results do not depend
@@ -130,6 +131,8 @@ def simulate_season(
     divw = (R * same_div).sum(2)
     divg = (Gm * same_div).sum(1)
     divpct = np.round(divw / np.maximum(divg, 1), 9)
+    same_conf = (conf_id[:, None] == conf_id[None, :]) & ~np.eye(T, dtype=bool)
+    confpct = np.round((R * same_conf).sum(2) / np.maximum((Gm * same_conf).sum(1), 1), 9)
 
     rnd = rng.random((n_sims, T))
     made = np.zeros((n_sims, T), dtype=bool)
@@ -143,6 +146,13 @@ def simulate_season(
         hw = np.einsum("sij,sj->si", R, mf)
         hg = mf @ Gm.T
         return np.round(np.where(hg > 0, hw / np.maximum(hg, 1), 0.5), 9)
+
+    met = (Gm > 0).astype(np.float32)
+
+    def h2h_applicable(m):  # per sim: every tied team met every other tied team (WR-07)
+        mf = m.astype(np.float32)
+        k = mf.sum(1, keepdims=True)
+        return ((mf @ met.T) * mf == (k - 1) * mf).all(1)
 
     def choose(m):
         has = m.any(1)
@@ -165,7 +175,8 @@ def simulate_season(
             if not cand.any():
                 break
             m = best(cand, wpct)
-            m = best(m, h2h(m))
+            m = np.where(h2h_applicable(m)[:, None], best(m, h2h(m)), m)
+            m = best(m, confpct)
             choose(m)
 
     return teams, made.mean(0).astype(np.float64), wins.mean(0).astype(np.float64)

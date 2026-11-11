@@ -144,6 +144,27 @@ def test_team_without_division_raises(monkeypatch):
         sim.simulate_season(g, {"A": 1500.0, "Z": 1500.0}, 1)
 
 
+def test_wildcard_h2h_only_when_all_tied_teams_met(monkeypatch):
+    """WR-07: three-way wildcard tie (A, B, C all 1-1 overall and in conference) where A beat B and
+    C met neither: head-to-head does not apply (not every pair met), conference win% is level, so
+    the wildcard is a coin flip, not A every time."""
+    _tiny(monkeypatch, {"X D1": ["P", "A"], "X D2": ["Q", "B"], "X D3": ["R", "C"],
+                        "Y D1": ["Z1"], "Y D2": ["Z2"], "Y D3": ["Z3"]}, 8)  # 1 wildcard per conference
+    win = [("P", "Z1"), ("P", "Z2"), ("Q", "Z1"), ("Q", "Z2"), ("Q", "Z3"), ("R", "Z1"), ("R", "Z2"),
+           ("R", "Z3"), ("A", "B"), ("Q", "A"), ("B", "R"), ("C", "Q"), ("R", "C")]
+    g = _g([(f"g{i:02d}", 1 + i % 8, w, l, 20, 10) for i, (w, l) in enumerate(win)])
+    elo = dict.fromkeys(["P", "Q", "R", "A", "B", "C", "Z1", "Z2", "Z3"], 1500.0)
+    p, _ = _run(g, elo)
+    assert p["P"] == p["Q"] == p["R"] == 1.0
+    for t in "ABC":
+        assert abs(p[t] - 1 / 3) < 0.05, (t, p[t])
+    # once every pair has met (all still .500), head-to-head applies: A is 2-0 vs the tied set
+    win2 = win + [("A", "C"), ("B", "C"), ("C", "Z1"), ("C", "Z2"), ("Z3", "A"), ("Z3", "B")]
+    g2 = _g([(f"g{i:02d}", 1 + i % 8, w, l, 20, 10) for i, (w, l) in enumerate(win2)])
+    p2, _ = _run(g2, elo)
+    assert p2["A"] == 1.0 and p2["B"] == 0.0 and p2["C"] == 0.0
+
+
 # --- model_version + cache ---
 
 
