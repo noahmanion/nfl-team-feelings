@@ -1,6 +1,6 @@
 # feel-good-score
 
-How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is a weighted, backtested blend of three factors, shown as a mood board and a mood-over-time chart in a small local site.
+How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is a weighted, backtested blend of seven factors, shown as a mood board, a mood-over-time chart and a page per team in a small local site.
 
 ## Run it
 
@@ -43,10 +43,18 @@ uv run fgs backtest --propose-weights    # also print ridge weights fit on 1999�
 ## How the score works today
 
 - The score is an integer from 0 to 100. Each factor is z-scored across all teams in the same week, multiplied by its weight in `pipeline/weights.yaml`, and the products are summed. The score is that sum's percentile.
-- Factors and current weights: **Elo** 4.58, **season record** (regular-season win %) 0.63, **last 16 games** (win %, across seasons, playoffs included) −1.25.
-- Last-16 has a negative weight on purpose. Once Elo is known, a hot recent record tends to run ahead of real strength. Each factor's backtest gain is logged in `pipeline/BACKTEST_LOG.md`.
+- Factors and current weights (points of future adjusted margin per standard deviation, interim until Phase 6):
+  - **Elo** (`elo`) 3.75: game-by-game strength rating.
+  - **Season record** (`season_record`) 0.90: this season's regular-season win %, ties count half.
+  - **Last 16 games** (`last16`) −0.56: win % over the last 16 games, across seasons, playoffs included.
+  - **Margin of victory** (`mov`) 1.34: average point margin over the last 8 games, each capped at 24.
+  - **Quality of results** (`sow`) −1.07: results over the last 8 games vs what an average team would do against the same opponents.
+  - **Streak** (`streak`) −0.14: current win or loss streak, ties end it, capped at 8.
+  - **Close-game luck** (`luck`) −0.30: one-score wins minus one-score losses (8 points or fewer) over the last 16 games.
+- Four weights are negative on purpose. Once Elo and margins are known, a record that runs ahead of them (hot last 16, results beating margins, a long streak, lots of coin-flip wins) tends to regress, so it predicts slightly *worse* future margins. An 8-2 team that won six one-score games should feel a little worried. Each factor's backtest gain and fitted sign are logged in `pipeline/BACKTEST_LOG.md`.
 - Percentiles compare against every preseason and regular-season team-week from 1999–2021. That reference is fixed, so a historical score never shifts after a refresh. A test checks that future games can't move a past score.
 - Seven mood bands turn the score into a label. A team's label only changes once its score is 2 points into the new band, going up or down. For the 60 edge, a team rises to the higher label at 61 and drops to the lower one at 58. Scores of 59 and 60 keep whatever label it already had, so labels don't flicker.
+- **Team page.** Click any row on the board (or open `#/team/{ABBR}`, e.g. `#/team/BUF`) to see why a team's score is what it is. The bars are score points: they start at "Average team {baseline}" and add up to the team's score. A one-line blurb names the biggest reasons (e.g. a skid, or coin-flip luck that tends to even out), with recent games and a score sparkline below.
 - A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
 ## Backtest target
@@ -60,4 +68,4 @@ This target was written down before any score weights were fit. Weights get tune
 - **Walk-forward by season.** Anything fit for test season S uses only earlier seasons. The first test season is 2003.
 - **Sealed holdout.** Seasons 2022–2025 are a holdout that `fgs backtest` only touches with `--include-holdout`. The 2026 season in progress is never a test season.
 
-**Status:** Phase 3 is done: a backtest harness, the additive score with season-record and last-16 factors, and a mood-over-time chart at `#/history`. Next is Phase 4: game-result factors and team pages.
+**Status:** Phase 4 is done: game-result factors (margin, quality of results, streak, close-game luck) and team pages. Next is Phase 5: efficiency, QB trend and a season simulator.
