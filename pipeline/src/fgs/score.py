@@ -95,6 +95,22 @@ def load_weights(path=None) -> dict[str, float]:
     return out
 
 
+def load_weights_doc(path=None) -> dict:
+    """The whole weights.yaml document (weights plus the frozen/fit evidence keys)."""
+    path = paths.WEIGHTS_PATH if path is None else path  # read at call time (tests monkeypatch it)
+    try:
+        with open(path) as fh:
+            doc = yaml.safe_load(fh)
+    except FileNotFoundError:
+        raise ValueError(f"weights file not found: {path}") from None
+    return doc if isinstance(doc, dict) else {}
+
+
+def is_frozen(path=None) -> bool:
+    """True only when weights.yaml says `frozen: true` (Phase 6 freeze; refits are refused)."""
+    return load_weights_doc(path).get("frozen") is True
+
+
 def zscore(df: pl.DataFrame, cols, by=SNAPSHOT) -> pl.DataFrame:
     """Add z_{col} = (x - mean) / std(ddof=0) within each snapshot; 0.0 where std <= 1e-12.
     No clipping (an expansion team at week 0 really is an outlier)."""

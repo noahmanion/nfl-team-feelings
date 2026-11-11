@@ -8,11 +8,12 @@ import pytest
 
 from fgs import cli
 from fgs.backtest import (
-    adjusted_margins, choose_alpha, propose_weights, ridge_fit, run_backtest, targets, test_seasons,
+    PROPOSAL_FACTORS, RIDGE_SETS, adjusted_margins, choose_alpha, propose_weights, ridge_fit, run_backtest,
+    spearman, targets, test_seasons, walk_forward_frame,
 )
 from fgs.ingest import load_schedules
 from fgs.paths import WEIGHTS_PATH
-from fgs.score import load_weights
+from fgs.score import is_frozen, load_weights, load_weights_doc
 from conftest import derive_inputs
 
 TG_SCHEMA = {
@@ -117,13 +118,19 @@ def test_target_n4_caps_window():
 
 
 @pytest.fixture(scope="module")
-def real_report():
+def real_derived():
     from fgs.paths import CACHE_DIR
 
     if not (CACHE_DIR / "schedules.parquet").exists():
         pytest.skip("no cached schedules; run `uv run fgs build` first")
     raw = load_schedules()
-    return raw, run_backtest(cli.derive(raw, **derive_inputs()))
+    return raw, cli.derive(raw, **derive_inputs())
+
+
+@pytest.fixture(scope="module")
+def real_report(real_derived):
+    raw, derived = real_derived
+    return raw, run_backtest(derived)
 
 
 def test_holdout_test_seasons():
@@ -234,6 +241,55 @@ def test_ridge_composites_in_report(real_report):
     assert all(math.isfinite(v) for v in prop["weights"].values())
 
 
+
+
+def test_walk_forward_frame_matches_report(real_derived, real_report):
+    _, derived = real_derived
+    _, report = real_report
+    wf = walk_forward_frame(derived)
+    last = list(RIDGE_SETS)[-1]
+    rows = wf["rows"]
+    assert rows["season"].min() == 2003 and rows["season"].max() == 2021
+    d = rows.filter(pl.col("y8").is_not_null())
+    sp = spearman(d["composite"].to_numpy(), d["y8"].to_numpy())
+    assert sp == pytest.approx(report["candidates"][last]["N8"]["all"]["spearman"], abs=1e-6)
+    assert (d["composite"] - d[f"pred_{last}"]).abs().max() == 0
+    folds = wf["ridge"][last]["folds"]
+    assert [f["season"] for f in folds] == list(range(2003, 2022))
+    assert all(list(f["weights"]) == PROPOSAL_FACTORS for f in folds)
+    g = wf["games"]
+    pcols = ["p_composite", "p_elo", "p_season_wpct", "p_last16", "p_pd_pg", "p_spread", "p_elo_538"]
+    assert set(pcols + ["y", "season", "asof_week"]) <= set(g.columns)
+    assert g.height > 4000 and g["season"].max() == 2021 and g["season"].min() == 2003
+    for c in pcols:
+        arr = g[c].to_numpy()
+        assert g[c].null_count() == 0 and np.isfinite(arr).all() and ((arr > 0) & (arr < 1)).all(), c
+
+
 def test_weights_yaml_loads():
     w = load_weights(WEIGHTS_PATH)
     assert list(w) == FINAL_KEYS
+
+
+def test_load_weights_ignores_freeze_sibling_keys(tmp_path):
+    p = tmp_path / "w.yaml"
+    body = "\n".join(f"  {k}: {0.1 * i:.2f}" for i, k in enumerate(FINAL_KEYS))
+    fit = "\n".join(f'  {k}: {{raw: 0.1, sign: "+", fold_sign: [19, 19]}}' for k in FINAL_KEYS)
+    p.write_text(f"frozen: true\nfit_seasons: [1999, 2021]\nalpha: 0.01\nn: 5\nweights:\n{body}\nfit:\n{fit}\n")
+    w = load_weights(p)
+    assert list(w) == FINAL_KEYS and len(w) == 11
+    doc = load_weights_doc(p)
+    assert doc["frozen"] is True and doc["fit"]["elo"]["fold_sign"] == [19, 19]
+    assert is_frozen(p)
+
+
+def test_is_frozen_only_when_true(tmp_path):
+    p = tmp_path / "w.yaml"
+    p.write_text("weights:\n  elo: 1.0\n")
+    assert not is_frozen(p)
+    p.write_text("frozen: false\nweights:\n  elo: 1.0\n")
+    assert not is_frozen(p)
+    p.write_text("frozen: \"true\"\nweights:\n  elo: 1.0\n")
+    assert not is_frozen(p)
+    with pytest.raises(ValueError, match="not found"):
+        load_weights_doc(tmp_path / "missing.yaml")

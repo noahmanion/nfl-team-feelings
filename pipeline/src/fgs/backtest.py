@@ -204,19 +204,26 @@ def next_game_frame(games: pl.DataFrame, feats: pl.DataFrame, cols) -> pl.DataFr
     return g.select(keep).drop_nulls([f"{s}_{c}" for c in cols for s in ("h", "a")]).sort("season", "game_id")
 
 
-def _walk_forward_brier(ng: pl.DataFrame, seasons: list[int], xfn) -> tuple[float | None, int]:
+def _walk_forward_brier(ng: pl.DataFrame, seasons: list[int], xfn, return_p: bool = False):
+    """Per test season S: logistic fit on rows with season < S, scored on season S.
+    Returns (brier, n); with return_p=True also the per-row probability aligned to ng (NaN
+    outside the scored test seasons)."""
     ps, ys = [], []
+    p_all = np.full(ng.height, np.nan)
+    sea = ng["season"].to_numpy()
     for S in seasons:
         tr, te = ng.filter(pl.col("season") < S), ng.filter(pl.col("season") == S)
         if tr.is_empty() or te.is_empty():
             continue
         b = logit_fit(xfn(tr), tr["y"].to_numpy())
-        ps.append(logit_predict(b, xfn(te)))
+        p = logit_predict(b, xfn(te))
+        p_all[sea == S] = p  # ng is sorted by (season, game_id): filter order == mask order
+        ps.append(p)
         ys.append(te["y"].to_numpy())
     if not ps:
-        return None, 0
+        return (None, 0, p_all) if return_p else (None, 0)
     p, y = np.concatenate(ps), np.concatenate(ys)
-    return brier(p, y), int(len(y))
+    return (brier(p, y), int(len(y)), p_all) if return_p else (brier(p, y), int(len(y)))
 
 
 def _corr_block(x, y) -> dict:
@@ -347,10 +354,14 @@ def format_proposal(prop: dict, date: str) -> str:
     return "\n".join(lines)
 
 
-def _ridge_walk_forward(df: pl.DataFrame, ng: pl.DataFrame, seasons: list[int], factors: list[str]):
+def _ridge_walk_forward(df: pl.DataFrame, ng: pl.DataFrame, seasons: list[int], factors: list[str]) -> dict:
     """Per test season S: alpha by LOSO CV and ridge fit on rows with season < S and y8 present,
     predict season S. Brier: logistic on (pred_h - pred_a, home_ind) fit on next-game rows < S
-    scored with the same fold's ridge. Returns (pred per df row, brier, brier_n, last fold info)."""
+    scored with the same fold's ridge.
+
+    Returns {"pred": per df row (NaN outside test seasons), "brier", "brier_n",
+    "last_fold", "folds": every fold's {"season", "alpha", "intercept", "weights"},
+    "game_p": per ng row win probability (NaN outside test seasons)}."""
     zc = [f"z_{f}" for f in factors]
     X = df.select(zc).to_numpy()
     y = df[FIT_TARGET].to_numpy().astype(float)
@@ -363,7 +374,8 @@ def _ridge_walk_forward(df: pl.DataFrame, ng: pl.DataFrame, seasons: list[int], 
     ng_y = ng["y"].to_numpy()
 
     pred = np.full(len(df), np.nan)
-    ps, ys, last = [], [], None
+    game_p = np.full(ng.height, np.nan)
+    ps, ys, folds = [], [], []
     for S in seasons:
         tr = has_y & (sea < S)
         te = sea == S
@@ -372,27 +384,46 @@ def _ridge_walk_forward(df: pl.DataFrame, ng: pl.DataFrame, seasons: list[int], 
         alpha = choose_alpha(X[tr], y[tr], sea[tr])
         w, b = ridge_fit(X[tr], y[tr], alpha)
         pred[te] = ridge_predict(w, b, X[te])
-        last = {"season": S, "alpha": alpha, "intercept": b, "weights": dict(zip(factors, w.tolist()))}
+        folds.append({"season": S, "alpha": alpha, "intercept": b, "weights": dict(zip(factors, w.tolist()))})
 
         diff = ridge_predict(w, b, Xh) - ridge_predict(w, b, Xa)
         gtr, gte = ng_sea < S, ng_sea == S
         if gtr.any() and gte.any():
             lb = logit_fit(np.column_stack([diff[gtr], home[gtr]]), ng_y[gtr])
-            ps.append(logit_predict(lb, np.column_stack([diff[gte], home[gte]])))
+            p = logit_predict(lb, np.column_stack([diff[gte], home[gte]]))
+            game_p[gte] = p
+            ps.append(p)
             ys.append(ng_y[gte])
+    out = {"pred": pred, "brier": None, "brier_n": 0, "last_fold": folds[-1] if folds else None,
+           "folds": folds, "game_p": game_p}
     if ps:
         p, yy = np.concatenate(ps), np.concatenate(ys)
-        return pred, brier(p, yy), int(len(yy)), last
-    return pred, None, 0, last
+        out["brier"], out["brier_n"] = brier(p, yy), int(len(yy))
+    return out
 
 
 # ---------------------------------------------------------------------------
 # Walk-forward backtest
 # ---------------------------------------------------------------------------
 
-def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
-    """Baselines vs the locked target, walk-forward by season. Seasons past the last test season
-    (2021 by default) are dropped before any metric or fit, so the holdout stays sealed."""
+def _p538(t: pl.DataFrame) -> np.ndarray:
+    return 1.0 / (1.0 + 10 ** (-(t["h_elo"] - t["a_elo"] + t["hfa_s"]).to_numpy() / 400))
+
+
+def walk_forward_frame(derived: dict, include_holdout: bool = False) -> dict:
+    """The walk-forward core shared by run_backtest and the Phase 6 freeze evidence.
+
+    Seasons past the last test season (2021 by default) are dropped before any feature, target,
+    metric or fit, so the holdout stays sealed. Returns:
+      "seasons": test seasons
+      "rows":   test-season snapshot rows: KEYS, bucket, y4, y8, the CANDIDATES columns, one
+                pred_<set> per RIDGE_SETS entry and "composite" (= the last set's pred column)
+      "ridge":  per set {"col", "brier", "brier_n", "factors", "last_fold", "folds"}
+      "brier":  baseline next-game Brier {name: (brier, n)} for CANDIDATES, "spread", "elo_538"
+      "games":  per test-season game: game_id, season, asof_week, y and p_composite, p_elo,
+                p_season_wpct, p_last16, p_pd_pg, p_spread, p_elo_538, restricted to games where
+                every p_ is defined (inner joins on game_id)
+    """
     seasons = test_seasons(include_holdout)
     last_season = seasons[-1]
     snaps = derived["snapshots"].filter(pl.col("season") <= last_season)
@@ -409,14 +440,60 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     ngz = next_game_frame(games, feats, zcols)
     ridge_meta: dict[str, dict] = {}
     pred_cols = []
+    game_p = None
     for name, factors in RIDGE_SETS.items():
-        pred, bs, bn, last_fold = _ridge_walk_forward(full, ngz, seasons, factors)
+        r = _ridge_walk_forward(full, ngz, seasons, factors)
         col = f"pred_{name}"
-        pred_cols.append(pl.Series(col, pred, dtype=pl.Float64).fill_nan(None))
-        ridge_meta[name] = {"col": col, "brier": bs, "brier_n": bn, "factors": factors, "last_fold": last_fold}
-    full = full.with_columns(pred_cols)
+        pred_cols.append(pl.Series(col, r["pred"], dtype=pl.Float64).fill_nan(None))
+        ridge_meta[name] = {"col": col, "brier": r["brier"], "brier_n": r["brier_n"], "factors": factors,
+                            "last_fold": r["last_fold"], "folds": r["folds"]}
+        game_p = r["game_p"]  # the last set's (composite) per-game probabilities
+    last_col = ridge_meta[list(RIDGE_SETS)[-1]]["col"]
+    full = full.with_columns(pred_cols).with_columns(pl.col(last_col).alias("composite"))
+    rows = full.filter(pl.col("season").is_in(seasons)).with_columns(bucket_expr().alias("bucket"))
 
-    df = full.filter(pl.col("season").is_in(seasons)).with_columns(bucket_expr().alias("bucket"))
+    def ok(p):  # finite probability -> keep
+        return pl.Series(p, dtype=pl.Float64).fill_nan(None)
+
+    in_test = pl.col("season").is_in(seasons)
+    g = ngz.select("game_id", "season", "asof_week", "y").with_columns(ok(game_p).alias("p_composite"))
+    g = g.filter(in_test)
+    base_brier: dict[str, tuple] = {}
+    p_base = ng.select("game_id")
+    for name, col in CANDIDATES.items():
+        bs, bn, p = _walk_forward_brier(
+            ng, seasons,
+            lambda t, c=col: np.column_stack([(t[f"h_{c}"] - t[f"a_{c}"]).to_numpy(), t["home_ind"].to_numpy()]),
+            return_p=True,
+        )
+        base_brier[name] = (bs, bn)
+        p_base = p_base.with_columns(ok(p).alias(f"p_{name}"))
+
+    sp = ng.filter(pl.col("spread_line").is_not_null())
+    bs, bn, p = _walk_forward_brier(sp, seasons, lambda t: t["spread_line"].to_numpy(), return_p=True)
+    base_brier["spread"] = (bs, bn)
+    p_sp = sp.select("game_id").with_columns(ok(p).alias("p_spread"))
+
+    te = ng.filter(in_test)
+    base_brier["elo_538"] = (brier(_p538(te), te["y"].to_numpy()) if te.height else None, te.height)
+    p538 = te.select("game_id").with_columns(pl.Series("p_elo_538", _p538(te), dtype=pl.Float64))
+
+    gcols = ["p_composite"] + [f"p_{n}" for n in CANDIDATES] + ["p_spread", "p_elo_538"]
+    games_frame = (
+        g.join(p_base, on="game_id", how="inner")
+        .join(p_sp, on="game_id", how="inner")
+        .join(p538, on="game_id", how="inner")
+        .drop_nulls(gcols)
+        .sort("season", "game_id")
+    )
+    return {"seasons": seasons, "rows": rows, "ridge": ridge_meta, "brier": base_brier, "games": games_frame}
+
+
+def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
+    """Baselines vs the locked target, walk-forward by season. Seasons past the last test season
+    (2021 by default) are dropped before any metric or fit, so the holdout stays sealed."""
+    wf = walk_forward_frame(derived, include_holdout)
+    seasons, df, ridge_meta = wf["seasons"], wf["rows"], wf["ridge"]
 
     cands: dict[str, dict] = {}
     columns = dict(CANDIDATES) | {name: m["col"] for name, m in ridge_meta.items()}
@@ -441,23 +518,13 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
             entry["factors"] = m["factors"]
             entry["last_fold_weights"] = m["last_fold"]
         else:
-            bs, bn = _walk_forward_brier(
-                ng, seasons,
-                lambda t, c=col: np.column_stack([(t[f"h_{c}"] - t[f"a_{c}"]).to_numpy(), t["home_ind"].to_numpy()]),
-            )
-            entry["brier"], entry["brier_n"] = bs, bn
+            entry["brier"], entry["brier_n"] = wf["brier"][name]
         cands[name] = entry
 
-    sp = ng.filter(pl.col("spread_line").is_not_null())
-    bs, bn = _walk_forward_brier(sp, seasons, lambda t: t["spread_line"].to_numpy())
+    bs, bn = wf["brier"]["spread"]
     cands["spread"] = {"N4": None, "N8": None, "per_season": None, "brier": bs, "brier_n": bn}
-
-    te = ng.filter(pl.col("season").is_in(seasons))
-    p538 = 1.0 / (1.0 + 10 ** (-(te["h_elo"] - te["a_elo"] + te["hfa_s"]).to_numpy() / 400))
-    cands["elo_538"] = {
-        "N4": None, "N8": None, "per_season": None,
-        "brier": brier(p538, te["y"].to_numpy()) if te.height else None, "brier_n": te.height,
-    }
+    bs, bn = wf["brier"]["elo_538"]
+    cands["elo_538"] = {"N4": None, "N8": None, "per_season": None, "brier": bs, "brier_n": bn}
 
     report = {
         "target": TARGET_TEXT,
