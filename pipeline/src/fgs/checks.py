@@ -6,6 +6,7 @@
 import polars as pl
 
 from fgs import season_config
+from fgs.elo import EloParams
 from fgs.franchises import CANONICAL, unknown_codes
 
 REQUIRED_RAW_COLUMNS = [
@@ -98,7 +99,9 @@ def check_games_per_team(games: pl.DataFrame) -> list[str]:
     return out
 
 
-def check_continuity(games: pl.DataFrame, snapshots: pl.DataFrame) -> list[str]:
+def check_continuity(games: pl.DataFrame, snapshots: pl.DataFrame, params: EloParams | None = None) -> list[str]:
+    """Week-0 Elo == prior final regressed toward params.mean by params.revert (the params replay used)."""
+    params = params or EloParams()
     out = []
     max_season = games["season"].max()
     present = {}
@@ -118,7 +121,7 @@ def check_continuity(games: pl.DataFrame, snapshots: pl.DataFrame) -> list[str]:
     )
     week0 = snapshots.filter(pl.col("week") == 0).select("season", "franchise_id", "elo")
     joined = week0.join(finals, on=["season", "franchise_id"], how="inner").with_columns(
-        (season_config.MEAN_ELO / 3 + 2 / 3 * pl.col("prev_final")).alias("expected")
+        (params.mean * params.revert + (1 - params.revert) * pl.col("prev_final")).alias("expected")
     )
     bad = joined.filter((pl.col("elo") - pl.col("expected")).abs() > CONTINUITY_TOL)
     for s, team, elo, _prev, exp in bad.sort("season", "franchise_id").iter_rows():
@@ -210,15 +213,16 @@ def check_week_date_order(games: pl.DataFrame) -> list[str]:
     ]
 
 
-def check_league_mean(snapshots: pl.DataFrame) -> list[str]:
+def check_league_mean(snapshots: pl.DataFrame, params: EloParams | None = None) -> list[str]:
+    mean = (params or EloParams()).mean
     means = (
         snapshots.filter((pl.col("week") == 0) & (pl.col("season") >= MEAN_CHECK_FROM))
         .group_by("season").agg(pl.col("elo").mean().alias("m")).sort("season")
     )
     return [
-        f"{s}: week-0 league mean Elo {m:.3f}, expected {season_config.MEAN_ELO} +/- {MEAN_TOL}"
+        f"{s}: week-0 league mean Elo {m:.3f}, expected {mean} +/- {MEAN_TOL}"
         for s, m in means.iter_rows()
-        if abs(m - season_config.MEAN_ELO) >= MEAN_TOL
+        if abs(m - mean) >= MEAN_TOL
     ]
 
 
@@ -261,26 +265,32 @@ def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[st
     return out
 
 
-# (name, callable(raw, derived) -> list[str]).
+# (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
 CHECKS: list[tuple[str, callable]] = [
-    ("columns", lambda raw, d: check_columns(raw)),
-    ("config_coverage", lambda raw, d: check_config_coverage(d["games"])),
-    ("team_counts", lambda raw, d: check_team_counts(d["games"])),
-    ("games_per_team", lambda raw, d: check_games_per_team(d["games"])),
-    ("continuity", lambda raw, d: check_continuity(d["games"], d["snapshots"])),
-    ("divisions", lambda raw, d: check_divisions(d["games"])),
-    ("result_consistency", lambda raw, d: check_result_consistency(d["games"])),
-    ("elo_zero_sum", lambda raw, d: check_elo_zero_sum(d["games"])),
-    ("week_date_order", lambda raw, d: check_week_date_order(d["games"])),
-    ("league_mean", lambda raw, d: check_league_mean(d["snapshots"])),
-    ("snapshot_grid", lambda raw, d: check_snapshot_grid(d["snapshots"], d["games"])),
+    ("columns", lambda raw, d, p: check_columns(raw)),
+    ("config_coverage", lambda raw, d, p: check_config_coverage(d["games"])),
+    ("team_counts", lambda raw, d, p: check_team_counts(d["games"])),
+    ("games_per_team", lambda raw, d, p: check_games_per_team(d["games"])),
+    ("continuity", lambda raw, d, p: check_continuity(d["games"], d["snapshots"], p)),
+    ("divisions", lambda raw, d, p: check_divisions(d["games"])),
+    ("result_consistency", lambda raw, d, p: check_result_consistency(d["games"])),
+    ("elo_zero_sum", lambda raw, d, p: check_elo_zero_sum(d["games"])),
+    ("week_date_order", lambda raw, d, p: check_week_date_order(d["games"])),
+    ("league_mean", lambda raw, d, p: check_league_mean(d["snapshots"], p)),
+    ("snapshot_grid", lambda raw, d, p: check_snapshot_grid(d["snapshots"], d["games"])),
 ]
 
 
-def run_checks(raw: pl.DataFrame, derived: dict[str, pl.DataFrame]) -> list[tuple[str, list[str]]]:
-    """Per-check results, in CHECKS order (check_codes excluded; callers run it first)."""
-    return [(name, fn(raw, derived)) for name, fn in CHECKS]
+def run_checks(
+    raw: pl.DataFrame, derived: dict[str, pl.DataFrame], params: EloParams | None = None
+) -> list[tuple[str, list[str]]]:
+    """Per-check results, in CHECKS order (check_codes excluded; callers run it first).
+
+    Pass the same `params` that derive() used, so param-dependent checks validate that replay.
+    """
+    params = params or EloParams()
+    return [(name, fn(raw, derived, params)) for name, fn in CHECKS]
 
 
-def run_all(raw: pl.DataFrame, derived: dict[str, pl.DataFrame]) -> list[str]:
-    return [f"{name}: {msg}" for name, fails in run_checks(raw, derived) for msg in fails]
+def run_all(raw: pl.DataFrame, derived: dict[str, pl.DataFrame], params: EloParams | None = None) -> list[str]:
+    return [f"{name}: {msg}" for name, fails in run_checks(raw, derived, params) for msg in fails]

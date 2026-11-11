@@ -140,3 +140,13 @@ def test_check_cli_bad_code(real_raw, monkeypatch, capsys):
 
 def test_week_date_order(real_derived):
     assert checks.check_week_date_order(real_derived["games"]) == []
+
+
+def test_continuity_follows_params(real_raw):
+    """Continuity validates the params replay actually used, not hardcoded defaults (WR-04)."""
+    from fgs.elo import EloParams
+
+    params = EloParams(revert=0.25)
+    d = derive(real_raw, params)
+    assert checks.check_continuity(d["games"], d["snapshots"], params) == []
+    assert checks.check_continuity(d["games"], d["snapshots"]) != []  # default revert disagrees

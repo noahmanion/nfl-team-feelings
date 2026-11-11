@@ -6,16 +6,16 @@ import sys
 import polars as pl
 
 from fgs import checks
-from fgs.elo import replay
+from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
 from fgs.ingest import load_schedules
 from fgs.paths import DERIVED_DIR
 from fgs.snapshots import build_grid
 
 
-def derive(raw: pl.DataFrame) -> dict[str, pl.DataFrame]:
+def derive(raw: pl.DataFrame, params: EloParams | None = None) -> dict[str, pl.DataFrame]:
     """Pure: raw schedules -> games (with Elo), team_games, snapshots. No file I/O."""
-    games, sparse = replay(build_games(raw))
+    games, sparse = replay(build_games(raw), params or EloParams())
     team_games = build_team_games(games)
     return {"games": games, "team_games": team_games, "snapshots": build_grid(games, team_games, sparse)}
 
@@ -128,8 +128,9 @@ def _cmd_check(args) -> int:
     if failed:
         print("raw data failed pre-derive checks; not deriving")
         return 1
-    derived = derive(raw)
-    for name, fails in checks.run_checks(raw, derived):
+    params = EloParams()
+    derived = derive(raw, params)
+    for name, fails in checks.run_checks(raw, derived, params):
         if name == "columns":
             continue  # already reported above
         failed |= _report(name, fails)
