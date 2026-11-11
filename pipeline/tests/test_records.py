@@ -185,3 +185,29 @@ def test_records_on_real_data_shape(real_inputs):
     json.dumps(r, allow_nan=False)
     md = records.records_check_md(r)
     assert "Notable non-entries" in md and md.count("| # |") == 4
+
+
+def test_records_check_key_ignores_the_date_but_not_the_records(tmp_path, monkeypatch):
+    """IN-06: a new export date (and the active-streak day counts it moves) never rewrites
+    RECORDS_CHECK.md; any real change does."""
+    from conftest import make_games
+    from fgs import cli, paths
+
+    games = make_games([("g1", 2007, 1, "REG", "2007-09-09", "NE", "AAA", 1, 0, False)])
+    rows = _season("NE", [100], 2007) + _season("AAA", [5], 2007)
+    r1 = records.build_records(_scored(rows), games, D("2008-01-01"))
+    r2 = records.build_records(_scored(rows), games, D("2008-02-01"))
+    assert r1["active"]["NE"]["days"] != r2["active"]["NE"]["days"]
+    assert records.records_check_key(r1) == records.records_check_key(r2)
+    r3 = records.build_records(_scored(_season("NE", [90], 2007) + _season("AAA", [5], 2007)), games, D("2008-02-01"))
+    assert records.records_check_key(r3) != records.records_check_key(r1)
+
+    path = tmp_path / "RECORDS_CHECK.md"
+    monkeypatch.setattr(paths, "RECORDS_CHECK_PATH", path)
+    assert cli._write_records_check({"records.json": r1}) == (path, True)
+    first = path.read_text()
+    assert "as of 2008-01-01" in first
+    assert cli._write_records_check({"records.json": r2}) == (path, False)
+    assert path.read_text() == first
+    assert cli._write_records_check({"records.json": r3}) == (path, True)
+    assert "as of 2008-02-01" in path.read_text()
