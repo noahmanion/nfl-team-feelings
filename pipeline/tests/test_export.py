@@ -50,6 +50,14 @@ def _fake_teams() -> pl.DataFrame:
     })
 
 
+def test_as_of_date_is_us_eastern():
+    """WR-09: a post-MNF export (after 8 pm ET, already tomorrow in UTC) keeps the ET date."""
+    from fgs.export import as_of_date
+    assert as_of_date("2026-11-11T03:30:00+00:00") == date(2026, 11, 10)
+    assert as_of_date("2026-11-11T18:40:00+00:00") == date(2026, 11, 11)
+    assert as_of_date("2026-07-01T03:30:00") == date(2026, 6, 30)  # naive = UTC; EDT
+
+
 def test_team_meta_filters_and_uppercases():
     meta = team_meta(_fake_teams())
     assert set(meta) == set(CANONICAL) and len(meta) == 32

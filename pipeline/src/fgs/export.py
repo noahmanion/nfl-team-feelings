@@ -8,8 +8,9 @@ import os
 import re
 import shutil
 import tempfile
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import polars as pl
 
@@ -231,6 +232,19 @@ def _load_evidence(fp_weights: dict[str, float], evidence: dict | None = None) -
     return evidence
 
 
+NFL_TZ = ZoneInfo("America/New_York")
+
+
+def as_of_date(generated_at: str) -> date:
+    """The export's calendar date in US Eastern time (WR-09): nflverse gamedays are local ET dates,
+    so a UTC date would add a day to every active streak for exports run after 8 pm ET. A naive
+    timestamp is taken as UTC."""
+    ts = datetime.fromisoformat(generated_at)
+    if ts.tzinfo is None:
+        ts = ts.replace(tzinfo=ZoneInfo("UTC"))
+    return ts.astimezone(NFL_TZ).date()
+
+
 def build_export(
     derived: dict, teams_df: pl.DataFrame, generated_at: str, *, evidence: dict | None = None,
 ) -> dict[str, object]:
@@ -253,7 +267,7 @@ def build_export(
         scored = _playoff_display(scored, games).sort(["season", "week", "rank"])
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
     ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence)
-    as_of = date.fromisoformat(generated_at[:10])  # active streaks count through the export date
+    as_of = as_of_date(generated_at)  # active streaks count through the export date (US Eastern)
     latest = asof.latest_played(games)
     assert latest is not None, "no played games"
     # WR-01: the latest week's streak cards count through as_of, like records.json active
