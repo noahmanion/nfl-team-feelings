@@ -101,8 +101,9 @@
         y: 'y',
         z: 'team',
         stroke: 'var(--text-muted)',
-        strokeOpacity: 0.25,
-        strokeWidth: 1,
+        // 31 background lines; scale ink with width so they stay a texture, not a grey mass.
+        strokeOpacity: width >= 900 ? 0.16 : wide ? 0.12 : 0.08,
+        strokeWidth: width >= 900 ? 0.75 : wide ? 0.6 : 0.5,
       }),
       Plot.line(highlightRows, { x: 'x', y: 'y', stroke: color, strokeWidth: 2.5 }),
       Plot.text(last, {
