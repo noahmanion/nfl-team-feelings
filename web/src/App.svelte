@@ -79,10 +79,12 @@
 
   $effect(() => {
     void retry
-    if (!meta || !target || target.latest) return
-    const s = target.season
+    // Record the wanted season before any early return, so an older in-flight fetch
+    // (e.g. A -> B -> back to A) can't land after the user has moved on.
+    requestedSeason = !meta || !target || target.latest ? null : target.season
+    if (!meta || requestedSeason === null) return
+    const s = requestedSeason
     if (seasonFile?.season === s) return
-    requestedSeason = s
     seasonError = null
     loadSeason(meta, s).then(
       (file) => {
