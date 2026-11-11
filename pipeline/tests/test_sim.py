@@ -222,6 +222,17 @@ def test_cache_write_deferred(tmp_path):
     assert not list(tmp_path.glob("*.tmp"))
 
 
+def test_input_digest_covers_game_order():
+    """WR-05: a moved kickoff (no result change) reorders the uniform draws, so it must change the digest."""
+    g = _g([("g1", 1, "A", "B", 20, 10), ("g2", 2, "C", "D", None, None), ("g3", 2, "A", "C", None, None)])
+    snaps = pl.DataFrame({"week": [0, 0, 0, 0], "franchise_id": list("ABCD"), "elo": [1500.0] * 4})
+    base = sim.input_digest(g, snaps)
+    moved = g.with_columns(pl.when(pl.col("game_id") == "g2").then(pl.lit("2023-09-30")).otherwise(pl.col("gameday"))
+                           .alias("gameday"))
+    assert sim.input_digest(moved, snaps) != base
+    assert sim.input_digest(g.reverse(), snaps) == base  # row order of the input frame is irrelevant
+
+
 # --- real data (skips without the schedules cache) ---
 
 

@@ -194,10 +194,14 @@ def model_version(n_sims: int = N_SIMS, sigma: float = SIGMA, seed: int = SEED) 
 
 
 def input_digest(season_games: pl.DataFrame, season_snaps: pl.DataFrame) -> str:
-    """Per-season data digest: REG games + as-of Elo grid."""
-    g = season_games.select(
-        "game_id", "home_id", "away_id", "result", "played", "asof_week", "neutral"
-    ).sort("game_id")
+    """Per-season data digest: REG games + as-of Elo grid.
+
+    Hashes exactly what simulate_season reads, in the order it reads it (WR-05): the game order
+    (gameday, gametime, game_id) decides which uniform draw goes to which game, so a moved
+    kickoff must invalidate the cached season even when no result changed."""
+    cols = ["game_id", "home_id", "away_id", "result", "played", "asof_week", "neutral"]
+    cols += [c for c in ("gameday", "gametime") if c in season_games.columns]
+    g = _sort_games(season_games).select(cols)
     s = season_snaps.select(
         pl.col("week").cast(pl.Int64), "franchise_id", pl.col("elo").cast(pl.Float64).round(9)
     ).sort("week", "franchise_id")
