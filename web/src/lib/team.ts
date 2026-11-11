@@ -59,15 +59,14 @@ export interface BarRow {
 
 /**
  * Factor bars: every factor in meta order (missing points count as 0), sorted by |points| desc
- * with meta order as the tiebreak. Top `top` are shown, the rest go under "All factors".
- * scale = max(1, max|points|) so the largest bar spans half the track.
+ * with meta order as the tiebreak. All of them are shown, so the visible bars plus the baseline
+ * add up to the score. scale = max(1, max|points|) so the largest bar spans half the track.
  */
 export function barRows(
   points: Record<string, number>,
   factors: FactorMeta[],
   baseline: number,
-  top = 4,
-): { shown: BarRow[]; rest: BarRow[]; scale: number; total: number } {
+): { rows: BarRow[]; scale: number; total: number } {
   const rows = factors.map((f, i) => {
     const p = points[f.key]
     return { i, key: f.key, label: f.label, description: f.description, points: typeof p === 'number' && Number.isFinite(p) ? p : 0 }
@@ -76,7 +75,7 @@ export function barRows(
   const clean = rows.map(({ i: _i, ...r }) => r)
   const scale = Math.max(1, ...clean.map((r) => Math.abs(r.points)))
   const total = baseline + clean.reduce((s, r) => s + r.points, 0)
-  return { shown: clean.slice(0, top), rest: clean.slice(top), scale, total }
+  return { rows: clean, scale, total }
 }
 
 export const findTeamRow = (file: SeasonFile, team: string, week: number): Row | undefined =>

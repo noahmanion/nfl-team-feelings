@@ -9,7 +9,8 @@
     score,
   }: { points: Record<string, number> | undefined; factors: FactorMeta[]; baseline: number; score: number } = $props()
 
-  // Factor-agnostic: whatever meta.factors lists is drawn, in |points| order.
+  // Factor-agnostic: whatever meta.factors lists is drawn, in |points| order. All of them, so the
+  // visible numbers add up to the score.
   const bars = $derived(points ? barRows(points, factors, baseline) : null)
   const width = (p: number, scale: number): string => `${(Math.abs(p) / scale) * 50}%`
 </script>
@@ -35,20 +36,10 @@
   {#if bars}
     <p class="baseline">Average team {baseline}</p>
     <ol>
-      {#each bars.shown as r (r.key)}
+      {#each bars.rows as r (r.key)}
         {@render bar(r, bars.scale)}
       {/each}
     </ol>
-    {#if bars.rest.length}
-      <details>
-        <summary>All factors</summary>
-        <ol>
-          {#each bars.rest as r (r.key)}
-            {@render bar(r, bars.scale)}
-          {/each}
-        </ol>
-      </details>
-    {/if}
     <p class="total">= {score}</p>
   {:else}
     <p class="missing">Factor breakdown unavailable for this week.</p>
@@ -72,9 +63,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
-  }
-  details ol {
-    margin-top: var(--space-md);
   }
   .factor {
     display: grid;
@@ -136,13 +124,6 @@
     color: var(--text-muted);
     font-size: var(--text-label);
     line-height: var(--lh-label);
-  }
-  details summary {
-    display: inline-flex;
-    align-items: center;
-    min-block-size: var(--tap-min);
-    color: var(--accent);
-    cursor: pointer;
   }
   .total {
     padding-top: var(--space-sm);
