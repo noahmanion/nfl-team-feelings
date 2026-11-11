@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: executing
-stopped_at: "Roadmap and state initialized; ready for `/gsd:plan-phase 1`"
-last_updated: "2026-11-11T17:53:03.485Z"
-last_activity: 2026-11-11 -- Phase 1 planning complete
+stopped_at: "Completed 01-01-PLAN.md"
+last_updated: "2026-11-11T17:56:59.381Z"
+last_activity: 2026-11-11 -- Completed 01-01 (Elo walking skeleton)
 progress:
   total_phases: 8
   completed_phases: 0
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 33
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 ## Current Position
 
 Phase: 1 of 8 (Data Foundation & Elo Core)
-Plan: 0 of TBD in current phase
-Status: Ready to execute
-Last activity: 2026-11-11 -- Phase 1 planning complete
+Plan: 1 of 3 in current phase (01-01 complete; next 01-02)
+Status: Executing
+Last activity: 2026-11-11 -- Completed 01-01 (Elo walking skeleton)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [███░░░░░░░] 33%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 01 P01 | 12min | 3 tasks | 17 files |
 
 ## Accumulated Context
 
@@ -65,6 +66,8 @@ Recent decisions affecting current work:
 - [Roadmap]: Weights are frozen and the 2022–2025 holdout is evaluated once (Phase 6) before the draft reaction (Phase 7).
 - [Research]: Python 3.13 + uv + nflreadpy (pinned) + Polars in `pipeline/`. Vite + Svelte 5 + Observable Plot in `web/`. JSON in `web/public/data/` is the only contract.
 - [Research]: Score = Σ weight × per-snapshot z-score, strictly additive, with each contribution stored. Every sign is decided by the backtest.
+- [01-01]: Snapshot grid ends at last played week per season (latest week derived from data)
+- [01-01]: Era HFA 65/58/30/45 market-implied, in fgs.season_config.hfa_for
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-11
-Stopped at: Roadmap and state initialized; ready for `/gsd:plan-phase 1`
+Last session: 2026-11-11T17:56:55.673Z
+Stopped at: Completed 01-01-PLAN.md
 Resume file: None

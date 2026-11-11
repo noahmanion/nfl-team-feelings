@@ -42,7 +42,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 Plans:
 **Wave 1**
 
-- [ ] 01-01-PLAN.md — Walking skeleton: uv project, cached ingest, franchise map, 538 Elo, snapshot grid, `fgs build`/`fgs elo`
+- [x] 01-01-PLAN.md — Walking skeleton: uv project, cached ingest, franchise map, 538 Elo, snapshot grid, `fgs build`/`fgs elo`
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -172,7 +172,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation & Elo Core | 0/3 | Not started | - |
+| 1. Data Foundation & Elo Core | 1/3 | In Progress|  |
 | 2. Elo Mood Board | 0/TBD | Not started | - |
 | 3. Backtest Harness & Additive Score | 0/TBD | Not started | - |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
