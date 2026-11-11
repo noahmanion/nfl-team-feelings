@@ -136,3 +136,7 @@ def test_check_cli_bad_code(real_raw, monkeypatch, capsys):
     assert cli.main(["check"]) == 1
     out = capsys.readouterr().out
     assert "XXX" in out and "FAIL  codes" in out
+
+
+def test_week_date_order(real_derived):
+    assert checks.check_week_date_order(real_derived["games"]) == []

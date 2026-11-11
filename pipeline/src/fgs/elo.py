@@ -55,8 +55,15 @@ def replay(
 
     Each season: regress every rated team 1/3 toward the mean, seed first-time teams,
     emit week-0 rows for that season's teams, then apply every played game in order.
+
+    Games are applied in date order (not week-label order), and each result is keyed to its
+    `asof_week`: the highest week label reached in that season by the time the game was played.
+    A postponed game that keeps its original week label but is played later therefore lands in
+    the snapshot of the week it was actually played in, never in an earlier week's as-of view.
+    When week order and date order agree (all cached history), asof_week == week.
     """
-    games = games.sort(["season", "week", "gameday", "gametime", "game_id"], nulls_last=True)
+    games = games.sort(["season", "gameday", "gametime", "week", "game_id"], nulls_last=True)
+    games = games.with_columns(pl.col("week").cum_max().over("season").alias("asof_week"))
     teams = sorted(set(games["home_id"]) | set(games["away_id"]))
     idx = {t: i for i, t in enumerate(teams)}
     ratings = np.full(len(teams), np.nan, dtype=np.float64)
@@ -69,7 +76,7 @@ def replay(
     p_home = [None] * n
     sparse: list[tuple[int, int, str, float]] = []
 
-    rows = games.select("season", "week", "home_id", "away_id", "result", "neutral", "played").rows()
+    rows = games.select("season", "asof_week", "home_id", "away_id", "result", "neutral", "played").rows()
     seasons = sorted({r[0] for r in rows})
     by_season: dict[int, list[int]] = {s: [] for s in seasons}
     for i, r in enumerate(rows):

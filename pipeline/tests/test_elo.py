@@ -6,7 +6,7 @@ import pytest
 from conftest import make_games
 from fgs.elo import EloParams, mov_mult, replay, update, win_prob
 from fgs.games import build_team_games
-from fgs.season_config import hfa_for
+from fgs.season_config import MEAN_ELO, hfa_for
 from fgs.snapshots import build_grid
 
 
@@ -151,3 +151,24 @@ def test_grid_bye_forward_fill_and_reg_only_records(synthetic_games):
     assert (by_week[19]["wins"], by_week[19]["losses"]) == (2, 0)
     ne = snap.filter((pl.col("franchise_id") == "NE") & (pl.col("season") == 2023) & (pl.col("week") == 3))
     assert ne.select("wins", "losses", "ties", "win_pct").row(0) == (0, 1, 1, 0.25)
+
+
+def test_postponed_game_lands_in_week_it_was_played(synthetic_games):
+    """A week-1 game played after week-2 games must not leak into the week-1 snapshot (WR-02)."""
+    from fgs.checks import check_week_date_order
+
+    moved = synthetic_games.with_columns(
+        pl.when(pl.col("game_id") == "2023_01_MIA_BUF").then(pl.lit("2023-09-18"))
+        .otherwise(pl.col("gameday")).alias("gameday")
+    )
+    games, sparse = replay(moved)
+    assert games.filter(pl.col("game_id") == "2023_01_MIA_BUF")["asof_week"].item() == 2
+    wk1 = sparse.filter((pl.col("season") == 2023) & (pl.col("week") == 1))
+    assert "BUF" not in wk1["franchise_id"].to_list()
+    # BUF's week-2 game (played 09-17) now uses its pre-season rating, before the 09-18 game.
+    assert games.filter(pl.col("game_id") == "2023_02_BUF_NYJ")["elo_pre_away"].item() == MEAN_ELO
+    snap = build_grid(games, build_team_games(games), sparse)
+    buf1 = snap.filter((pl.col("season") == 2023) & (pl.col("week") == 1) & (pl.col("franchise_id") == "BUF"))
+    assert (buf1["wins"].item(), buf1["elo"].item()) == (0, MEAN_ELO)
+    assert check_week_date_order(moved) != []
+    assert check_week_date_order(synthetic_games) == []

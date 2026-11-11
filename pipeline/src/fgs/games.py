@@ -44,6 +44,8 @@ def _outcome(margin: pl.Expr) -> pl.Expr:
 def build_team_games(games: pl.DataFrame) -> pl.DataFrame:
     """Two rows per game, one from each team's perspective."""
     has_elo = "elo_pre_home" in games.columns
+    # asof_week (from replay) is the week a result became known; fall back to the label week.
+    asof = pl.col("asof_week") if "asof_week" in games.columns else pl.col("week")
 
     def side(home: bool) -> pl.DataFrame:
         me, opp = ("home", "away") if home else ("away", "home")
@@ -51,7 +53,7 @@ def build_team_games(games: pl.DataFrame) -> pl.DataFrame:
         elo_pre = pl.col(f"elo_pre_{me}") if has_elo else pl.lit(None, pl.Float64)
         elo_post = pl.col(f"elo_post_{me}") if has_elo else pl.lit(None, pl.Float64)
         return games.select(
-            "game_id", "season", "week", "game_type", "is_reg",
+            "game_id", "season", "week", asof.cast(pl.Int32).alias("asof_week"), "game_type", "is_reg",
             pl.col(f"{me}_id").alias("franchise_id"),
             pl.col(f"{opp}_id").alias("opponent_id"),
             pl.lit(home).alias("is_home"),

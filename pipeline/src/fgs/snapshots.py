@@ -8,10 +8,11 @@ SNAPSHOT_COLUMNS = ["season", "week", "franchise_id", "elo", "wins", "losses", "
 def build_grid(games_with_elo: pl.DataFrame, team_games: pl.DataFrame, sparse: pl.DataFrame) -> pl.DataFrame:
     keys = ["season", "week", "franchise_id"]
     # Last *played* week per season (not last scheduled), so the current season ends at the latest result.
+    wk = "asof_week" if "asof_week" in games_with_elo.columns else "week"
     wmax = (
         games_with_elo.filter(pl.col("played"))
         .group_by("season")
-        .agg(pl.col("week").max().alias("wmax"))
+        .agg(pl.col(wk).max().cast(pl.Int32).alias("wmax"))
     )
     teams = team_games.select("season", "franchise_id").unique()
     grid = (
@@ -26,8 +27,11 @@ def build_grid(games_with_elo: pl.DataFrame, team_games: pl.DataFrame, sparse: p
         .group_by(keys, maintain_order=True)
         .last()
     )
+    # Records are keyed by asof_week (the week a result became known), matching the Elo keys.
+    asof = pl.col("asof_week") if "asof_week" in team_games.columns else pl.col("week")
     reg = (
         team_games.filter(pl.col("is_reg") & pl.col("played"))
+        .with_columns(asof.alias("week"))
         .group_by(keys)
         .agg(
             (pl.col("outcome") == 1.0).sum().alias("w"),

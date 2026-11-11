@@ -184,6 +184,32 @@ def check_elo_zero_sum(games: pl.DataFrame) -> list[str]:
     return out
 
 
+def check_week_date_order(games: pl.DataFrame) -> list[str]:
+    """Flag played games dated before a played game from an earlier-labelled week (same season).
+
+    Such an inversion means a game was postponed but kept its week label. Replay orders by date
+    and keys results by asof_week, so snapshots stay as-of correct; this check still fails so a
+    human looks at the reschedule (records, week semantics) before trusting the build.
+    """
+    played = games.filter(pl.col("played"))
+    prior = (
+        played.group_by("season", "week")
+        .agg(pl.col("gameday").max().alias("hi"))
+        .sort("season", "week")
+        .with_columns(pl.col("hi").cum_max().shift(1).over("season").alias("prior_hi"))
+        .select("season", "week", "prior_hi")
+    )
+    bad = (
+        played.join(prior, on=["season", "week"])
+        .filter(pl.col("gameday") < pl.col("prior_hi"))
+        .sort("season", "week", "gameday", "game_id")
+    )
+    return [
+        f"{s} {gid} (wk{w}, {day}) precedes an earlier-week game played {hi}; week and date order disagree"
+        for s, w, gid, day, hi in bad.select("season", "week", "game_id", "gameday", "prior_hi").iter_rows()
+    ]
+
+
 def check_league_mean(snapshots: pl.DataFrame) -> list[str]:
     means = (
         snapshots.filter((pl.col("week") == 0) & (pl.col("season") >= MEAN_CHECK_FROM))
@@ -208,8 +234,9 @@ def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[st
     dups = snapshots.group_by(keys).len().filter(pl.col("len") > 1).sort(keys)
     for s, w, team, n in dups.head(10).iter_rows():
         out.append(f"{s} week {w} {team}: {n} duplicate rows")
+    wk = "asof_week" if "asof_week" in games.columns else "week"
     wmax = dict(
-        games.filter(pl.col("played")).group_by("season").agg(pl.col("week").max()).iter_rows()
+        games.filter(pl.col("played")).group_by("season").agg(pl.col(wk).max()).iter_rows()
     )
     rows = dict(snapshots.group_by("season").len().iter_rows())
     for s in sorted(set(wmax) | set(rows)):
@@ -239,6 +266,7 @@ CHECKS: list[tuple[str, callable]] = [
     ("divisions", lambda raw, d: check_divisions(d["games"])),
     ("result_consistency", lambda raw, d: check_result_consistency(d["games"])),
     ("elo_zero_sum", lambda raw, d: check_elo_zero_sum(d["games"])),
+    ("week_date_order", lambda raw, d: check_week_date_order(d["games"])),
     ("league_mean", lambda raw, d: check_league_mean(d["snapshots"])),
     ("snapshot_grid", lambda raw, d: check_snapshot_grid(d["snapshots"], d["games"])),
 ]
