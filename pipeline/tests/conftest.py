@@ -55,3 +55,11 @@ def real_cache():
     if not path.exists():
         pytest.skip("no cached schedules; run `uv run fgs build` first")
     return path
+
+
+@pytest.fixture(scope="session")
+def real_inputs():
+    """Optional derive() inputs from the real cache (pbp_games may be None without a pbp cache)."""
+    from fgs import cli
+
+    return cli.cached_inputs()

@@ -7,7 +7,7 @@ from collections.abc import Callable
 
 import polars as pl
 
-from fgs import season_config
+from fgs import pbp, season_config
 from fgs.elo import EloParams
 from fgs.franchises import CANONICAL, unknown_codes
 
@@ -281,6 +281,8 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("week_date_order", lambda raw, d, p: check_week_date_order(d["games"])),
     ("league_mean", lambda raw, d, p: check_league_mean(d["snapshots"], p)),
     ("snapshot_grid", lambda raw, d, p: check_snapshot_grid(d["snapshots"], d["games"])),
+    ("pbp_coverage", lambda raw, d, p: [] if d.get("team_game_epa") is None
+     else pbp.check_pbp(d["team_game_epa"], d["team_games"])),
 ]
 
 

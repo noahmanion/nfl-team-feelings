@@ -14,46 +14,86 @@ from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
 from fgs.ingest import load_schedules, load_teams, save_cache
 from fgs.paths import CACHE_DIR, DERIVED_DIR, WEB_DATA_DIR
+from fgs.pbp import PBP_SUBDIR, cached_seasons, load_all_pbp, load_pbp_season, team_game_epa
 from fgs.snapshots import build_grid
 
 
 def derive_games(
     games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
-    scored: bool = True,
+    scored: bool = True, *, pbp_games: pl.DataFrame | None = None,
 ) -> dict:
     """Pure (apart from reading weights.yaml when weights is None): normalized games ->
     games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
     the exact weights dict that produced the contributions (export reports these, not a re-read).
 
     scored=False stops after the Elo grid (no features, no weights): the backtest rebuilds its
-    own features and must not need a valid weights.yaml to propose one."""
+    own features and must not need a valid weights.yaml to propose one.
+
+    pbp_games (pbp.team_game_epa frame, or None) is carried through as derived["team_game_epa"]."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
     if not scored:
-        return {"games": games, "team_games": team_games, "snapshots": snapshots}
+        return {"games": games, "team_games": team_games, "snapshots": snapshots, "team_game_epa": pbp_games}
     feats = features.build_features(snapshots, team_games)
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
-    return {"games": games, "team_games": team_games, "snapshots": snapshots, "features": feats, "weights": w}
+    return {
+        "games": games, "team_games": team_games, "snapshots": snapshots, "features": feats, "weights": w,
+        "team_game_epa": pbp_games,
+    }
 
 
 def derive(
     raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
-    scored: bool = True,
+    scored: bool = True, *, pbp_games: pl.DataFrame | None = None,
 ) -> dict:
     """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file."""
-    return derive_games(build_games(raw), params, weights, scored=scored)
+    return derive_games(build_games(raw), params, weights, scored=scored, pbp_games=pbp_games)
+
+
+PBP_FIRST_SEASON = 1999
+
+
+def _current_season(games: pl.DataFrame) -> int:
+    """Season of the latest played week (else the max schedule season)."""
+    if "played" not in games.columns:  # raw schedules: played = has a result
+        games = games.with_columns(pl.col("result").is_not_null().alias("played"))
+    latest = latest_played(games)
+    if latest is not None:
+        return int(latest[0])
+    played = games.filter(pl.col("played"))
+    return int((played if played.height else games)["season"].max())
+
+
+def pbp_seasons(games: pl.DataFrame) -> list[int]:
+    """pbp seasons to load: 1999 through the current season. `games` = raw schedules or build_games(raw)
+    (raw works too, so refresh can pick seasons before the code checks have run)."""
+    return list(range(PBP_FIRST_SEASON, _current_season(games) + 1))
+
+
+def cached_inputs(cache_dir=None) -> dict:
+    """Optional derive() inputs read from the cache only (no network). None when not cached."""
+    cache_dir = CACHE_DIR if cache_dir is None else cache_dir  # module global read at call time
+    seasons = cached_seasons(cache_dir)
+    if not seasons:
+        return {"pbp_games": None}
+    return {"pbp_games": team_game_epa(load_all_pbp(seasons, cache_dir, write_cache=False))}
 
 
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     raw = load_schedules(refresh=refresh)
-    out = derive(raw)
+    seasons = pbp_seasons(raw)
+    current = seasons[-1]
+    plays = load_all_pbp(seasons, CACHE_DIR, refresh_seasons=[current] if refresh else ())
+    tge = team_game_epa(plays)
+    out = derive(raw, pbp_games=tge)
     _write_derived(out)
     print(
         f"built: raw {raw.height} rows, games {out['games'].height}, "
         f"team_games {out['team_games'].height}, elo_snapshots {out['snapshots'].height}"
     )
+    print(f"pbp: {tge.height} team-games, seasons {seasons[0]}-{seasons[-1]}")
     latest = _latest_played(out["games"])
     if latest is not None:
         print(f"latest: {latest[0]} week {latest[1]} (data through {_data_through(out['games'], *latest)})")
@@ -66,6 +106,8 @@ def _write_derived(out: dict[str, pl.DataFrame]) -> None:
     out["team_games"].write_parquet(DERIVED_DIR / "team_games.parquet")
     out["snapshots"].write_parquet(DERIVED_DIR / "elo_snapshots.parquet")
     out["features"].write_parquet(DERIVED_DIR / "features.parquet")
+    if out.get("team_game_epa") is not None:
+        out["team_game_epa"].write_parquet(DERIVED_DIR / "team_game_epa.parquet")
 
 
 # Kept under the old names so existing callers/tests keep working.
@@ -139,7 +181,9 @@ def _cmd_elo(args) -> int:
     return 0
 
 
-def _checked_derive(raw: pl.DataFrame) -> tuple[bool, dict[str, pl.DataFrame] | None, EloParams]:
+def _checked_derive(
+    raw: pl.DataFrame, pbp_games: pl.DataFrame | None = None,
+) -> tuple[bool, dict[str, pl.DataFrame] | None, EloParams]:
     """Pre-derive checks (columns, codes), then derive and run every post-derive check. No file I/O."""
     params = EloParams()
     failed = False
@@ -148,7 +192,7 @@ def _checked_derive(raw: pl.DataFrame) -> tuple[bool, dict[str, pl.DataFrame] | 
     if failed:
         print("raw data failed pre-derive checks; not deriving")
         return False, None, params
-    derived = derive(raw, params)
+    derived = derive(raw, params, pbp_games=pbp_games)
     for name, fails in checks.run_checks(raw, derived, params):
         if name == "columns":
             continue  # already reported above
@@ -159,7 +203,7 @@ def _checked_derive(raw: pl.DataFrame) -> tuple[bool, dict[str, pl.DataFrame] | 
 
 def _cmd_check(args) -> int:
     raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
-    ok, _, _ = _checked_derive(raw)
+    ok, _, _ = _checked_derive(raw, **cached_inputs())
     return 0 if ok else 1
 
 
@@ -169,17 +213,29 @@ def _cmd_refresh(args) -> int:
     The downloads are not persisted until every check passes and the export builds, so a bad
     nflverse file never replaces the good raw cache that `fgs export`/`build`/`check` read.
     """
+    cache_dir = CACHE_DIR  # module global read at call time (tests monkeypatch it)
     raw = load_schedules(refresh=True, write_cache=False)
     teams = load_teams(refresh=True, write_cache=False)
-    ok, derived, _ = _checked_derive(raw)
+    seasons = pbp_seasons(raw)
+    current = seasons[-1]
+    # Only the current season is re-downloaded; earlier seasons come from the cache. Any that
+    # are missing are downloaded in memory too and saved with the rest after checks pass.
+    have = set(cached_seasons(cache_dir))
+    fetched = {s: load_pbp_season(s, refresh=True, cache_dir=cache_dir, write_cache=False)
+               for s in seasons if s == current or s not in have}
+    cached = [s for s in seasons if s not in fetched]
+    frames = ([load_all_pbp(cached, cache_dir, write_cache=False)] if cached else []) + list(fetched.values())
+    tge = team_game_epa(pl.concat(frames, how="diagonal_relaxed"))
+    ok, derived, _ = _checked_derive(raw, pbp_games=tge)
     if not ok:
         print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     files = export.build_export(derived, teams, generated_at=generated_at)  # pure; may still raise before writes
-    cache_dir = CACHE_DIR  # module global read at call time (tests monkeypatch it)
     save_cache(raw, "schedules.parquet", cache_dir)
     save_cache(teams, "teams.parquet", cache_dir)
+    for s, df in sorted(fetched.items()):
+        save_cache(df, f"{PBP_SUBDIR}/{s}.parquet", cache_dir)
     _write_derived(derived)
     export.write_export(files, WEB_DATA_DIR)
     meta = files["meta.json"]
@@ -191,7 +247,7 @@ def _cmd_refresh(args) -> int:
 
 
 def _cmd_export(args) -> int:
-    derived = derive(load_schedules())  # cache only (downloads once if missing)
+    derived = derive(load_schedules(), **cached_inputs())  # cache only (schedules download once if missing)
     teams = load_teams()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     files = export.build_export(derived, teams, generated_at=generated_at)
@@ -208,7 +264,7 @@ def _cmd_export(args) -> int:
 def _cmd_backtest(args) -> int:
     # cache only (downloads once if missing). Unscored: the backtest builds its own features,
     # so a missing/invalid weights.yaml must not block proposing new weights.
-    derived = derive(load_schedules(), scored=False)
+    derived = derive(load_schedules(), scored=False, **cached_inputs())
     report = run_backtest(derived, include_holdout=args.include_holdout)
     print(format_report(report))
     out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it
@@ -241,8 +297,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="re-download everything (same as --refresh for schedules, which is one file)")
     p.set_defaults(func=_cmd_ingest)
 
-    p = sub.add_parser("build", help="ingest (cached) + derive games, team_games, elo_snapshots")
-    p.add_argument("--refresh", action="store_true", help="re-download schedules first")
+    p = sub.add_parser("build", help="ingest (cached) schedules + pbp, derive games, team_games, elo_snapshots, "
+                                     "team_game_epa")
+    p.add_argument("--refresh", action="store_true",
+                   help="re-download schedules and the current season's pbp first")
     p.set_defaults(func=_cmd_build)
 
     p = sub.add_parser("elo", help="ranked Elo table as of a (season, week); default = latest played week")

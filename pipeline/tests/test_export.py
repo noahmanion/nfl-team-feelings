@@ -51,7 +51,7 @@ def test_team_meta_filters_and_uppercases():
 def real_files():
     if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
         pytest.skip("no cached schedules/teams; run `uv run fgs export` once first")
-    derived = derive(load_schedules())
+    derived = derive(load_schedules(), **cli.cached_inputs())
     return derived, build_export(derived, load_teams(), generated_at=GEN)
 
 
@@ -196,7 +196,7 @@ def test_latest_partial_week_synthetic():
         [pl.when(pl.col("game_id") == last).then(None).otherwise(pl.col(c)).alias(c)
          for c in ("result", "home_score", "away_score")]
     )
-    files = build_export(derive(mutated), load_teams(), generated_at=GEN)
+    files = build_export(derive(mutated, **cli.cached_inputs()), load_teams(), generated_at=GEN)
     meta = files["meta.json"]
     assert meta["latest"] == {"season": s, "week": w}
     assert meta["partial_week"] is True
@@ -233,7 +233,7 @@ def test_partial_current_week_by_kickoff():
         [pl.when(pl.col("game_id") == last).then(None).otherwise(pl.col(c)).alias(c)
          for c in ("result", "home_score", "away_score")]
     )
-    meta = build_export(derive(mutated), load_teams(), generated_at=GEN)["meta.json"]
+    meta = build_export(derive(mutated, **cli.cached_inputs()), load_teams(), generated_at=GEN)["meta.json"]
     assert meta["latest"] == {"season": s, "week": w}
     assert meta["partial_week"] is True
 
@@ -248,7 +248,7 @@ def test_partial_next_week_one_game_played():
         pl.when(pl.col("game_id") == g["game_id"]).then(pl.lit(v)).otherwise(pl.col(c)).cast(raw.schema[c]).alias(c)
         for c, v in (("home_score", 27), ("away_score", 20), ("result", 7))
     )
-    files = build_export(derive(mutated), load_teams(), generated_at=GEN)
+    files = build_export(derive(mutated, **cli.cached_inputs()), load_teams(), generated_at=GEN)
     meta = files["meta.json"]
     assert meta["latest"] == {"season": s, "week": w + 1}
     assert meta["partial_week"] is True

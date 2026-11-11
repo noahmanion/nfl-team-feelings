@@ -25,7 +25,7 @@ def real_raw(real_cache):
 
 @pytest.fixture(scope="module")
 def real_derived(real_raw):
-    return derive(real_raw)
+    return derive(real_raw, **cli.cached_inputs())
 
 
 def test_columns(real_raw):
@@ -139,6 +139,19 @@ def test_check_cli_bad_code(real_raw, monkeypatch, capsys):
     assert cli.main(["check"]) == 1
     out = capsys.readouterr().out
     assert "XXX" in out and "FAIL  codes" in out
+
+
+def test_pbp_coverage_real(real_derived, real_raw):
+    if real_derived["team_game_epa"] is None:
+        pytest.skip("no pbp cache; run `uv run fgs build` first")
+    results = dict(checks.run_checks(real_raw, real_derived))
+    assert "pbp_coverage" in results
+    assert results["pbp_coverage"] == []
+
+
+def test_pbp_coverage_skipped_without_pbp(real_raw):
+    d = derive(real_raw, scored=False)
+    assert dict(checks.run_checks(real_raw, d))["pbp_coverage"] == []
 
 
 def test_week_date_order(real_derived):

@@ -81,10 +81,21 @@ def test_week0_uses_prior_data_and_lists_all_teams(derived, capsys):
 
 
 def test_build_prints_data_through(derived, tmp_path, monkeypatch, capsys):
+    import polars as pl
+
+    tge = pl.DataFrame({"game_id": ["g"], "franchise_id": ["BUF"]})
+    calls = []
     monkeypatch.setattr(cli, "load_schedules", lambda refresh=False: derived["games"])
-    monkeypatch.setattr(cli, "derive", lambda raw: derived)
+    monkeypatch.setattr(cli, "load_all_pbp", lambda seasons, cache_dir, refresh_seasons=(): calls.append(
+        (list(seasons), list(refresh_seasons))))
+    monkeypatch.setattr(cli, "team_game_epa", lambda plays: tge)
+    monkeypatch.setattr(cli, "derive", lambda raw, pbp_games=None: {**derived, "team_game_epa": pbp_games})
     assert cli.main(["build"]) == 0
-    assert "data through 2024-09-15" in capsys.readouterr().out
+    assert calls == [(list(range(1999, 2025)), [])]
+    out = capsys.readouterr().out
+    assert "data through 2024-09-15" in out
+    assert "pbp: 1 team-games, seasons 1999-2024" in out
+    assert (tmp_path / "team_game_epa.parquet").exists()
 
 
 # --- fgs refresh: check-then-write (network mocked by reading the caches) -------------------
@@ -95,6 +106,36 @@ def _cached_inputs():
         pytest.skip("no cached schedules/teams")
     from fgs.ingest import load_schedules, load_teams
     return load_schedules(), load_teams()
+
+
+def _mock_pbp(monkeypatch, current):
+    """Network mock for pbp: the 'download' of `current` reads the real cache (or a tiny synthetic
+    frame without one); earlier seasons are served from the real cache via cli.load_all_pbp."""
+    import polars as pl
+
+    from fgs import pbp
+    from fgs.paths import CACHE_DIR
+
+    real = pbp.cached_seasons(CACHE_DIR)
+    if real:
+        earlier = [s for s in real if s < current]
+        monkeypatch.setattr(cli, "cached_seasons", lambda cache_dir: earlier)
+        monkeypatch.setattr(cli, "load_all_pbp", lambda seasons, cache_dir, **kw: pbp.load_all_pbp(
+            seasons, CACHE_DIR, write_cache=False))
+    calls = []
+
+    def fake_load(season, refresh=False, cache_dir=None, write_cache=True):
+        calls.append((season, refresh, write_cache))
+        if real and season in real:
+            return pbp.load_pbp_season(season, cache_dir=CACHE_DIR, write_cache=False)
+        return pl.DataFrame(schema={c: pl.String for c in pbp.SLIM_COLUMNS})  # no plays
+
+    monkeypatch.setattr(cli, "load_pbp_season", fake_load)
+    return calls
+
+
+def _current(raw):
+    return cli.pbp_seasons(raw)[-1]
 
 
 CACHE_FILES = ("schedules.parquet", "teams.parquet")
@@ -121,6 +162,7 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     bad = raw.head(1).with_columns(pl.lit("XXX").alias("home_team"), pl.lit("2099_01_XXX_BUF").alias("game_id"))
     monkeypatch.setattr(cli, "load_schedules", lambda **kw: pl.concat([raw, bad]))
     monkeypatch.setattr(cli, "load_teams", lambda **kw: teams)
+    _mock_pbp(monkeypatch, _current(raw))
     assert cli.main(["refresh"]) == 1
     cap = capsys.readouterr()
     assert "FAIL" in cap.out and "cache and JSON not updated" in cap.err
@@ -128,7 +170,7 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     for d in (derived_dir, web_dir):
         assert [p.name for p in d.iterdir()] == ["SENTINEL"]
         assert (d / "SENTINEL").read_bytes() == b"untouched\n"
-    assert sorted(p.name for p in cache_dir.iterdir()) == list(CACHE_FILES)
+    assert sorted(p.name for p in cache_dir.iterdir()) == list(CACHE_FILES)  # no pbp/ written
     for f in CACHE_FILES:  # the bad download never replaced the good raw cache
         assert (cache_dir / f).read_bytes() == b"good cache: " + f.encode()
 
@@ -138,14 +180,24 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     calls = []
     monkeypatch.setattr(cli, "load_schedules", lambda **kw: (calls.append(kw), raw)[1])
     monkeypatch.setattr(cli, "load_teams", lambda **kw: (calls.append(kw), teams)[1])
+    current = _current(raw)
+    pbp_calls = _mock_pbp(monkeypatch, current)
     assert cli.main(["refresh"]) == 0
     assert calls == [{"refresh": True, "write_cache": False}, {"refresh": True, "write_cache": False}]
+    from fgs.pbp import cached_seasons
+    from fgs.paths import CACHE_DIR
+    if cached_seasons(CACHE_DIR):  # only the current season is re-downloaded, in memory
+        assert pbp_calls == [(current, True, False)]
     derived_dir, web_dir, cache_dir = refresh_dirs
     import polars as pl
     assert pl.read_parquet(cache_dir / "schedules.parquet").equals(raw)  # cache saved only after checks
     assert pl.read_parquet(cache_dir / "teams.parquet").equals(teams)
     for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet", "features.parquet"):
         assert (derived_dir / f).exists()
+    if cached_seasons(CACHE_DIR):  # pbp saved only after checks pass
+        assert (cache_dir / "pbp" / f"{current}.parquet").exists()
+        assert sorted(p.name for p in (cache_dir / "pbp").iterdir()) == [f"{current}.parquet"]
+        assert (derived_dir / "team_game_epa.parquet").exists()
     for f in ("meta.json", "latest.json", "callouts.json", "history.json"):
         assert (web_dir / f).exists()
     assert len(list((web_dir / "teams").iterdir())) == 32
@@ -159,4 +211,13 @@ def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkey
 
     monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", tmp_path / "missing.yaml")
     out = cli.derive_games(synthetic_games, scored=False)
-    assert set(out) == {"games", "team_games", "snapshots"}
+    assert set(out) == {"games", "team_games", "snapshots", "team_game_epa"}
+    assert out["team_game_epa"] is None
+
+
+def test_derive_carries_pbp_games(synthetic_games, monkeypatch):
+    import polars as pl
+
+    tge = pl.DataFrame({"game_id": ["g"], "franchise_id": ["BUF"]})
+    assert cli.derive_games(synthetic_games, scored=False, pbp_games=tge)["team_game_epa"] is tge
+    assert cli.derive_games(synthetic_games, None, None, pbp_games=tge)["team_game_epa"] is tge

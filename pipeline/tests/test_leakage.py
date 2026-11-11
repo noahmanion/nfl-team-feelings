@@ -6,6 +6,7 @@ after the latest week with any played game; filling unplayed games inside a part
 week would legitimately change that week, so those are never touched.
 """
 
+import functools
 import re
 from pathlib import Path
 
@@ -13,7 +14,7 @@ import polars as pl
 import pytest
 
 import fgs
-from fgs import explain, features, mood, season_config
+from fgs import cli, explain, features, mood, season_config
 from fgs.cli import derive, derive_games
 from fgs.mood import score_frame
 from conftest import _ROWS, make_games
@@ -29,8 +30,13 @@ def _with_points(derived: dict) -> pl.DataFrame:
     return explain.add_points(score_frame(feats), list(derived["weights"]), mood.reference_values(feats))
 
 
+@functools.cache
+def _inputs() -> dict:
+    return cli.cached_inputs()  # read the pbp cache once per session
+
+
 def _pipeline(raw: pl.DataFrame) -> pl.DataFrame:
-    return _with_points(derive(raw))
+    return _with_points(derive(raw, **_inputs()))
 
 
 def _assert_unchanged(before: pl.DataFrame, after: pl.DataFrame) -> None:
