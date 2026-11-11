@@ -7,7 +7,7 @@ from pathlib import Path
 import polars as pl
 
 from fgs.franchises import CANONICAL, RAW_TO_FRANCHISE
-from fgs.ingest import save_cache
+from fgs.ingest import nflreadpy_uncached, save_cache
 from fgs.paths import CACHE_DIR
 
 SLIM_COLUMNS = [
@@ -48,10 +48,9 @@ def load_pbp_season(
         return pl.read_parquet(path)
 
     import nflreadpy
-    from nflreadpy.config import update_config
 
-    update_config(cache_mode="off")  # we own the cache
-    df = nflreadpy.load_pbp(season).select(SLIM_COLUMNS)
+    with nflreadpy_uncached():  # we own the cache; nflreadpy's global setting is restored after
+        df = nflreadpy.load_pbp(season).select(SLIM_COLUMNS)
     if write_cache:
         save_cache(df, f"{PBP_SUBDIR}/{season}.parquet", cache_dir)
     return df

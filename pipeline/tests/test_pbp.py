@@ -247,3 +247,26 @@ def test_real_coverage_is_known_gaps_only(real_tge):
     played = set(games.filter(pl.col("played"))["game_id"].to_list())
     assert played - set(real_tge["game_id"]) == set(pbp.KNOWN_NO_PBP)
     assert pbp.check_pbp(real_tge, build_team_games(games)) == []
+
+
+def test_download_restores_nflreadpy_cache_mode(tmp_path, monkeypatch):
+    """IN-05: a pbp download turns nflreadpy's cache off only for the call, even when it fails."""
+    import nflreadpy
+    from nflreadpy.config import get_config, update_config
+
+    prev = get_config().cache_mode
+    update_config(cache_mode="memory")
+    modes = []
+
+    def fake(season):
+        modes.append(str(get_config().cache_mode))
+        raise RuntimeError("no release")
+
+    monkeypatch.setattr(nflreadpy, "load_pbp", fake)
+    try:
+        with pytest.raises(RuntimeError):
+            pbp.load_pbp_season(2099, refresh=True, cache_dir=tmp_path)
+        assert "off" in modes[0].lower()
+        assert str(get_config().cache_mode).lower().endswith("memory")
+    finally:
+        update_config(cache_mode=prev)

@@ -1,11 +1,27 @@
 """Raw nflverse pulls, cached as parquet we own (not nflreadpy's 24h cache)."""
 
 import os
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 import polars as pl
 
 from fgs.paths import CACHE_DIR
+
+
+@contextmanager
+def nflreadpy_uncached() -> Iterator[None]:
+    """Turn nflreadpy's own cache off for one download, then restore the caller's setting (IN-05):
+    we own the cache, but must not change process-wide nflreadpy state."""
+    from nflreadpy.config import get_config, update_config
+
+    prev = get_config().cache_mode
+    update_config(cache_mode="off")
+    try:
+        yield
+    finally:
+        update_config(cache_mode=prev)
 
 
 def save_cache(df: pl.DataFrame, name: str, cache_dir: Path = CACHE_DIR) -> None:
@@ -27,10 +43,9 @@ def load_schedules(refresh: bool = False, cache_dir: Path = CACHE_DIR, write_cac
         return pl.read_parquet(path)
 
     import nflreadpy
-    from nflreadpy.config import update_config
 
-    update_config(cache_mode="off")  # we own the cache; avoid nflreadpy's memory/fs cache
-    df = nflreadpy.load_schedules()  # no args = every season, one file
+    with nflreadpy_uncached():  # we own the cache; avoid nflreadpy's memory/fs cache
+        df = nflreadpy.load_schedules()  # no args = every season, one file
     if write_cache:
         save_cache(df, "schedules.parquet", cache_dir)
     return df
@@ -43,10 +58,9 @@ def load_teams(refresh: bool = False, cache_dir: Path = CACHE_DIR, write_cache: 
         return pl.read_parquet(path)
 
     import nflreadpy
-    from nflreadpy.config import update_config
 
-    update_config(cache_mode="off")
-    df = nflreadpy.load_teams()
+    with nflreadpy_uncached():
+        df = nflreadpy.load_teams()
     if write_cache:
         save_cache(df, "teams.parquet", cache_dir)
     return df
