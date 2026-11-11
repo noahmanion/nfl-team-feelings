@@ -24,9 +24,13 @@
 # sow (quality of results vs an average team's expected results) is negative on purpose.
 # Alone it is positive (univariate Spearman 0.43), but Elo already rewards beating good
 # teams; leftover sow means results running ahead of margins, which regress.
+#
+# streak (signed current win/loss streak, capped at 8) is slightly negative and adds ~0 to
+# the backtest; kept per the phase decision. Given the other factors a hot streak tends to fade.
 weights:
-  elo: 3.92
-  season_record: 0.79
-  last16: -0.90
+  elo: 3.96
+  season_record: 0.86
+  last16: -0.94
   mov: 1.54
-  sow: -1.29
+  sow: -1.24
+  streak: -0.15
