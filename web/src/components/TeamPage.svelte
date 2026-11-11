@@ -113,9 +113,9 @@
           <h2 id="team-heading">{name}</h2>
         </div>
         <p class="sub">
-          {when}{#if !latest}<span class="sep" aria-hidden="true"> · </span><a href={teamHash(team)}>Now</a>{/if}
+          {when}{#if !latest}<span class="sep" aria-hidden="true">·</span><a href={teamHash(team)}>Now</a>{/if}
         </p>
-        <p class="sub"><span>{record}</span><span class="sep" aria-hidden="true"> · </span><span>#{row.rank}</span></p>
+        <p class="sub"><span>{record}</span><span class="sep" aria-hidden="true">·</span><span>Rank #{row.rank}</span></p>
       </div>
       <div class="score-cell">
         <span class="score"><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
@@ -198,6 +198,10 @@
     font-size: var(--text-label);
     line-height: var(--lh-label);
     font-variant-numeric: tabular-nums;
+  }
+  /* Svelte trims whitespace inside elements, so the separator gets its spacing from margin */
+  .sep {
+    margin-inline: var(--space-xs);
   }
   .score-cell {
     display: flex;
