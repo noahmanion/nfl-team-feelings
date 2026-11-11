@@ -132,6 +132,16 @@ def test_check_cli_real_data(real_raw, capsys):
     assert "FAIL" not in out and "all checks passed" in out
 
 
+def test_check_cli_never_writes_sim_cache(monkeypatch):
+    """IN-01: `fgs check` is read-only; it reuses the sim cache but never rewrites it."""
+    seen = {}
+    monkeypatch.setattr(cli, "load_schedules", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "cached_inputs", lambda: {"pbp_games": None, "vegas": None})
+    monkeypatch.setattr(cli, "_checked_derive", lambda raw, **kw: (seen.update(kw), (True, None, None))[1])
+    assert cli.main(["check"]) == 0
+    assert seen["sim_write_cache"] is False and seen["sim_cache_dir"] == cli.sim_cache_dir()
+
+
 def test_check_cli_bad_code(real_raw, monkeypatch, capsys):
     tampered = real_raw.with_row_index("_i").with_columns(
         pl.when(pl.col("_i") == 0).then(pl.lit("XXX")).otherwise(pl.col("home_team")).alias("home_team")

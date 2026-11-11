@@ -255,7 +255,8 @@ def _checked_derive(
 def _cmd_check(args) -> int:
     raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
     incomplete = _incomplete_refresh_msg()
-    ok, _, _ = _checked_derive(raw, **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    # read-only (IN-01): reuse the sim cache but never rewrite it from a verification run
+    ok, _, _ = _checked_derive(raw, **cached_inputs(), sim_cache_dir=sim_cache_dir(), sim_write_cache=False)
     if incomplete:
         _report("refresh_complete", [incomplete])
         return 1
