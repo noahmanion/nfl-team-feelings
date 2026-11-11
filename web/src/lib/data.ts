@@ -1,4 +1,4 @@
-import type { HistoryFile, Meta, SeasonFile, SeasonMeta, WeekFile } from './types'
+import type { GamesFile, HistoryFile, Meta, SeasonFile, SeasonMeta, WeekFile } from './types'
 
 export const dataUrl = (path: string): string => `${import.meta.env.BASE_URL}data/${path}`
 
@@ -36,6 +36,21 @@ export function loadHistory(meta: Meta): Promise<HistoryFile> {
   historyCache = entry
   p.catch(() => {
     if (historyCache === entry) historyCache = null
+  })
+  return p
+}
+
+// games/{season}.json: session cache keyed by meta.generated_at + season, evicted on failure.
+const gamesCache = new Map<string, Promise<GamesFile>>()
+
+export function loadGames(meta: Meta, season: number): Promise<GamesFile> {
+  const key = `${meta.generated_at}|${season}`
+  const cached = gamesCache.get(key)
+  if (cached) return cached
+  const p = getJson<GamesFile>(`games/${season}.json?v=${encodeURIComponent(meta.generated_at)}`)
+  gamesCache.set(key, p)
+  p.catch(() => {
+    if (gamesCache.get(key) === p) gamesCache.delete(key)
   })
   return p
 }
