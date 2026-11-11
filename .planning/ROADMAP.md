@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Data Foundation & Elo Core** - Clean 1999→present game data with stable franchise IDs, era rules, and a chronological Elo snapshot grid (completed 2026-11-11)
 - [x] **Phase 2: Elo Mood Board** - JSON contract, one-command weekly refresh, and a runnable site showing all 32 teams ranked with mood labels (completed 2026-11-11)
 - [x] **Phase 3: Backtest Harness & Additive Score** - Documented target, baselines, leakage test, additive combiner with record factors, and the mood-over-time chart (completed 2026-11-11)
-- [ ] **Phase 4: Game-Result Factors & Team Deep-Dive** - Margin, opponent quality, streak, and close-game luck factors plus a team page with diverging-bar breakdown and one-liner
+- [x] **Phase 4: Game-Result Factors & Team Deep-Dive** - Margin, opponent quality, streak, and close-game luck factors plus a team page with diverging-bar breakdown and one-liner (completed 2026-11-11)
 - [ ] **Phase 5: Efficiency, QB Trend & Season Simulator** - PBP-based efficiency and QB trajectory factors, Monte Carlo simulator, expectations and playoff-odds factors
 - [ ] **Phase 6: Weight Freeze & Methodology** - Ridge-fit, human-rounded weights, one-time 2022–2025 holdout, beats plain Elo, methodology page
 - [ ] **Phase 7: Draft-Aware Offseason** - Between seasons the score reacts to draft surplus over slot expectation, without rewarding tanking
@@ -128,7 +128,7 @@ Plans:
   2. User can click a team and see its score, mood label, a plain-English one-liner naming its biggest drivers, and its recent games.
   3. The team page shows diverging factor bars that visibly sum to the displayed score.
 
-**Plans:** 3/4 plans executed
+**Plans:** 4/4 plans complete
 
 Plans:
 **Wave 1**
@@ -142,7 +142,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 04-04-PLAN.md — Add streak then luck one at a time; final 7-factor export + README
+- [x] 04-04-PLAN.md — Add streak then luck one at a time; final 7-factor export + README
 
 **UI hint**: yes
 
@@ -220,7 +220,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Data Foundation & Elo Core | 3/3 | Complete    | 2026-11-11 |
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
-| 4. Game-Result Factors & Team Deep-Dive | 3/4 | In Progress|  |
+| 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete   | 2026-11-11 |
 | 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
