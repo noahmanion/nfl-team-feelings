@@ -1,5 +1,6 @@
 <script lang="ts">
-  let { current = 'board' }: { current?: 'board' | 'history' } = $props()
+  // 'team': neither nav link is the current page.
+  let { current = 'board' }: { current?: 'board' | 'history' | 'team' } = $props()
 </script>
 
 <header class="site-header">

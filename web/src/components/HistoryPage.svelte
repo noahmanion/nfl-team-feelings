@@ -15,7 +15,7 @@
     type Point,
   } from '../lib/history'
   import { go, replace } from '../lib/route.svelte'
-  import { historyHash } from '../lib/router'
+  import { historyHash, teamHash } from '../lib/router'
   import type { HistoryFile, Meta, Row } from '../lib/types'
 
   let { meta, latestRows, team }: { meta: Meta; latestRows: Row[]; team?: string } = $props()
@@ -122,7 +122,7 @@
       actions={[{ label: 'Try again', onClick: () => retry++ }]}
     />
   {:else if chart && teamMeta}
-    <p class="summary">{summary}</p>
+    <p class="summary">{summary} <a href={teamHash(selected)}>See {teamMeta.name} →</a></p>
     <HistoryChart
       rows={chart.rows}
       xMax={chart.xMax}

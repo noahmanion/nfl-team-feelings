@@ -20,6 +20,12 @@
   const seasonMeta = $derived(findSeason(meta, season))
   const prevSeason = $derived(findSeason(meta, season - 1) ? season - 1 : null)
 
+  // Arriving from a board row deep in the list: start at the top of the team page.
+  $effect(() => {
+    void team
+    window.scrollTo(0, 0)
+  })
+
   // ---- season file (header, bars, sparkline): stale responses ignored ----
   let seasonFile = $state<SeasonFile | null>(null)
   let seasonFailed = $state(false)

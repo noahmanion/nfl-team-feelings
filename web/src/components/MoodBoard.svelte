@@ -7,13 +7,18 @@
   let {
     rows = [],
     meta = null,
+    season = 0,
     week = 0,
+    latest = true,
     loading = false,
     busy = false,
   }: {
     rows?: Row[]
     meta?: Meta | null
+    season?: number
     week?: number
+    /** Latest board: rows link to #/team/ABBR; historical boards link to that week's page. */
+    latest?: boolean
     /** Initial boot: static skeleton, no data yet. */
     loading?: boolean
     /** Season switch: keep the current rows visible but dimmed. */
@@ -53,7 +58,7 @@
     {@render columns()}
     <ol aria-labelledby="board-heading" aria-busy={busy}>
       {#each rows as row (row.franchise)}
-        <BoardRow {row} team={meta.teams[row.franchise]} bands={meta.bands} {week} />
+        <BoardRow {row} team={meta.teams[row.franchise]} bands={meta.bands} {season} {week} {latest} />
       {/each}
     </ol>
   </div>

@@ -7,10 +7,11 @@
   import SiteFooter from './components/SiteFooter.svelte'
   import SiteHeader from './components/SiteHeader.svelte'
   import StatusPanel from './components/StatusPanel.svelte'
+  import TeamPage from './components/TeamPage.svelte'
   import { findSeason, isLatest as isLatestWeek, loadLatest, loadMeta, loadSeason } from './lib/data'
   import { carryWeek } from './lib/format'
   import { go, replace, route } from './lib/route.svelte'
-  import { boardHash, type Route } from './lib/router'
+  import { boardHash, teamHash, type Route } from './lib/router'
   import type { Meta, Row, SeasonFile, WeekFile } from './lib/types'
 
   let meta = $state<Meta | null>(null)
@@ -55,19 +56,46 @@
     return { season: meta.latest.season, week: meta.latest.week, latest: true }
   })
 
-  let notice = $state(false)
+  // ---- team route (SITE-02): validated against meta ----
+
+  const validTeam = (m: Meta, team: string): boolean => Object.hasOwn(m.teams, team)
+  function validTeamWeek(m: Meta, season: number, week: number): boolean {
+    const s = findSeason(m, season)
+    return !!s && week >= 0 && week <= s.max_week
+  }
+
+  const teamTarget = $derived.by((): (Target & { team: string }) | null => {
+    const r = route.current
+    if (!meta || r.kind !== 'team' || !validTeam(meta, r.team)) return null
+    if (r.season !== undefined && r.week !== undefined && validTeamWeek(meta, r.season, r.week)) {
+      return { team: r.team, season: r.season, week: r.week, latest: isLatestWeek(meta, r.season, r.week) }
+    }
+    return { team: r.team, season: meta.latest.season, week: meta.latest.week, latest: true }
+  })
+
+  const BOARD_NOTICE = 'We don’t have a board for that week, so here’s the latest one.'
+  const TEAM_NOTICE = 'We don’t know that team, so here’s the latest board.'
+  let notice = $state<string | null>(null)
 
   // Bad or reserved links fall back to #/; bad ones also get a dismissible notice.
+  // An unknown team goes to the board (with a notice); a bad season/week goes to the team's latest page.
   $effect(() => {
     if (!meta) return
     const r = route.current
     if (r.kind === 'reserved') {
       replace('#/')
+    } else if (r.kind === 'team') {
+      if (!validTeam(meta, r.team)) {
+        replace('#/')
+        notice = TEAM_NOTICE
+      } else if (r.season !== undefined && r.week !== undefined && !validTeamWeek(meta, r.season, r.week)) {
+        replace(teamHash(r.team))
+      }
     } else if (r.kind === 'invalid' || (r.kind === 'board' && !validBoard(meta, r))) {
       replace('#/')
-      notice = true
+      notice = BOARD_NOTICE
     } else if (r.kind === 'board' && !isLatestWeek(meta, r.season, r.week)) {
-      notice = false
+      notice = null
     }
   })
 
@@ -106,9 +134,9 @@
   })
 
   // Keep the previous board visible (dimmed) while a season file loads.
-  let shown = $state<{ rows: Row[]; week: number } | null>(null)
+  let shown = $state<{ rows: Row[]; season: number; week: number; latest: boolean } | null>(null)
   $effect(() => {
-    if (currentRows && target) shown = { rows: currentRows, week: target.week }
+    if (currentRows && target) shown = { rows: currentRows, season: target.season, week: target.week, latest: target.latest }
   })
 
   const seasonFailed = $derived(!!target && !target.latest && seasonError === target.season)
@@ -134,7 +162,7 @@
 </script>
 
 <div class="page">
-  <SiteHeader current={route.current.kind === 'history' ? 'history' : 'board'} />
+  <SiteHeader current={route.current.kind === 'history' ? 'history' : route.current.kind === 'team' ? 'team' : 'board'} />
 
   <main>
     {#if status === 'error'}
@@ -144,6 +172,16 @@
       </StatusPanel>
     {:else if route.current.kind === 'history' && status === 'ready' && meta && latestFile}
       <HistoryPage {meta} latestRows={latestFile.rows} team={route.current.team} />
+    {:else if route.current.kind === 'team' && status === 'ready' && meta && teamTarget}
+      <TeamPage
+        {meta}
+        team={teamTarget.team}
+        season={teamTarget.season}
+        week={teamTarget.week}
+        latest={teamTarget.latest}
+      />
+    {:else if route.current.kind === 'team'}
+      <p class="loading" role="status">Loading…</p>
     {:else}
       <Scrubber
         {meta}
@@ -160,8 +198,8 @@
         {#if notice}
           <StatusPanel
             variant="notice"
-            body="We don’t have a board for that week, so here’s the latest one."
-            onDismiss={() => (notice = false)}
+            body={notice}
+            onDismiss={() => (notice = null)}
           />
         {/if}
         {#if seasonFailed}
@@ -183,7 +221,14 @@
             isLatest={target.latest}
             scoreKind={meta.score_kind}
           />
-          <MoodBoard rows={shown.rows} {meta} week={shown.week} busy={pending} />
+          <MoodBoard
+            rows={shown.rows}
+            {meta}
+            season={shown.season}
+            week={shown.week}
+            latest={shown.latest}
+            busy={pending}
+          />
         {:else}
           <MoodBoard loading />
         {/if}
@@ -206,6 +251,9 @@
   }
   main {
     margin-top: var(--space-lg);
+  }
+  .loading {
+    color: var(--text-muted);
   }
   @media (min-width: 1024px) {
     .page {

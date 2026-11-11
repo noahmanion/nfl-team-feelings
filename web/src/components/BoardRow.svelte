@@ -3,9 +3,19 @@
   import MoodLabel from './MoodLabel.svelte'
   import TeamChip from './TeamChip.svelte'
   import { bandIndex, formatRecord, moodToken } from '../lib/format'
+  import { teamHash } from '../lib/router'
   import type { Band, Row, TeamMeta } from '../lib/types'
 
-  let { row, team, bands, week }: { row: Row; team: TeamMeta | undefined; bands: Band[]; week: number } = $props()
+  let {
+    row,
+    team,
+    bands,
+    season,
+    week,
+    latest = true,
+  }: { row: Row; team: TeamMeta | undefined; bands: Band[]; season: number; week: number; latest?: boolean } = $props()
+
+  const href = $derived(latest ? teamHash(row.franchise) : teamHash(row.franchise, season, week))
 
   // Stripe follows the exported band (hysteresis-adjusted, same as the label), never the raw score.
   const bandIdx = $derived(bandIndex(row.band, bands))
@@ -41,26 +51,28 @@
   )
 </script>
 
-<li class="row" style:--stripe-color={stripe}>
-  <span class="visually-hidden">{srText}</span>
-  <span class="rank" aria-hidden="true">{num(row.rank)}</span>
-  <span class="team" aria-hidden="true">
-    <TeamChip primary={team?.primary} secondary={team?.secondary} />
-    <span class="abbr">{row.franchise}</span>
-    <span class="name">{name}</span>
-  </span>
-  <span class="line2" aria-hidden="true">
-    <span class="record">{record}</span>
-    <span class="mood"><MoodLabel emoji={row.emoji} label={row.label} /></span>
-  </span>
-  <span class="score-cell" aria-hidden="true">
-    <span class="score" class:missing={!ok(row.score)}>{num(row.score)}</span>
-    <span class="elo">{elo}</span>
-  </span>
-  <span class="change" aria-hidden="true">
-    <Delta value={row.score_delta} kind="score" />
-    <span class="rank-delta"><Delta value={row.rank_delta} kind="rank" /></span>
-  </span>
+<li>
+  <a class="row" {href} style:--stripe-color={stripe}>
+    <span class="visually-hidden">{srText}</span>
+    <span class="rank" aria-hidden="true">{num(row.rank)}</span>
+    <span class="team" aria-hidden="true">
+      <TeamChip primary={team?.primary} secondary={team?.secondary} />
+      <span class="abbr">{row.franchise}</span>
+      <span class="name">{name}</span>
+    </span>
+    <span class="line2" aria-hidden="true">
+      <span class="record">{record}</span>
+      <span class="mood"><MoodLabel emoji={row.emoji} label={row.label} /></span>
+    </span>
+    <span class="score-cell" aria-hidden="true">
+      <span class="score" class:missing={!ok(row.score)}>{num(row.score)}</span>
+      <span class="elo">{elo}</span>
+    </span>
+    <span class="change" aria-hidden="true">
+      <Delta value={row.score_delta} kind="score" />
+      <span class="rank-delta"><Delta value={row.rank_delta} kind="rank" /></span>
+    </span>
+  </a>
 </li>
 
 <style>
@@ -76,6 +88,15 @@
     border: 1px solid var(--border);
     border-left: var(--stripe-width) solid var(--stripe-color);
     border-radius: var(--radius-md);
+    color: inherit;
+    text-decoration: none;
+  }
+  .row:hover {
+    background: var(--bg);
+  }
+  .row:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .rank {
     grid-column: 1;
