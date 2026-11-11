@@ -59,9 +59,15 @@
   const mine = $derived(validMyTeam(myTeam.abbr, meta.teams))
   const myStreak = $derived(mine && records ? streakLine(records.active?.[mine]) : null)
 
-  const excludedText = $derived(
-    records?.excluded.map((x) => `the ${x.season} ${teamName(x.franchise)}`).join(' and ') ?? '',
-  )
+  // Footnote built from records.excluded (IN-02), so it follows season_config.SEEDS.
+  const excludedText = $derived.by(() => {
+    const xs = records?.excluded ?? []
+    if (xs.length === 0) return ''
+    const names = xs.map((x) => `the ${x.season} ${teamName(x.franchise)}`)
+    const list = names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+    const sentence = `${list} ${xs.length === 1 ? 'is' : 'are'} left out: as expansion teams they start from an assumed rating, not results.`
+    return sentence.charAt(0).toUpperCase() + sentence.slice(1)
+  })
 </script>
 
 <article class="records" aria-labelledby="records-heading">
@@ -144,11 +150,9 @@
 
     <p class="footnote muted">
       Saddest and happiest rank each team-season by its lowest or highest weekly score, then by its regular-season
-      average. A misery streak is every day spent under 20; a joy streak, every day at 80 or higher.
-      {#if excludedText}
-        The 1999 Browns and 2002 Texans are left out: as expansion teams they start from an assumed rating, not
-        results.
-      {/if}
+      average. A season in progress joins those two lists once its regular season ends. A misery streak is every day
+      spent under 20; a joy streak, every day at 80 or higher.
+      {excludedText}
     </p>
   {/if}
 </article>
