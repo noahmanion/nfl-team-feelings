@@ -30,6 +30,21 @@ def test_largest_remainder_all_zero():
     assert int(largest_remainder(np.zeros(4), -2).sum()) == -2
 
 
+def test_largest_remainder_never_flips_sign():
+    # nearly cancelling contributions with a big residual: plain spreading would give [-1, -3, -1]
+    out = largest_remainder(np.array([1.0, -1.0, 0.5]), -5)
+    assert out.tolist() == [0, -5, 0]
+    rng = np.random.default_rng(11)
+    for _ in range(500):
+        n = int(rng.integers(2, 8))
+        real = rng.normal(0, 5, n)
+        total = int(rng.integers(-30, 31))
+        out = largest_remainder(real, total)
+        assert int(out.sum()) == total
+        if (real > 0).any() and (real < 0).any():  # both signs available: no flips needed
+            assert not (out * real < 0).any(), (real, total, out)
+
+
 def test_largest_remainder_ties_go_to_factor_order():
     assert largest_remainder(np.array([0.5, 0.5]), 1).tolist() == [1, 0]
 

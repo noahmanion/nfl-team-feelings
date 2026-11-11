@@ -54,12 +54,8 @@ def slope(c, xs: np.ndarray, qs: np.ndarray) -> np.ndarray:
     return np.where(np.abs(c) < 1e-6, d0, s)
 
 
-def largest_remainder(real: np.ndarray, total: int) -> np.ndarray:
-    """Integers summing exactly to `total`. The residual (total - sum(real)) is first spread in
-    proportion to |real| (evenly if all are 0), then floor + one extra unit to the k largest
-    fractional parts. Stable argsort: ties go to the earlier factor, so it is deterministic."""
-    real = np.asarray(real, dtype=float)
-    total = int(total)
+def _lr(real: np.ndarray, total: int) -> np.ndarray:
+    """One largest-remainder pass (see largest_remainder)."""
     mag = np.abs(real)
     resid = total - real.sum()
     if mag.sum() > 0:
@@ -71,9 +67,37 @@ def largest_remainder(real: np.ndarray, total: int) -> np.ndarray:
     k = total - int(out.sum())
     k = min(max(k, 0), len(real))  # float noise can only push this by one at the ends
     out[np.argsort(-(real - fl), kind="stable")[:k]] += 1
+    return out
+
+
+def largest_remainder(real: np.ndarray, total: int) -> np.ndarray:
+    """Integers summing exactly to `total`. The residual (total - sum(real)) is first spread in
+    proportion to |real| (evenly if all are 0), then floor + one extra unit to the k largest
+    fractional parts. Stable argsort: ties go to the earlier factor, so it is deterministic.
+
+    No sign flips: when the residual would push a factor's integer to the opposite sign of its
+    real share (contributions nearly cancelling), that factor is rounded toward zero (0) and the
+    pass is re-run over the others. Repeats until no factor flips."""
+    real = np.asarray(real, dtype=float)
+    total = int(total)
+    n = len(real)
+    out = _lr(real, total)
+    fixed = np.zeros(n, dtype=bool)
+    for _ in range(n):
+        flip = ~fixed & (out * real < 0)
+        if not flip.any():
+            break
+        fixed |= flip
+        out[fixed] = 0
+        free = ~fixed
+        if not free.any():
+            break
+        out[free] = _lr(real[free], total)
     diff = total - int(out.sum())  # belt and braces: never ship a row that doesn't add up
     if diff:
-        out[int(np.argmax(mag))] += diff
+        mag = np.abs(real)
+        same = np.sign(real) == np.sign(diff)
+        out[int(np.argmax(np.where(same, mag, -1.0))) if same.any() else int(np.argmax(mag))] += diff
     return out
 
 
