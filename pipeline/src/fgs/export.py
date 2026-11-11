@@ -231,7 +231,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
     values = derived.get("draft_values")
     draft_ctx = {
         "values": values, "moves_score": cfg["weight"] != 0, "ranks": _draft_ranks(scored),
-        "threshold": None if values is None else float(values[64]),
+        # the week-0 lead may mention draft capital only when the score carries it (CR-03); with
+        # weight 0 the draft is shown only in its own "doesn't move the score" line
+        "threshold": None if values is None or not draft_live else float(values[64]),
     }
 
     latest = asof.latest_played(games)

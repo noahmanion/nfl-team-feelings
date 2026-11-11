@@ -521,9 +521,9 @@ def test_contract_methodology(real_files):
 
 # --- Phase 7: the nonzero draft-weight path (synthetic, fake weight) ------------------------
 
-def test_export_with_live_draft_weight(monkeypatch):
-    """A fake offseason weight of 1.0: draft is in contribs/points/meta.factors on weeks 0-3, 0.0
-    from week 4, and every row's points still sum to score - baseline."""
+def _draft_export(monkeypatch, cfg):
+    """Synthetic 4-team 2023-2024 export with 2024 draft surplus BUF +50, MIA -30, NE 0.2, NYJ 5
+    and the given offseason cfg. Returns (files, z by franchise)."""
     import numpy as np
 
     from conftest import make_games
@@ -543,8 +543,6 @@ def test_export_with_live_draft_weight(monkeypatch):
     monkeypatch.setattr(season_config, "reg_weeks", lambda s: 5 if s in (2023, 2024) else real_reg_weeks(s))
     monkeypatch.setattr(season_config, "REF_SEASONS", (2023, 2023))
 
-    cfg = {"weight": 1.0, "display_only": False, "chart": "stuart", "winsor": (-17.0, 16.0),
-           "decay": [1.0, 0.75, 0.5, 0.25]}
     weights = {"elo": 2.0, "season_record": 1.0}
     derived = derive_games(games, weights=weights, offseason={**cfg, "weight": 0.0})
     feats = derived["features"].drop("composite_inseason", "draft_surplus", "draft_z")
@@ -554,6 +552,29 @@ def test_export_with_live_draft_weight(monkeypatch):
     values = np.concatenate([[np.nan], np.linspace(60.0, 0.5, 262)])
     files = build_export({**derived, "features": feats, "offseason": cfg, "draft_values": values},
                          _fake_teams(), generated_at=GEN)
+    return files, dict(zip(dz["franchise_id"], dz["draft_z"]))
+
+
+LIVE_CFG = {"weight": 1.0, "display_only": False, "chart": "stuart", "winsor": (-17.0, 16.0),
+            "decay": [1.0, 0.75, 0.5, 0.25]}
+
+
+def test_export_display_only_draft_never_leads_the_blurb(monkeypatch):
+    """CR-03: with weight 0 the score carries no draft capital, so the week-0 lead must not say it
+    does; the draft shows only in the separate display line."""
+    files, _ = _draft_export(monkeypatch, {**LIVE_CFG, "weight": 0.0, "display_only": True})
+    rows = files["snapshots/2024.json"]["weeks"]["0"]
+    assert len(rows) == 4
+    for r in rows:
+        assert "draft" not in r["blurb"], r["blurb"]
+        assert r["blurb"].startswith("Preseason, carrying last season's form: ")
+        assert r["draft"]["text"].endswith("doesn't move the score.")
+
+
+def test_export_with_live_draft_weight(monkeypatch):
+    """A fake offseason weight of 1.0: draft is in contribs/points/meta.factors on weeks 0-3, 0.0
+    from week 4, and every row's points still sum to score - baseline."""
+    files, z = _draft_export(monkeypatch, LIVE_CFG)
     meta = files["meta.json"]
     assert [f["key"] for f in meta["factors"]] == ["elo", "season_record", "draft"]
     assert meta["factors"][-1]["label"] == "Draft capital over slot" and meta["factors"][-1]["weight"] == 1.0
@@ -561,7 +582,6 @@ def test_export_with_live_draft_weight(monkeypatch):
                                           "decay": [1.0, 0.75, 0.5, 0.25]}
     assert all(s["week_labels"]["0"] == "Preseason (after draft)" for s in meta["seasons"])
     base = meta["baseline"]
-    z = dict(zip(dz["franchise_id"], dz["draft_z"]))
     seen = 0
     for season, week, r in _all_rows(files):
         assert sum(r["points"].values()) == r["score"] - base

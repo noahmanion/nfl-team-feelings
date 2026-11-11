@@ -164,7 +164,9 @@ STRONG = {"elo": 20}  # Elo dominates |points|, so its strong tier needs more
 STRONG_DEFAULT = 10
 PRESEASON = "Preseason, carrying last season's form: "
 # Week-0 carry leads when the team's draft capital over its original slots is at least the chart
-# value of pick 64 (either way); the export passes that value as draft_threshold.
+# value of pick 64 (either way); the export passes that value as draft_threshold ONLY when the draft
+# term is live (nonzero weight). Otherwise the score carries no draft capital and the lead must not
+# say it does: the draft appears only in draft_text's "doesn't move the score" line.
 PRESEASON_DRAFT_PLUS = "Preseason, carrying last season's form plus extra draft capital: "
 PRESEASON_DRAFT_MINUS = "Preseason, carrying last season's form minus some draft capital: "
 # Week-0 kinds: "carry" (has a prior season in the data), "fresh" (first season in the data: no
