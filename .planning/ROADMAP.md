@@ -66,7 +66,22 @@ Plans:
   4. One command refreshes the data and regenerates all JSON (meta, latest, snapshots, teams, history, callouts). Running it on a partially completed 2026 week works, and the site shows a "last updated" stamp.
   5. The site starts locally with one command, works on a phone-sized screen, and the README explains the idea, how to run it, and where it stands.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — End-to-end slice: mood.py (percentile, bands, ±2 hysteresis) + export.py full JSON contract via `fgs export` + web/ scaffold rendering the latest board
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 02-02-PLAN.md — Scrubber (season select, week slider, Latest) + hash router deep links + bad-link notice
+- [ ] 02-03-PLAN.md — `fgs refresh` (check-then-write), partial-week + abort tests, regenerated JSON, README
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 02-04-PLAN.md — Loading/fatal/empty states, desktop column header + sticky scrubber, 320–375px polish
+
 **UI hint**: yes
 
 ### Phase 3: Backtest Harness & Additive Score
@@ -173,7 +188,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Elo Core | 3/3 | Complete    | 2026-11-11 |
-| 2. Elo Mood Board | 0/TBD | Not started | - |
+| 2. Elo Mood Board | 0/4 | Planned | - |
 | 3. Backtest Harness & Additive Score | 0/TBD | Not started | - |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
 | 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
