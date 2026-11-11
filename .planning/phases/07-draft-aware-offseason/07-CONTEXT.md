@@ -55,3 +55,11 @@ Load draft picks + a draft-value chart for 1999→present and add an offseason d
 - Free agency reaction (v2); grading drafted players' actual performance (needs post-draft outcomes — not knowable at draft time).
 
 </deferred>
+
+<research_revisions>
+## Accepted research revisions (07-RESEARCH, autonomous approval 2026-11-11)
+- Original slots derived from prior-season standings (playoff stage → win% → SOS, tied teams rotate by round; expansion first; forfeit table) aligned to actual picks; 1999 has no surplus (no 1998 data); cap percentiles from 2000–2021. Chart = stuart.
+- Gate: draft weight is used only if the final fitted weight is POSITIVE and ≥60% of folds share THAT sign and Δ>0 on week-0 bucket; otherwise weight 0 → display-only text ("over their original slots", not "great draft"). Expected outcome per research: weight 0. Still build + test the nonzero path with a fake weight.
+- `fgs backtest --draft` must be re-run on the Phase 6 FROZEN composite (not interim).
+- Offseason connector = Plot.link for highlighted team only; week-0 delta computed across team history ("vs end of last season").
+</research_revisions>
