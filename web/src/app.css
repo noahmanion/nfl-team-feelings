@@ -1,0 +1,154 @@
+/* Design tokens (02-UI-SPEC). Components use only var(--token). */
+:root {
+  color-scheme: light dark;
+
+  /* spacing */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* sizes */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --chip-size: 16px;
+  --stripe-width: 4px;
+  --tap-min: 44px;
+  --content-max: 960px;
+
+  /* type: 4 sizes, 2 weights */
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --text-label: 14px;
+  --text-body: 16px;
+  --text-heading: 20px;
+  --text-display: 28px;
+  --lh-label: 1.4;
+  --lh-body: 1.5;
+  --lh-heading: 1.25;
+  --lh-display: 1.1;
+  --weight-regular: 400;
+  --weight-semibold: 600;
+
+  /* color (light) */
+  --bg: #f6f6f3;
+  --surface: #ffffff;
+  --border: #deded9;
+  --text: #1b1b1f;
+  --text-muted: #5b5d63;
+  --accent: #3446d4;
+  --on-accent: #ffffff;
+  --up: #18794e;
+  --down: #b42318;
+  --danger: #b42318;
+  --chip-outline: rgba(0, 0, 0, 0.18);
+
+  /* mood bands (index 0 = lowest), non-text graphics only */
+  --mood-0: #7f1d1d;
+  --mood-1: #c2410c;
+  --mood-2: #b7791f;
+  --mood-3: #8a8d93;
+  --mood-4: #2f9e8f;
+  --mood-5: #15803d;
+  --mood-6: #0b5d3b;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #121316;
+    --surface: #1b1d21;
+    --border: #30333a;
+    --text: #ecedef;
+    --text-muted: #a1a4ab;
+    --accent: #8f9cff;
+    --on-accent: #121316;
+    --up: #4ade80;
+    --down: #ff8a7a;
+    --danger: #ff8a7a;
+    --chip-outline: rgba(255, 255, 255, 0.28);
+
+    --mood-0: #f87171;
+    --mood-1: #fb923c;
+    --mood-2: #facc15;
+    --mood-3: #8e929a;
+    --mood-4: #5eead4;
+    --mood-5: #4ade80;
+    --mood-6: #a7f3d0;
+  }
+}
+
+/* minimal reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+h1,
+h2,
+h3,
+p,
+ol,
+ul,
+figure {
+  margin: 0;
+  padding: 0;
+}
+
+ol,
+ul {
+  list-style: none;
+}
+
+body {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body);
+  font-weight: var(--weight-regular);
+  line-height: var(--lh-body);
+  -webkit-font-smoothing: antialiased;
+  -webkit-text-size-adjust: 100%;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
