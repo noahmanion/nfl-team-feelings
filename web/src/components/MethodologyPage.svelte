@@ -114,7 +114,8 @@
       <h2>The factors</h2>
       <p class="muted">
         Weights are points of next-8-games margin per standard deviation of the factor. Negative and near-zero weights
-        are shown as fitted. “Same sign” counts the walk-forward seasons whose refit agreed with the final sign; “Added”
+        are shown as fitted. “Same sign” counts the walk-forward seasons whose refit agreed with the sign of the final unrounded fit
+        (so a weight that rounds to 0.00 can still show a count); “Added”
         is the change in rank correlation when the factor joins the ones above it.
       </p>
       <ol class="rows">
