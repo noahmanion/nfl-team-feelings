@@ -33,7 +33,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. The data checks pass: 31 franchises for 1999–2001 and 32 after that, the right games per team-season (16, or 17 from 2021), no unmatched team abbreviations, and LV/LAC/LA/WAS each have one unbroken history.
   3. Ties count as 0.5, neutral-site games get no home-field advantage, and the cancelled BUF–CIN 2022 game is skipped without crashing or miscounting.
   4. A CLI command prints the Elo ranking of all teams as of any (season, week), including bye weeks and week 0. The current 2026 ranking looks plausible.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Walking skeleton: uv project, cached ingest, franchise map, 538 Elo, snapshot grid, `fgs build`/`fgs elo`
+- [ ] 01-02-PLAN.md — Era rules in season_config + `fgs check` data checks (counts, games/team, codes, continuity, divisions, zero-sum)
+- [ ] 01-03-PLAN.md — Snapshot grid semantics tests, honest as-of `fgs elo` (latest week, beyond-latest error, data-through), owner plausibility check
 
 ### Phase 2: Elo Mood Board
 **Goal**: Users can open a local site and see how every fanbase should feel right now (Elo-only for now), refreshed by a single command after each week
@@ -134,7 +139,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation & Elo Core | 0/TBD | Not started | - |
+| 1. Data Foundation & Elo Core | 0/3 | Not started | - |
 | 2. Elo Mood Board | 0/TBD | Not started | - |
 | 3. Backtest Harness & Additive Score | 0/TBD | Not started | - |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
