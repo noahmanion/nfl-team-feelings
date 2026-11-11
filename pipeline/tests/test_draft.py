@@ -149,7 +149,6 @@ def test_align_identical_all_matches():
 def test_align_swap_is_substitution():
     path = draft.align(["A", "B", "C", "D"], ["A", "C", "C", "D"])
     assert path == [(0, 0), (1, 1), (2, 2), (3, 3)]
-    assert all(i is not None and j is not None for i, j in path)
 
 
 def test_align_free_tail_insertion():
@@ -157,10 +156,28 @@ def test_align_free_tail_insertion():
     assert path == [(0, 0), (1, 1), (2, 2), (None, 3)]
 
 
-def test_align_missing_slot_is_deletion():
+def test_align_prefers_trades_over_invented_forfeit():
+    # a deletion + shift would match 6 of 7 slots; the old cost model (dele 3 < 6 subs) took it.
+    o = ["A", "B", "C", "D", "E", "F", "G", "H"]
+    act = ["A", "C", "D", "E", "F", "G", "H", "X", "Y"]
+    path = draft.align(o, act, free_tail=True)
+    assert all(i is not None for i, _ in path if _ is not None and _ < 8)
+    assert not [p for p in path if p[1] is None]  # no slot deleted
+    old = draft.align(o, act, dele=3.0, free_tail=True)
+    assert (1, None) in old  # documents the bug the default cost model fixes
+
+
+def test_align_short_round_deletes_only_when_forced():
     path = draft.align(["A", "B", "C", "D"], ["A", "B", "D"], free_tail=False)
-    assert (2, None) in path
-    assert [p for p in path if p[0] is not None and p[1] is not None] == [(0, 0), (1, 1), (3, 2)]
+    assert [p for p in path if p[1] is None] == [(2, None)]
+
+
+def test_heavy_trades_are_trades_not_forfeits():
+    # every round-2 pick traded (rotated by one): the old DP could delete a slot here
+    tbl = draft.surplus_table(_league4(), _picks(2010, [["A", "B", "C", "D"], ["B", "C", "D", "A"]]), _values())
+    s = _sur(tbl, 2010)
+    assert sum(s.values()) == pytest.approx(0.0)  # zero-sum: no slot charged as a forfeit
+    assert s["A"] == pytest.approx(-4.0 + 1.0)    # gave pick 5 (4), got pick 8 (1)
 
 
 # ---------- surplus ----------
@@ -185,17 +202,28 @@ def test_surplus_trade_moves_value_between_two_teams():
 
 
 def test_surplus_forfeit_only_hurts_owner():
-    # C's round-2 slot vanished (found by alignment, not the table): 3 picks in round 2.
-    tbl = draft.surplus_table(_league4(), _picks(2010, [["A", "B", "C", "D"], ["A", "B", "D"]]), _values())
+    # C's round-2 slot is in the forfeit table: 3 picks in round 2.
+    tbl = draft.surplus_table(_league4(), _picks(2010, [["A", "B", "C", "D"], ["A", "B", "D"]]), _values(),
+                              forfeits={(2010, 2): ["C"]})
     s = _sur(tbl, 2010)
-    assert s["C"] < 0
+    assert s["C"] == -2.0  # values[5 + 2] = 2
     assert s["A"] == 0.0 and s["B"] == 0.0 and s["D"] == 0.0
-    assert sum(s.values()) == pytest.approx(s["C"])
+
+
+def test_surplus_unknown_short_round_warns_and_charges_nobody():
+    picks = _picks(2010, [["A", "B", "C", "D"], ["A", "B", "D"]])
+    with pytest.warns(UserWarning, match="unknown forfeit"):
+        tbl = draft.surplus_table(_league4(), picks, _values(), forfeits={})
+    s = _sur(tbl, 2010)
+    assert sum(s.values()) == pytest.approx(0.0)  # zero-sum: nobody is charged an invented forfeit
+    assert s["D"] >= 0.0  # the unpaired trailing slot loses nothing
+    tbl2 = draft.surplus_table(_league4(), picks, _values(), forfeits={}, unattributed={(2010, 2)})
+    assert tbl2["surplus"].to_list() == tbl["surplus"].to_list()
 
 
 def test_surplus_comp_tail_excluded():
     rounds = [["A", "B", "C", "D"], ["A", "B", "C", "D"], ["A", "B", "C", "D", "B"]]
-    tbl = draft.surplus_table(_league4(), _picks(2010, rounds), _values(16))
+    tbl = draft.surplus_table(_league4(), _picks(2010, rounds), _values(16), forfeits={})
     assert all(v == 0.0 for v in tbl["surplus"].to_list())
 
 
@@ -320,22 +348,25 @@ def test_coverage_real(real_draft):
     assert sorted(set(sur["season"].to_list())) == list(range(2000, years[-1] + 1))
 
 
+def _round(tg, picks, y, r):
+    """(slots after table forfeits, [(owner, pick, user)] regular picks, forfeited owners)."""
+    gone = draft.FORFEITS.get((y, r), [])
+    o = [x for x in draft.original_order(tg, y)[r - 1] if x not in gone]
+    pr = picks.filter((pl.col("season") == y) & (pl.col("round") == r)).sort("pick")
+    act, pk = pr["franchise_id"].to_list(), pr["pick"].to_list()
+    path = draft.align(o, act, free_tail=r >= 3)
+    return o, [(o[si], pk[pj], act[pj]) for si, pj in path if si is not None and pj is not None], gone
+
+
 def _slot1_untraded(tg, picks, y) -> tuple[str, bool]:
-    """(slot-1 franchise, True when all its aligned picks are its own and it gained no regular picks)."""
-    order = draft.original_order(tg, y)
-    t = order[0][0]
-    dy = picks.filter(pl.col("season") == y)
+    """(slot-1 franchise, True when all its regular picks are its own and it gained no regular picks)."""
+    t = draft.original_order(tg, y)[0][0]
     for r in range(1, draft.N_ROUNDS + 1):
-        if t in draft.FORFEITS_R12.get((y, r), []):
+        o, regular, gone = _round(tg, picks, y, r)
+        if t in gone or (t in o and t not in [own for own, _, _ in regular]):
             return t, False
-        pr = dy.filter(pl.col("round") == r).sort("pick")
-        act = pr["franchise_id"].to_list()
-        o = [x for x in order[r - 1] if x not in draft.FORFEITS_R12.get((y, r), [])]
-        for si, pj in draft.align(o, act, free_tail=r >= 3):
-            owner = o[si] if si is not None else None
-            user = act[pj] if pj is not None and si is not None else None
-            if (owner == t) != (user == t) or (owner == t and pj is None):
-                return t, False
+        if any((own == t) != (user == t) for own, _, user in regular):
+            return t, False
     return t, True
 
 
@@ -371,6 +402,38 @@ def test_acceptance_known_trades(real_draft):
     assert s[(2018, "CLE")] > 20
     assert s[(2012, "LV")] < -20
     assert s[(2022, "LA")] < -15
+
+
+def test_no_unknown_short_rounds_real(real_draft):
+    import warnings as w
+
+    with w.catch_warnings():
+        w.simplefilter("error")
+        draft.surplus_table(real_draft["tg"], real_draft["picks"], real_draft["values"])
+
+
+def test_forfeit_2008_r5_is_sf_not_kc_lv(real_draft):
+    o, regular, gone = _round(real_draft["tg"], real_draft["picks"], 2008, 5)
+    assert gone == ["SF"]
+    owners = [own for own, _, _ in regular]
+    assert len(regular) == 31 and len(owners) == len(set(owners))
+    assert "KC" in owners and "LV" in owners and "SF" not in owners
+
+
+def test_forfeit_2016_r5_atl_la(real_draft):
+    o, regular, gone = _round(real_draft["tg"], real_draft["picks"], 2016, 5)
+    assert sorted(gone) == ["ATL", "LA"]
+    owner_of = {p: own for own, p, _ in regular}
+    assert owner_of[157] != "ATL"
+    assert "LV" in owner_of.values() and "WAS" in owner_of.values()
+
+
+def test_forfeit_2017_r4_ne_and_regular_picks_kept(real_draft):
+    o, regular, gone = _round(real_draft["tg"], real_draft["picks"], 2017, 4)
+    assert gone == ["NE"]
+    owners = {own for own, _, _ in regular}
+    assert {"BUF", "MIA"} <= owners and len(regular) == 31
+    assert 138 in {p for _, p, _ in regular}  # CIN's pick 138 is a regular pick, not a comp pick
 
 
 def test_winsor_real(real_draft):

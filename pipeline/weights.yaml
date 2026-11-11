@@ -75,8 +75,9 @@ fit:  # per-factor evidence (ignored by load_weights)
 # walk-forward: the 2022-2025 holdout was consumed by Phase 6, so there is no fresh holdout.
 # Gate: weight = fitted (2 dp) only if fitted > 0 AND >= 60% of folds share its sign AND
 # wk0 ΔSpearman (N=8) > 0; otherwise weight 0 and display only (surplus shown, not scored).
-# Verdict: gate failed: fitted -0.28, 8/19 folds share its sign, wk0 ΔSpearman +0.0002
-# -> weight 0, display only.
+# Verdict: gate failed: fitted -0.28, 8/19 folds share its sign, wk0 ΔSpearman +0.0003
+# -> weight 0, display only. Re-run 2026-11-11 after the CR-01 alignment fix (forfeits only from
+# draft.FORFEITS, no DP-invented forfeits): was fitted -0.2828 / 8/19 / wk0 Δ +0.0002.
 offseason:
   draft:
     weight: 0.00
@@ -86,7 +87,7 @@ offseason:
     decay: linear_to0_by_wk4  # weeks 0,1,2,3 -> 1, .75, .5, .25
     fit_seasons: 2000-2021
     test_seasons: 2003-2021
-    fitted: -0.2828
+    fitted: -0.2826
     fold_sign: "8/19"
-    delta_wk0: 0.0002
+    delta_wk0: 0.0003
     evidence: training-only walk-forward (no fresh holdout)

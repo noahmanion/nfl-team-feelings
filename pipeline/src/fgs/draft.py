@@ -4,9 +4,14 @@ surplus(team, draft) = chart value of the regular picks the team actually used
                      - chart value of the regular picks its ORIGINAL slots would have given it.
 
 The original slots come from the prior season's standings (playoff stage, then win %, then SOS;
-tied teams rotate each round; expansion teams first; a small table of round 1-2 forfeits), aligned
-to the actual pick sequence with an edit-distance DP. Substitutions are trades, deletions are
-forfeits, and trailing extras in rounds 3-7 are compensatory picks (excluded from both sides).
+tied teams rotate each round; expansion teams first). Forfeited slots come ONLY from the explicit
+FORFEITS table. The remaining slots are aligned to the actual picks with an edit-distance DP whose
+deletion cost exceeds any substitutions it could save, so it never invents a forfeit: substitutions
+are trades, the occasional mid-round extra pick is an insertion, and trailing extras in rounds 3-7
+are compensatory picks (excluded from both sides). A round with fewer picks than slots forces a
+deletion; that slot is left unpaired and nobody is charged (with a warning unless the round is in
+UNATTRIBUTED_SHORT). The earlier DP (deletion cost 3) invented forfeits in heavily traded rounds,
+charging the wrong teams (e.g. 2008 R5 KC/LV instead of SF).
 
 So surplus measures capital gained or lost by TRADES (including picks spent on veterans), not draft
 position: a team that kept its own #1 pick has surplus exactly 0, and tanking is never rewarded.
@@ -21,6 +26,7 @@ reads no outcomes: only picks and the prior season's standings.
 
 import os
 import urllib.request
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -44,11 +50,37 @@ DRAFT_VALUES_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/da
 STAGE = {"WC": 1, "DIV": 2, "CON": 3, "SB": 4}  # last playoff game; won SB -> 5; no playoffs -> 0
 SB_WINNER = 5
 EXPANSION_FIRST: dict[int, str] = {2002: "HOU"}  # (CLE 1999 too, but 1999 isn't derivable)
-# (draft year, round) -> original slot owners whose round 1-2 pick was stripped by the league.
-FORFEITS_R12: dict[tuple[int, int], list[str]] = {
-    (2004, 2): ["LV"], (2008, 1): ["NE"], (2012, 2): ["NO"], (2013, 2): ["NO", "CLE"],
-    (2016, 1): ["NE"], (2023, 1): ["MIA"],
+# (draft year, round) -> original slot owners whose pick was stripped by the league (tampering,
+# cap/integrity penalties, and the next-year pick spent in a supplemental draft). Each entry was
+# checked against the pick data (short round, or the slot shift it causes).
+FORFEITS: dict[tuple[int, int], list[str]] = {
+    (2001, 5): ["SF"],                          # cap violations
+    (2004, 2): ["LV"],
+    (2006, 5): ["MIA"],                         # 2005 supplemental (M. Wright)
+    (2007, 3): ["CIN"],                         # 2006 supplemental (A. Brooks)
+    (2008, 1): ["NE"],                          # videotaping
+    (2008, 4): ["LAC"],                         # 2007 supplemental (P. Oliver)
+    (2008, 5): ["SF"],                          # tampering
+    (2010, 3): ["WAS"],                         # 2009 supplemental (J. Jarmon)
+    (2011, 7): ["CHI"],                         # 2010 supplemental (H. Unga)
+    (2012, 2): ["NO"],                          # bounty
+    (2012, 3): ["LV"],                          # 2011 supplemental (T. Pryor)
+    (2013, 2): ["NO", "CLE"],                   # bounty; 2012 supplemental (J. Gordon)
+    (2016, 1): ["NE"],                          # ball deflation
+    (2016, 3): ["KC"],                          # tampering
+    (2016, 5): ["ATL", "LA"],                   # crowd noise; 2015 supplemental (I. Battle)
+    (2017, 4): ["NE"],                          # ball deflation
+    (2017, 6): ["KC"],                          # tampering
+    (2019, 3): ["NYG"],                         # 2018 supplemental (S. Beal)
+    (2019, 6): ["WAS"],                         # 2018 supplemental (A. Alexander)
+    (2020, 5): ["ARI"],                         # 2019 supplemental (J. Thompson)
+    (2021, 3): ["NE"],                          # videotaping
+    (2023, 1): ["MIA"],                         # tampering
+    (2024, 3): ["MIA"],                         # tampering
+    (2025, 5): ["ATL", "SF"],                   # tampering; payroll accounting
 }
+# Rounds known to be one regular pick short whose owner we can't attribute: nobody is charged.
+UNATTRIBUTED_SHORT: set[tuple[int, int]] = {(2021, 7)}
 STD_EPS = 1e-12
 
 SURPLUS_SCHEMA = {
@@ -180,14 +212,18 @@ def original_order(team_games: pl.DataFrame, draft_year: int, n_rounds: int = N_
 
 # ---------- alignment ----------
 
-def align(orig, actual, sub: float = 1.0, dele: float = 3.0, ins: float = 4.0,
+def align(orig, actual, sub: float = 1.0, dele: float | None = None, ins: float = 4.0,
           free_tail: bool = True) -> list[tuple[int | None, int | None]]:
     """Edit-distance alignment of original slots to actual pick positions.
 
-    match 0 / substitute (trade) `sub` / delete slot (forfeit) `dele` / insert extra pick `ins`;
-    with free_tail, extra picks after the last slot (comp picks) cost nothing. Returns
+    match 0 / substitute (trade) `sub` / delete slot `dele` / insert extra pick `ins`; with
+    free_tail, extra picks after the last slot (comp picks) cost nothing. `dele` defaults to more
+    than every substitution in the round could cost, so a deletion happens only when the round is
+    genuinely short of picks (trades are always preferred over a guessed forfeit). Returns
     (slot index or None, position or None) pairs in order; ties prefer match/sub, then delete."""
     n, k = len(orig), len(actual)
+    if dele is None:
+        dele = sub * (n + k) + ins + 1.0
     inf = float("inf")
     D = [[inf] * (k + 1) for _ in range(n + 1)]
     D[0][0] = 0.0
@@ -235,10 +271,13 @@ def derivable_years(team_games: pl.DataFrame, picks: pl.DataFrame) -> list[int]:
 
 
 def surplus_table(team_games: pl.DataFrame, picks: pl.DataFrame, values: np.ndarray,
-                  forfeits: dict[tuple[int, int], list[str]] | None = None) -> pl.DataFrame:
+                  forfeits: dict[tuple[int, int], list[str]] | None = None,
+                  unattributed: set[tuple[int, int]] | None = None) -> pl.DataFrame:
     """One row per franchise per derivable draft: slot (1-based round-1 original position),
-    orig_value, used_value and surplus = used - orig. `picks` = normalize_picks output."""
-    forfeits = FORFEITS_R12 if forfeits is None else forfeits
+    orig_value, used_value and surplus = used - orig. `picks` = normalize_picks output.
+    Warns on a round with fewer picks than (non-forfeited) slots that isn't in `unattributed`."""
+    forfeits = FORFEITS if forfeits is None else forfeits
+    unattributed = UNATTRIBUTED_SHORT if unattributed is None else unattributed
     if picks.height and int(picks["pick"].max()) > MAX_PICK:
         raise ValueError(f"draft pick {int(picks['pick'].max())} beyond the value chart ({MAX_PICK})")
     by_year = {k[0]: g for k, g in picks.partition_by("season", as_dict=True).items()} if picks.height else {}
@@ -259,17 +298,16 @@ def surplus_table(team_games: pl.DataFrame, picks: pl.DataFrame, values: np.ndar
             for t in gone:  # stripped slot: its owner loses the pick it would have been, nobody gains it
                 orig_v[t] += _v(values, pk[0] + order[r - 1].index(t))
             o = [t for t in order[r - 1] if t not in gone]
-            last_pick = pk[0] - 1
+            if len(act) < len(o) and (y, r) not in unattributed:
+                warnings.warn(f"draft {y} round {r}: {len(act)} picks for {len(o)} slots "
+                              "(unknown forfeit; add it to draft.FORFEITS)", stacklevel=2)
             for si, pj in align(o, act, free_tail=r >= 3):
                 if si is not None and pj is not None:  # regular pick (own or traded)
                     v = _v(values, pk[pj])
                     orig_v[o[si]] += v
-                    used_v.setdefault(act[pj], 0.0)
-                    used_v[act[pj]] += v
-                    last_pick = pk[pj]
-                elif si is not None:  # forfeited slot found by the alignment
-                    orig_v[o[si]] += _v(values, last_pick + 1)
-                # else: comp/extra pick -> excluded from both sides
+                    used_v[act[pj]] = used_v.get(act[pj], 0.0) + v
+                # slot without a pick (short round): unattributed, nobody charged;
+                # pick without a slot: comp/extra pick, excluded from both sides
         for t in teams:
             rows.append((y, t, teams.index(t) + 1, orig_v[t], used_v[t], used_v[t] - orig_v[t]))
     return pl.DataFrame(rows, schema=SURPLUS_SCHEMA, orient="row").sort("season", "franchise_id")
