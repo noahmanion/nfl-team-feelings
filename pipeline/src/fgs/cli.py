@@ -15,7 +15,7 @@ from fgs.snapshots import build_grid
 
 def derive(raw: pl.DataFrame, params: EloParams | None = None) -> dict[str, pl.DataFrame]:
     """Pure: raw schedules -> games (with Elo), team_games, snapshots. No file I/O."""
-    games, sparse = replay(build_games(raw), params or EloParams())
+    games, sparse = replay(build_games(raw), params)
     team_games = build_team_games(games)
     return {"games": games, "team_games": team_games, "snapshots": build_grid(games, team_games, sparse)}
 

@@ -48,7 +48,7 @@ SPARSE_SCHEMA = {"season": pl.Int32, "week": pl.Int32, "franchise_id": pl.String
 
 def replay(
     games: pl.DataFrame,
-    params: EloParams = EloParams(),
+    params: EloParams | None = None,
     hfa: Callable[[int], float] = hfa_for,
 ) -> tuple[pl.DataFrame, pl.DataFrame]:
     """Chronological replay. Returns (games with Elo columns, sparse (season, week, team, elo) rows).
@@ -62,6 +62,7 @@ def replay(
     the snapshot of the week it was actually played in, never in an earlier week's as-of view.
     When week order and date order agree (all cached history), asof_week == week.
     """
+    params = params or EloParams()  # fresh per call: no shared mutable seeds dict across calls
     games = games.sort(["season", "gameday", "gametime", "week", "game_id"], nulls_last=True)
     games = games.with_columns(pl.col("week").cum_max().over("season").alias("asof_week"))
     teams = sorted(set(games["home_id"]) | set(games["away_id"]))
