@@ -1,4 +1,4 @@
-import type { Meta, SeasonFile, SeasonMeta, WeekFile } from './types'
+import type { HistoryFile, Meta, SeasonFile, SeasonMeta, WeekFile } from './types'
 
 export const dataUrl = (path: string): string => `${import.meta.env.BASE_URL}data/${path}`
 
@@ -21,6 +21,19 @@ export function loadSeason(meta: Meta, season: number): Promise<SeasonFile> {
   seasonCache.set(season, p)
   p.catch(() => {
     if (seasonCache.get(season) === p) seasonCache.delete(season)
+  })
+  return p
+}
+
+// history.json is one file; cache a single promise for the session, evicted on failure.
+let historyCache: Promise<HistoryFile> | null = null
+
+export function loadHistory(meta: Meta): Promise<HistoryFile> {
+  if (historyCache) return historyCache
+  const p = getJson<HistoryFile>(`history.json?v=${encodeURIComponent(meta.generated_at)}`)
+  historyCache = p
+  p.catch(() => {
+    if (historyCache === p) historyCache = null
   })
   return p
 }

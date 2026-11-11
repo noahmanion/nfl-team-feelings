@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardHash, parseHash } from './router'
+import { boardHash, historyHash, parseHash } from './router'
 
 describe('parseHash', () => {
   it('empty and root hashes are the latest board', () => {
@@ -21,8 +21,17 @@ describe('parseHash', () => {
     expect(parseHash('#/board/2007/123')).toEqual({ kind: 'invalid' })
     expect(parseHash('#/nope')).toEqual({ kind: 'invalid' })
   })
+  it('parses history routes, uppercasing the team', () => {
+    expect(parseHash('#/history')).toEqual({ kind: 'history' })
+    expect(parseHash('#/history/')).toEqual({ kind: 'history' })
+    expect(parseHash('#/history/buf')).toEqual({ kind: 'history', team: 'BUF' })
+    expect(parseHash('#/history/BUF/')).toEqual({ kind: 'history', team: 'BUF' })
+    expect(parseHash('#/history/det')).toEqual({ kind: 'history', team: 'DET' })
+    expect(parseHash('#/history/TOOLONG')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/history/B1')).toEqual({ kind: 'invalid' })
+  })
   it('recognises routes reserved for later phases', () => {
-    for (const h of ['#/team/BUF', '#/team/BUF/2024/3', '#/history', '#/records', '#/methodology']) {
+    for (const h of ['#/team/BUF', '#/team/BUF/2024/3', '#/records', '#/methodology']) {
       expect(parseHash(h)).toEqual({ kind: 'reserved' })
     }
   })
@@ -34,5 +43,16 @@ describe('boardHash', () => {
     for (const [s, w] of [[1999, 0], [2020, 21], [2026, 9]]) {
       expect(parseHash(boardHash(s, w))).toEqual({ kind: 'board', season: s, week: w })
     }
+  })
+})
+
+describe('historyHash', () => {
+  it('builds history hashes', () => {
+    expect(historyHash()).toBe('#/history')
+    expect(historyHash('det')).toBe('#/history/DET')
+  })
+  it('round-trips through parseHash', () => {
+    expect(parseHash(historyHash())).toEqual({ kind: 'history' })
+    expect(parseHash(historyHash('KC'))).toEqual({ kind: 'history', team: 'KC' })
   })
 })
