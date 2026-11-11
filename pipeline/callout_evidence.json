@@ -1,0 +1,23 @@
+{
+ "threshold": 8,
+ "first_week": 4,
+ "train_seasons": [
+  1999,
+  2021
+ ],
+ "weights_fingerprint": "57fdb0045b4e",
+ "generated_at": "2026-11-11T23:00:54+00:00",
+ "note": "In-sample: 1999-2021 is also the weight-fit window; describes history, not an out-of-sample test.",
+ "hopeful": {
+  "n": 594,
+  "d_margin": 3.58,
+  "team_win": 0.549,
+  "peer_win": 0.4483
+ },
+ "worried": {
+  "n": 631,
+  "d_margin": -3.51,
+  "team_win": 0.4496,
+  "peer_win": 0.5456
+ }
+}

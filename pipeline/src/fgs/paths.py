@@ -13,3 +13,5 @@ PREREG_PATH = PIPELINE_ROOT / "PREREGISTRATION.md"
 FREEZE_RESULT_PATH = PIPELINE_ROOT / "FREEZE_RESULT.json"
 HOLDOUT_MD_PATH = PIPELINE_ROOT / "HOLDOUT_RESULT.md"
 HOLDOUT_JSON_PATH = PIPELINE_ROOT / "HOLDOUT_RESULT.json"
+# Phase 8: frozen perception-gap base rates (written by `fgs evidence`, read by the export)
+CALLOUT_EVIDENCE_PATH = PIPELINE_ROOT / "callout_evidence.json"

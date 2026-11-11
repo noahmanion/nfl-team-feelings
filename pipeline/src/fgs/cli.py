@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, draft, check, export, refresh, backtest, freeze, holdout."""
+"""`fgs` command line: ingest, build, elo, draft, check, export, refresh, backtest, freeze, holdout, evidence."""
 
 import argparse
 import json
@@ -487,6 +487,32 @@ def _cmd_export(args) -> int:
     return 0
 
 
+def _cmd_evidence(args) -> int:
+    """Dev-only: recompute the perception-gap base rates on 1999–2021 and write
+    paths.CALLOUT_EVIDENCE_PATH (commit it). fgs.evidence imports the backtest, so it is loaded
+    lazily here and never by the export."""
+    from fgs import evidence, insights, mood
+
+    incomplete = _incomplete_refresh_msg()
+    if incomplete:
+        print(f"error: {incomplete}", file=sys.stderr)
+        return 1
+    derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    scored = mood.score_frame(derived["features"])
+    fp = insights.weights_fingerprint(insights.fingerprint_weights(derived["weights"], derived["offseason"]))
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    ev = evidence.compute_evidence(scored, derived["team_games"], fp, generated_at)
+    out = paths.CALLOUT_EVIDENCE_PATH  # read at call time so tests can monkeypatch it
+    out.write_text(json.dumps(ev, indent=1, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
+    lo, hi = ev["train_seasons"]
+    for f in ("hopeful", "worried"):
+        e = ev[f]
+        print(f"{f:8s} n={e['n']}  d_margin={e['d_margin']:+.2f}  next-8 win {e['team_win']:.1%} vs peers "
+              f"{e['peer_win']:.1%}  ({lo}–{hi}, |gap| >= {ev['threshold']}, weeks {ev['first_week']}+)")
+    print(f"wrote {out} (weights fingerprint {fp}); commit it")
+    return 0
+
+
 FROZEN_MSG = "weights are frozen (fit 1999–2021); run `fgs freeze --unfreeze` to refit"
 POST_HOLDOUT_MSG = ("refitting after the holdout breaks the pre-registration (pipeline/PREREGISTRATION.md); "
                     "a new holdout would be needed")
@@ -798,6 +824,10 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--force", action="store_true",
                    help="re-run even though a result exists — don't: it breaks the pre-registration")
     p.set_defaults(func=_cmd_holdout)
+
+    p = sub.add_parser("evidence", help="dev-only: recompute the perception-gap base rates on 1999–2021 and write "
+                                        "pipeline/callout_evidence.json; commit it")
+    p.set_defaults(func=_cmd_evidence)
 
     args = parser.parse_args(argv)
     return args.func(args)
