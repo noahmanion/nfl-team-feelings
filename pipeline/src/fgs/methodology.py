@@ -101,6 +101,39 @@ def _sign_words(ws: list[float]) -> str:
     return " or ".join(order) if len(order) <= 2 else "negative, about zero or positive"
 
 
+def _kind(w: float) -> str:
+    """Rounded-weight class shared by every note: |w| < 0.1 is "about zero"."""
+    r = round(float(w), 2)
+    return "about zero" if abs(r) < 0.1 else "negative" if r < 0 else "positive"
+
+
+def _size(w: float) -> str:
+    a = abs(round(float(w), 2))
+    return "near-zero" if a < 0.1 else "small" if a < 0.5 else "moderate" if a < 1.0 else "large"
+
+
+def _consistency(folds: tuple[int, int] | None) -> str | None:
+    if not folds or folds[1] <= 0:
+        return None
+    k, n = folds
+    return "consistent" if k == n else "mostly consistent" if k / n >= 0.75 else "inconsistent"
+
+
+def describe_weight(w: float, folds: tuple[int, int] | None) -> str:
+    """e.g. "a small but consistent negative weight (−0.33, same sign in 19 of 19 seasons)". Every word
+    comes from the weight's rounded size/sign and its walk-forward fold-sign agreement (WR-06)."""
+    size, kind, cons = _size(w), _kind(w), _consistency(folds)
+    if kind == "about zero":
+        head = "a near-zero weight"
+    elif cons is None:
+        head = f"a {size} {kind} weight"
+    else:
+        conj = " but " if size == "small" and cons != "inconsistent" else ", "
+        head = f"a {size}{conj}{cons} {kind} weight"
+    tail = fmt_weight(w) + (f", same sign in {fmt_folds(*folds)} seasons" if folds else "")
+    return f"{head} ({tail})"
+
+
 def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) -> list[dict]:
     notes: list[dict] = []
     labels = {k: score.FACTORS[k]["label"] for k in weights}
@@ -120,29 +153,49 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
                 part += f" (same sign in {fmt_folds(*folds)} seasons)"
             parts.append(part)
         words = _sign_words([weights[k] for k in mom])
-        text = (
-            "Hot records mostly fade. Once Elo and point margins are known, a strong recent record, a "
-            f"winning streak and close-game wins tend not to last, so these weights are {words}: "
-            + "; ".join(parts) + "."
-        )
+        kinds = {_kind(weights[k]) for k in mom}
+        tail = f"these weights are {words}: " + "; ".join(parts) + "."
+        if "negative" in kinds and "positive" not in kinds:
+            text = ("Hot records mostly fade. Once Elo and point margins are known, a strong recent record, a "
+                    f"winning streak and close-game wins tend not to last, so {tail}")
+        elif "positive" in kinds and "negative" not in kinds:
+            text = ("Hot records mostly carry on. Even once Elo and point margins are known, a strong recent "
+                    f"record, a winning streak and close-game wins tend to persist, so {tail}")
+        elif "positive" in kinds:
+            text = f"Momentum signals point different ways once Elo and point margins are known: {tail}"
+        else:
+            text = f"Once Elo and point margins are known, recent record, streaks and close-game wins add about nothing: {tail}"
         notes.append({"key": "momentum", "text": text, "values": values})
 
     if "epa_traj" in weights:
         w = weights["epa_traj"]
         values = {"epa_traj": w}
-        text = f"The efficiency trend adds about nothing once Elo is known. Its weight is {fmt_weight(w)}"
+        folds = _folds(doc, "epa_traj")
+        if folds:
+            values["epa_traj_folds"], values["epa_traj_of"] = folds
+        kind = _kind(w)
+        how = ("an efficiency upswing slightly fades" if kind == "negative"
+               else "an efficiency upswing slightly carries on" if kind == "positive"
+               else "an efficiency upswing changes little")
+        text = f"The efficiency trend has {describe_weight(w, folds)}: once the other factors are known, {how}"
         d = ((freeze or {}).get("factors") or {}).get("epa_traj", {}).get("delta_spearman_n8")
         if d is not None:
             values["epa_traj_delta"] = d
-            text += f", and adding it changed the walk-forward rank correlation by {fmt_delta(d)}"
+            text += (". Adding it on top of the factors before it changed the walk-forward rank correlation by "
+                     f"{fmt_delta(d)}")
         notes.append({"key": "efficiency", "text": text + ".", "values": values})
 
     if "vs_exp" in weights:
         w = weights["vs_exp"]
         values = {"vs_exp": w}
+        folds = _folds(doc, "vs_exp")
+        kind = _kind(w)
+        how = ("beating expectations tends to fade" if kind == "negative"
+               else "beating expectations tends to persist" if kind == "positive"
+               else "beating expectations adds about nothing")
         text = (
-            f"“Vs preseason expectations” has weight {fmt_weight(w)}: given the record, beating "
-            "expectations tends to fade. Expectations come from Vegas win totals for 2003–2020 and "
+            f"“Vs preseason expectations” has {describe_weight(w, folds)}: given the record, {how}. "
+            "Expectations come from Vegas win totals for 2003–2020 and "
             "from the model’s own preseason projection otherwise, including all of 2021 onward."
         )
         diag = ((holdout or {}).get("diagnostic") or {}).get("vs_exp_zeroed")
@@ -169,7 +222,7 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
         notes.append({
             "key": "refit_vs_frozen",
             "text": (
-                "The walk-forward numbers (2003–21) refit the weights each season on earlier seasons only, "
+                f"The walk-forward numbers ({_span(*freeze['walk_forward']['seasons'])}) refit the weights each season on earlier seasons only, "
                 f"with unrounded weights: rank correlation {fmt_metric(c)} for the feel-good score vs "
                 f"{fmt_metric(e)} for Elo alone. The holdout uses the one frozen, rounded set."
             ),

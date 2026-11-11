@@ -130,6 +130,40 @@ def test_momentum_wording_follows_signs():
     assert "positive" in text and "negative" not in text
 
 
+def _note(m, key):
+    return next(n for n in m["notes"] if n["key"] == key)["text"]
+
+
+def test_notes_wording_follows_flipped_signs():
+    # WR-06: flip every sign; no note may keep the "fade" wording
+    flipped = {k: -w for k, w in WEIGHTS.items()}
+    doc = {**DOC, "weights": flipped}
+    m = build_methodology(flipped, doc, FREEZE, None, live=2026)
+    mom, eff, vx = _note(m, "momentum"), _note(m, "efficiency"), _note(m, "vs_exp")
+    assert "fade" not in mom and "carry on" in mom and "positive" in mom
+    assert "positive weight" in eff and "fades" not in eff and "carries on" in eff
+    assert "tends to persist" in vx and "fade" not in vx
+    base = build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)
+    assert "fade" in _note(base, "momentum") and "tends to fade" in _note(base, "vs_exp")
+    assert "negative weight" in _note(base, "efficiency")
+
+
+def test_momentum_mixed_and_zero_wording():
+    mixed = build_methodology({"last16": 0.4, "streak": -0.3, "luck": 0.0}, {}, None, None, live=2026)
+    assert "point different ways" in _note(mixed, "momentum") and "fade" not in _note(mixed, "momentum")
+    zero = build_methodology({"last16": 0.04, "streak": -0.03}, {}, None, None, live=2026)
+    assert "add about nothing" in _note(zero, "momentum")
+
+
+def test_describe_weight():
+    from fgs.methodology import describe_weight
+    assert describe_weight(-0.33, (19, 19)) == "a small but consistent negative weight (−0.33, same sign in 19 of 19 seasons)"
+    assert describe_weight(-1.22, (18, 19)).startswith("a large, mostly consistent negative weight")
+    assert describe_weight(0.63, (10, 19)).startswith("a moderate, inconsistent positive weight")
+    assert describe_weight(0.04, (12, 19)).startswith("a near-zero weight")
+    assert describe_weight(2.59, None) == "a large positive weight (+2.59)"
+
+
 def test_formatters():
     assert fmt_weight(2.59) == "+2.59" and fmt_weight(-0.56) == "−0.56" and fmt_weight(-0.0) == "0.00"
     assert fmt_delta(-0.0008) == "−0.0008" and fmt_delta(0.0028) == "+0.0028"
