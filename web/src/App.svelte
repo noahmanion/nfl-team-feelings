@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import HistoryPage from './components/HistoryPage.svelte'
+  import MethodologyPage from './components/MethodologyPage.svelte'
   import BoardHeading from './components/BoardHeading.svelte'
   import MoodBoard from './components/MoodBoard.svelte'
   import Scrubber from './components/Scrubber.svelte'
@@ -86,7 +87,7 @@
     const r = route.current
     if (r.kind === 'reserved') {
       replace('#/')
-    } else if (r.kind === 'history') {
+    } else if (r.kind === 'history' || r.kind === 'methodology') {
       notice = null
     } else if (r.kind === 'team') {
       if (!validTeam(meta, r.team)) {
@@ -170,7 +171,15 @@
 </script>
 
 <div class="page">
-  <SiteHeader current={route.current.kind === 'history' ? 'history' : route.current.kind === 'team' ? 'team' : 'board'} />
+  <SiteHeader
+    current={route.current.kind === 'history'
+      ? 'history'
+      : route.current.kind === 'team'
+        ? 'team'
+        : route.current.kind === 'methodology'
+          ? 'methodology'
+          : 'board'}
+  />
 
   <main>
     {#if status === 'error'}
@@ -189,6 +198,10 @@
         latest={teamTarget.latest}
       />
     {:else if route.current.kind === 'team'}
+      <p class="loading" role="status">Loading…</p>
+    {:else if route.current.kind === 'methodology' && status === 'ready' && meta}
+      <MethodologyPage {meta} />
+    {:else if route.current.kind === 'methodology'}
       <p class="loading" role="status">Loading…</p>
     {:else}
       <Scrubber
