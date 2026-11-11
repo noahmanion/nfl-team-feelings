@@ -165,8 +165,8 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — pbp ingest: slim per-season cache, team_game_epa aggregates, coverage check, build/refresh wiring (DATA-05)
-- [ ] 05-02-PLAN.md — Vectorized season simulator (era rules, tiebreaks, sigma=100, model_version cache) + win totals and source-tagged expectations (MODEL-13, MODEL-08)
+- [x] 05-01-PLAN.md — pbp ingest: slim per-season cache, team_game_epa aggregates, coverage check, build/refresh wiring (DATA-05)
+- [x] 05-02-PLAN.md — Vectorized season simulator (era rules, tiebreaks, sigma=100, model_version cache) + win totals and source-tagged expectations (MODEL-13, MODEL-08)
 
 **Wave 2**
 
@@ -239,7 +239,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
-| 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
+| 5. Efficiency, QB Trend & Season Simulator | 2/5 | In Progress|  |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
 | 8. Callouts, Records & My Team | 0/TBD | Not started | - |
