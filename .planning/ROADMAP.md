@@ -128,7 +128,22 @@ Plans:
   2. User can click a team and see its score, mood label, a plain-English one-liner naming its biggest drivers, and its recent games.
   3. The team page shows diverging factor bars that visibly sum to the displayed score.
 
-**Plans**: TBD
+**Plans:** 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Points attribution, blurbs, meta.baseline, games/{season}.json export (existing 3 factors)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 04-02-PLAN.md — Team deep-dive page: route, factor bars, recent games, sparkline, board-row links
+- [ ] 04-03-PLAN.md — Add mov then sow one at a time (backtest delta, sign, weights, log, regen)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 04-04-PLAN.md — Add streak then luck one at a time; final 7-factor export + README
+
 **UI hint**: yes
 
 ### Phase 5: Efficiency, QB Trend & Season Simulator
