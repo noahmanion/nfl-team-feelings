@@ -2,6 +2,7 @@
 
 import json
 import math
+from datetime import date
 import re
 
 import polars as pl
@@ -258,10 +259,14 @@ def test_latest_partial_week_synthetic():
 def test_cli_export_writes_to_monkeypatched_dir(tmp_path, monkeypatch, capsys):
     if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
         pytest.skip("no cached schedules/teams")
-    monkeypatch.setattr(cli, "WEB_DATA_DIR", tmp_path)
+    monkeypatch.setattr(cli, "WEB_DATA_DIR", tmp_path / "web")
+    monkeypatch.setattr(paths, "RECORDS_CHECK_PATH", tmp_path / "RECORDS_CHECK.md")  # never the committed file
     assert cli.main(["export"]) == 0
-    assert (tmp_path / "meta.json").exists()
-    assert "exported" in capsys.readouterr().out
+    assert (tmp_path / "web" / "meta.json").exists() and (tmp_path / "web" / "records.json").exists()
+    md = (tmp_path / "RECORDS_CHECK.md").read_text()
+    assert "Notable non-entries" in md and md.count("| # |") == 4
+    out = capsys.readouterr().out
+    assert "exported" in out and "RECORDS_CHECK.md" in out
 
 
 # --- partial weeks (calendar-robust: derive (s, w) from the data, never hardcode) ------------
@@ -641,7 +646,7 @@ def test_callouts_contract(real_files):
     assert all(set(x) == CALLOUT_KEYS and (x["season"], x["week"]) == (latest["season"], latest["week"]) for x in c)
     snap = files[f"snapshots/{latest['season']}.json"]
     assert c == snap["callouts"].get(str(latest["week"]), [])
-    total_gap = 0
+    total_gap = total_streak = 0
     for path, obj in files.items():
         if not path.startswith("snapshots/"):
             continue
@@ -655,9 +660,16 @@ def test_callouts_contract(real_files):
             by_type: dict[str, int] = {}
             for x in items:
                 assert set(x) == CALLOUT_KEYS and x["season"] == season and x["week"] == week
-                assert x["franchise"] in franchises and x["start"] is None and isinstance(x["stat"], int)
-                assert x["type"] in {"worried", "hopeful", "mover_up", "mover_down"}
+                assert x["franchise"] in franchises and isinstance(x["stat"], int)
+                assert x["type"] in {"worried", "hopeful", "misery", "joy", "mover_up", "mover_down"}
                 by_type[x["type"]] = by_type.get(x["type"], 0) + 1
+                if x["type"] in ("misery", "joy"):
+                    total_streak += 1
+                    assert x["stat"] >= season_config.STREAK_CALLOUT_MIN_DAYS and x["evidence"] is None
+                    assert x["start"] is not None and date.fromisoformat(x["start"]) and str(x["stat"]) in \
+                        x["headline"].replace(",", "")
+                    continue
+                assert x["start"] is None
                 if x["type"] in ("worried", "hopeful"):
                     total_gap += 1
                     assert season_config.GAP_FIRST_WEEK <= week <= rw - 1
@@ -667,7 +679,8 @@ def test_callouts_contract(real_files):
                     assert week >= 1 and x["evidence"] is None
                     assert (x["stat"] > 0) if x["type"] == "mover_up" else (x["stat"] < 0)
             assert all(n <= 3 for n in by_type.values()), (season, wk, by_type)
-    assert total_gap > 500
+            assert by_type.get("misery", 0) <= 1 and by_type.get("joy", 0) <= 1, (season, wk, by_type)
+    assert total_gap > 500 and total_streak > 100
     json.dumps(files["callouts.json"], allow_nan=False)
     json.dumps(files[f"snapshots/{latest['season']}.json"]["callouts"], allow_nan=False)
 
@@ -687,3 +700,19 @@ def test_export_requires_evidence_file(real_files, tmp_path, monkeypatch):
     monkeypatch.setattr(paths, "CALLOUT_EVIDENCE_PATH", tmp_path / "missing.json")
     with pytest.raises(ValueError, match="uv run fgs evidence"):
         build_export(derived, load_teams(), generated_at=GEN)
+
+
+# --- Phase 8: records (INSIGHT-03, INSIGHT-04) -------------------------------------------------
+
+def test_records_contract(real_files):
+    _, files = real_files
+    r = files["records.json"]
+    assert set(r) == {"as_of", "saddest", "happiest", "misery", "joy", "active", "excluded", "notable"}
+    assert r["as_of"] == GEN[:10]
+    assert all(len(r[k]) == 10 for k in ("saddest", "happiest", "misery", "joy"))
+    assert {(e["season"], e["franchise"]) for e in r["excluded"]} == {(1999, "CLE"), (2002, "HOU")}
+    teams = set(files["meta.json"]["teams"])
+    assert set(r["active"]) <= teams and all(a["kind"] in ("misery", "joy") for a in r["active"].values())
+    for e in r["misery"] + r["joy"]:
+        assert e["active"] == (e["end"] is None) and e["days"] > 0 and e["seasons"]
+    json.dumps(r, allow_nan=False)

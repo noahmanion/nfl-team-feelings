@@ -8,11 +8,12 @@ import os
 import re
 import shutil
 import tempfile
+from datetime import date
 from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, draft, explain, insights, methodology, mood, paths, score, season_config
+from fgs import asof, draft, explain, insights, methodology, mood, paths, records, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 from fgs.season_config import SEEDS
@@ -252,7 +253,8 @@ def build_export(
         scored = _playoff_display(scored, games).sort(["season", "week", "rank"])
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
     ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence)
-    by_week = insights.callouts_by_week(scored, derived["team_games"], nicks, ev)
+    as_of = date.fromisoformat(generated_at[:10])  # active streaks count through the export date
+    by_week = insights.callouts_by_week(scored, derived["team_games"], nicks, ev, games=games, as_of=as_of)
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
@@ -317,6 +319,7 @@ def build_export(
         }
     files["history.json"] = {"keys": keys, "teams": hist}
     files["callouts.json"] = by_week.get((int(s), int(w)), [])  # the flat list for meta.latest
+    files["records.json"] = records.build_records(scored, games, as_of)
     # built from committed evidence only (weights.yaml + FREEZE_RESULT + optional HOLDOUT_RESULT);
     # in `files` so write_export swaps it in atomically with everything else (Pitfall 3)
     files["methodology.json"] = methodology.build_methodology(weights, *methodology.load_evidence(), live=int(s))

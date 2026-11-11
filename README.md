@@ -33,7 +33,12 @@ uv run fgs elo                           # ranked Elo + W-L-T for the latest pla
 uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = preseason (regressed) ratings
 uv run fgs backtest                      # walk-forward backtest (2003–2021) of the score vs baselines
 uv run fgs backtest --propose-weights    # also print ridge weights fit on 1999–2021, ready for weights.yaml
+uv run fgs evidence                      # dev-only: recompute the perception-gap base rates (1999–2021)
 ```
+
+- `fgs evidence` writes `pipeline/callout_evidence.json`. Rerun it and commit the file after any weights or callout-threshold change: the export refuses stale evidence.
+- `fgs export` and `fgs refresh` also regenerate `pipeline/RECORDS_CHECK.md`, the hand-check list for the records page (saddest/happiest team-seasons, longest misery/joy streaks, notable non-entries, excluded expansion seeds). Read it against known NFL history after any weights change. Don't hand-edit it.
+- Misery (score under 20) and joy (80 or higher) streaks are counted in calendar days across seasons. Week-0 snapshots are dated at the draft's last day (`season_config.DRAFT_END`; `fgs check` fails if a past season is missing one), and week N at the last gameday of that week.
 
 `fgs backtest --include-holdout` also scores the sealed 2022–2025 seasons. It's reserved for Phase 6.
 

@@ -399,7 +399,7 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("vegas_coverage", lambda raw, d, p: check_vegas_coverage(d["games"], d.get("vegas"))),
     ("draft_coverage", lambda raw, d, p: [] if d.get("draft") is None else check_draft_coverage(d["draft"])),
     ("draft_sum", lambda raw, d, p: [] if d.get("draft") is None else check_draft_sum(d["draft"])),
-    ("draft_dates", lambda raw, d, p: check_draft_dates(d["games"])),
+    ("week0_dates", lambda raw, d, p: check_draft_dates(d["games"])),
 ]
 
 
@@ -419,7 +419,7 @@ def run_checks(
 WARNINGS: list[tuple[str, CheckFn]] = [
     ("pbp_lag", lambda raw, d, p: [] if d.get("team_game_epa") is None
      else pbp.pbp_lag(d["team_game_epa"], d["team_games"])),
-    ("draft_dates", lambda raw, d, p: warn_draft_date_current(d["games"])),
+    ("week0_dates", lambda raw, d, p: warn_draft_date_current(d["games"])),
 ]
 
 

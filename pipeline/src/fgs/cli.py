@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, draft, export, features, freeze, holdout, paths, score, sim
+from fgs import checks, draft, export, features, freeze, holdout, paths, records, score, sim
 from fgs.backtest import (
     draft_gate, draft_walk_forward, format_draft_report, format_proposal, format_report, propose_weights,
     run_backtest,
@@ -459,6 +459,7 @@ def _cmd_refresh(args) -> int:
     _write_derived(derived)
     sim.save_sim_cache(derived["sim"], sims)
     export.write_export(files, WEB_DATA_DIR)
+    check_path = _write_records_check(files)
     marker.unlink()  # every output written: the set is consistent again
     meta = files["meta.json"]
     print(
@@ -466,6 +467,14 @@ def _cmd_refresh(args) -> int:
         f"{meta['latest']['week']} (partial={meta['partial_week']}); data through {meta['data_through']}"
     )
     return 0
+
+
+def _write_records_check(files: dict):
+    """Write pipeline/RECORDS_CHECK.md from the exported records.json (path read at call time so
+    tests can monkeypatch paths.RECORDS_CHECK_PATH)."""
+    path = paths.RECORDS_CHECK_PATH
+    path.write_text(records.records_check_md(files["records.json"]), encoding="utf-8")
+    return path
 
 
 def _cmd_export(args) -> int:
@@ -479,11 +488,13 @@ def _cmd_export(args) -> int:
     files = export.build_export(derived, teams, generated_at=generated_at)
     out_dir = WEB_DATA_DIR  # module global read at call time so tests can monkeypatch it
     export.write_export(files, out_dir)
+    check_path = _write_records_check(files)
     meta = files["meta.json"]
     print(
         f"exported {len(files)} files to {out_dir}; latest {meta['latest']['season']} "
         f"week {meta['latest']['week']} (partial={meta['partial_week']})"
     )
+    print(f"records hand-check written to {check_path}")
     return 0
 
 

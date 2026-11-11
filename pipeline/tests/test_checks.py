@@ -232,4 +232,4 @@ def test_draft_dates_fail_for_past_season_warn_for_current(synthetic_games, monk
     monkeypatch.setattr(season_config, "DRAFT_END", {2024: "04-27"})
     fails = checks.check_draft_dates(synthetic_games)
     assert len(fails) == 1 and "2023" in fails[0]
-    assert "draft_dates" in [n for n, _ in checks.CHECKS] and "draft_dates" in [n for n, _ in checks.WARNINGS]
+    assert "week0_dates" in [n for n, _ in checks.CHECKS] and "week0_dates" in [n for n, _ in checks.WARNINGS]

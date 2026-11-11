@@ -182,6 +182,7 @@ def refresh_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
     monkeypatch.setattr(cli, "CACHE_DIR", cache_dir)
     monkeypatch.setattr(cli, "SIM_CACHE_DIR", None)  # sim cache under the tmp derived dir
+    monkeypatch.setattr(cli.paths, "RECORDS_CHECK_PATH", tmp_path / "RECORDS_CHECK.md")  # never the committed file
     return derived_dir, web_dir, cache_dir
 
 
@@ -195,6 +196,7 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     assert cli.main(["refresh"]) == 1
     cap = capsys.readouterr()
     assert "FAIL" in cap.out and "cache and JSON not updated" in cap.err
+    assert not cli.paths.RECORDS_CHECK_PATH.exists()
     derived_dir, web_dir, cache_dir = refresh_dirs
     for d in (derived_dir, web_dir):
         assert [p.name for p in d.iterdir()] == ["SENTINEL"]
@@ -231,8 +233,9 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
         assert (derived_dir / "team_game_epa.parquet").exists()
     sims = list((derived_dir / "sim").glob("*.parquet"))  # written only after checks pass
     assert [p.name for p in sims] == [f"{cli.sim.model_version()}.parquet"]
-    for f in ("meta.json", "latest.json", "callouts.json", "history.json"):
+    for f in ("meta.json", "latest.json", "callouts.json", "history.json", "records.json"):
         assert (web_dir / f).exists()
+    assert "Notable non-entries" in cli.paths.RECORDS_CHECK_PATH.read_text()  # hand-check written with the export
     assert len(list((web_dir / "teams").iterdir())) == 32
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
