@@ -236,7 +236,7 @@ Plans:
 
 **Wave 2** *(blocked on 07-01)*
 
-- [ ] 07-03-PLAN.md — Training-only draft walk-forward + gate on the frozen composite (`fgs backtest --draft`), offseason.draft in weights.yaml, scoring path (weight 0 = display only)
+- [x] 07-03-PLAN.md — Training-only draft walk-forward + gate on the frozen composite (`fgs backtest --draft`), offseason.draft in weights.yaml, scoring path (weight 0 = display only)
 
 **Wave 3** *(blocked on 07-02, 07-03)*
 
@@ -293,5 +293,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 5/5 | Complete    | 2026-11-11 |
-| 7. Draft-Aware Offseason | 2/4 | In Progress|  |
+| 7. Draft-Aware Offseason | 3/4 | In Progress|  |
 | 8. Callouts, Records & My Team | 0/5 | Planned | - |
