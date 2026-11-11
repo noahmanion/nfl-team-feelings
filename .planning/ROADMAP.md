@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Data Foundation & Elo Core** - Clean 1999→present game data with stable franchise IDs, era rules, and a chronological Elo snapshot grid (completed 2026-11-11)
 - [x] **Phase 2: Elo Mood Board** - JSON contract, one-command weekly refresh, and a runnable site showing all 32 teams ranked with mood labels (completed 2026-11-11)
-- [ ] **Phase 3: Backtest Harness & Additive Score** - Documented target, baselines, leakage test, additive combiner with record factors, and the mood-over-time chart
+- [x] **Phase 3: Backtest Harness & Additive Score** - Documented target, baselines, leakage test, additive combiner with record factors, and the mood-over-time chart (completed 2026-11-11)
 - [ ] **Phase 4: Game-Result Factors & Team Deep-Dive** - Margin, opponent quality, streak, and close-game luck factors plus a team page with diverging-bar breakdown and one-liner
 - [ ] **Phase 5: Efficiency, QB Trend & Season Simulator** - PBP-based efficiency and QB trajectory factors, Monte Carlo simulator, expectations and playoff-odds factors
 - [ ] **Phase 6: Weight Freeze & Methodology** - Ridge-fit, human-rounded weights, one-time 2022–2025 holdout, beats plain Elo, methodology page
@@ -112,7 +112,7 @@ Plans:
 
 **Wave 3** *(blocked on 03-02)*
 
-- [ ] 03-03-PLAN.md — Composite on the board: frozen 1999–2021 percentile reference, leakage test, meta.factors + row contribs, regenerated site data, README
+- [x] 03-03-PLAN.md — Composite on the board: frozen 1999–2021 percentile reference, leakage test, meta.factors + row contribs, regenerated site data, README
 
 **UI hint**: yes
 
@@ -204,7 +204,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 |-------|----------------|--------|-----------|
 | 1. Data Foundation & Elo Core | 3/3 | Complete    | 2026-11-11 |
 | 2. Elo Mood Board | 4/4 | Complete    | 2026-11-11 |
-| 3. Backtest Harness & Additive Score | 3/4 | In Progress|  |
+| 3. Backtest Harness & Additive Score | 4/4 | Complete   | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
 | 5. Efficiency, QB Trend & Season Simulator | 0/TBD | Not started | - |
 | 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
