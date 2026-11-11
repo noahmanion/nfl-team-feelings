@@ -12,7 +12,9 @@ Only opponent strength and venue are adjusted for, never the team's own rating.
 import numpy as np
 import polars as pl
 
+from fgs import draft
 from fgs.features import build_features
+from fgs.score import composite as score_composite
 from fgs.score import zscore
 from fgs.season_config import (
     FIRST_TEST_SEASON, HOLDOUT_SEASONS, MEAN_ELO, REF_SEASONS, TRAIN_LAST_SEASON, hfa_for,
@@ -574,4 +576,179 @@ def format_report(report: dict) -> str:
                 nrows = blk["all"]["n"]
             vals.append(_fmt(c["brier"], 4))
             lines.append(f"{name:<22}" + "".join(f"{v:>10}" for v in vals) + f"{nrows:>9}")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# Offseason draft term (Phase 7, MODEL-16): training-only walk-forward + gate
+# ---------------------------------------------------------------------------
+# The 2022-2025 holdout was consumed by Phase 6, so the draft term's evidence is walk-forward
+# on training seasons only. Every frame is cut to season <= TRAIN_LAST_SEASON before features,
+# targets or surplus z are computed, and there is deliberately no way to include later seasons.
+
+DRAFT_GATE_FOLDS = 0.60
+
+
+def _ols(X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """OLS coefficients and their classical standard errors (X includes the intercept column)."""
+    beta, *_ = np.linalg.lstsq(X, y, rcond=None)
+    resid = y - X @ beta
+    dof = max(len(y) - X.shape[1], 1)
+    cov = (resid @ resid / dof) * np.linalg.pinv(X.T @ X)
+    return beta, np.sqrt(np.clip(np.diag(cov), 0, None))
+
+
+def _resid_slope(x: np.ndarray, r: np.ndarray) -> float:
+    """Slope of r ~ 1 + x (0.0 when x is constant)."""
+    xc = x - x.mean()
+    v = float(xc @ xc)
+    return 0.0 if v <= 1e-12 else float(xc @ (r - r.mean()) / v)
+
+
+def _sp_delta(pred, base, y) -> float | None:
+    a, b = spearman(pred, y), spearman(base, y)
+    return None if a is None or b is None else a - b
+
+
+def _draft_fit(frame: pl.DataFrame, seasons: list[int]) -> dict:
+    """Fit core on [season, week, composite, y8, draft_z] rows (all season <= TRAIN_LAST_SEASON).
+
+    Residual form: the frozen composite is fixed. Per test season S, the slope of
+    (y8 - composite) ~ 1 + decay(week)*draft_z over seasons [FIRST_DRAFT, S-1] is the fold
+    weight, and season S is predicted as composite + w*x. The final weight is the same fit on all
+    rows. Only weeks < DECAY_WEEKS carry the term (x = 0 afterwards)."""
+    assert frame.height == 0 or int(frame["season"].max()) <= TRAIN_LAST_SEASON, "holdout rows in draft fit"
+    d = (
+        frame.filter((pl.col("week") < draft.DECAY_WEEKS) & (pl.col("season") >= draft.FIRST_DRAFT)
+                     & pl.col("y8").is_not_null())
+        .with_columns(pl.col("draft_z").fill_null(0.0))
+        .with_columns((pl.col("draft_z") * (1.0 - pl.col("week") / draft.DECAY_WEEKS)).alias("x"))
+        .sort("season", "week", "franchise_id")
+    )
+    sea, wk = d["season"].to_numpy(), d["week"].to_numpy()
+    x, comp, y = d["x"].to_numpy(), d["composite"].to_numpy(), d["y8"].to_numpy()
+    r = y - comp
+
+    pred = np.full(len(d), np.nan)
+    fold_w, fold_s = [], []
+    for S in seasons:
+        tr, te = (sea >= draft.FIRST_DRAFT) & (sea < S), sea == S
+        if not tr.any() or not te.any():
+            continue
+        w = _resid_slope(x[tr], r[tr])
+        pred[te] = comp[te] + w * x[te]
+        fold_w.append(w)
+        fold_s.append(int(S))
+    final = _resid_slope(x, r) if len(d) else 0.0
+
+    tested = ~np.isnan(pred)
+    w0 = tested & (wk == 0)
+    per_season = [_sp_delta(pred[w0 & (sea == S)], comp[w0 & (sea == S)], y[w0 & (sea == S)]) for S in fold_s]
+    pos = sum(1 for v in per_season if v is not None and v > 0)
+
+    a0 = wk == 0
+    partial = {"coef": None, "t": None}
+    if a0.sum() > 3:
+        beta, se = _ols(np.column_stack([np.ones(a0.sum()), comp[a0], x[a0]]), y[a0])
+        partial = {"coef": float(beta[2]), "t": float(beta[2] / se[2]) if se[2] > 0 else None}
+    return {
+        "fold_weights": fold_w,
+        "fold_seasons": fold_s,
+        "final": final,
+        "delta_wk0": _sp_delta(pred[w0], comp[w0], y[w0]),
+        "delta_wk0_3": _sp_delta(pred[tested], comp[tested], y[tested]),
+        "seasons_pos": f"{pos}/{len(fold_s)}",
+        "partial_wk0": partial,
+        "n_rows": int(len(d)),
+    }
+
+
+def draft_walk_forward(derived: dict, weights: dict[str, float], winsor=None) -> dict:
+    """Walk-forward test of the offseason draft term on top of the FROZEN composite (weights as
+    given), training seasons only: surplus 2000-2021, test seasons 2003-2021, target y8."""
+    if derived.get("draft") is None:
+        raise ValueError("draft cache missing; run `uv run fgs build`")
+    last = TRAIN_LAST_SEASON
+    snaps = derived["snapshots"].filter(pl.col("season") <= last)
+    team_games = derived["team_games"].filter(pl.col("season") <= last)
+    pbp_games = _sealed_pbp(derived, last)
+    sim, vegas = _sealed_sim(derived, last)
+    surplus = derived["draft"].filter(pl.col("season").is_between(draft.FIRST_DRAFT, last))
+    for f in (snaps, team_games, pbp_games, sim, vegas, surplus):  # hard guard: holdout never read
+        assert f is None or f.height == 0 or int(f["season"].max()) <= last, "holdout season in draft fit"
+    bounds = tuple(winsor) if winsor is not None else draft.winsor_bounds(surplus, (draft.FIRST_DRAFT, last))
+
+    feats = build_features(snaps, team_games, pbp_games=pbp_games, sim=sim, vegas=vegas)
+    feats = score_composite(feats, weights)
+    dz = draft.draft_z(surplus, bounds).select(pl.col("season").cast(pl.Int32), "franchise_id", "draft_z")
+    frame = (
+        feats.select(KEYS + ["composite"])
+        .with_columns(pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32))
+        .join(targets(team_games, snaps, (8,)), on=KEYS, how="left")
+        .join(dz, on=["season", "franchise_id"], how="left")
+    )
+    res = _draft_fit(frame, list(range(FIRST_TEST_SEASON, last + 1)))
+    res["winsor"] = [float(bounds[0]), float(bounds[1])]
+    return res
+
+
+def draft_gate(fold_ws: list[float], final_w: float, d_wk0: float | None) -> dict:
+    """Locked gate (07-RESEARCH): fold-sign consistency is measured against the FINAL weight's
+    sign (Pitfall 4). Pass only when final_w > 0, >= 60% of folds share its sign and wk0 Δ > 0."""
+    n = len(fold_ws)
+    k = sum(1 for w in fold_ws if np.sign(w) == np.sign(final_w))
+    same = k / n if n else 0.0
+    ok = d_wk0 is not None and d_wk0 > 0 and same >= DRAFT_GATE_FOLDS and final_w > 0
+    return {"weight": round(float(final_w), 2) if ok else 0.0, "fitted": float(final_w), "delta_wk0": d_wk0,
+            "fold_sign_consistency": same, "k": k, "n": n, "display_only": not ok}
+
+
+def _sgn(v, nd: int) -> str:
+    return "—" if v is None else f"{v:+.{nd}f}"
+
+
+def format_draft_report(res: dict, gate: dict, date: str) -> str:
+    """Human summary, one BACKTEST_LOG 'Offseason terms' row and the ready-to-paste offseason block."""
+    lo, hi = res["winsor"]
+    fs = f"{gate['k']}/{gate['n']}"
+    verdict = ("gate PASSED" if not gate["display_only"] else "gate failed") + (
+        f": fitted {gate['fitted']:+.2f}, {fs} folds share its sign, wk0 ΔSpearman {_sgn(gate['delta_wk0'], 4)}"
+        f" -> weight {gate['weight']:.2f}" + (", display only" if gate["display_only"] else ""))
+    p = res["partial_wk0"]
+    seasons = res["fold_seasons"]
+    lines = [
+        "offseason draft term on the FROZEN composite: training-only walk-forward (holdout consumed by Phase 6)",
+        f"surplus {draft.FIRST_DRAFT}-{TRAIN_LAST_SEASON}, test seasons {seasons[0]}-{seasons[-1]}, "
+        f"target N=8, chart {draft.CHART}, winsor [{lo:.2f}, {hi:.2f}], decay linear to 0 by week {draft.DECAY_WEEKS}",
+        f"  rows (weeks 0-{draft.DECAY_WEEKS - 1}): {res['n_rows']}",
+        f"  final weight (2000-{TRAIN_LAST_SEASON}): {res['final']:+.4f}",
+        f"  fold weights: " + " ".join(f"{s}:{w:+.2f}" for s, w in zip(seasons, res["fold_weights"])),
+        f"  fold-sign consistency vs final: {fs} ({gate['fold_sign_consistency']:.2f})",
+        f"  wk0 ΔSpearman (N=8): {_sgn(res['delta_wk0'], 4)}; weeks 0-3: {_sgn(res['delta_wk0_3'], 4)}; "
+        f"seasons with wk0 Δ>0: {res['seasons_pos']}",
+        f"  partial check wk0 (y8 ~ 1 + composite + x): coef {_sgn(p['coef'], 3)}, t {_sgn(p['t'], 2)}",
+        f"  {verdict}",
+        "",
+        "BACKTEST_LOG row (Offseason terms table):",
+        "| Date | Term | wk0 ΔSpearman (N=8) | Fitted weight | Fold-sign consistency | Gate | Notes |",
+        f"| {date} | draft | {_sgn(res['delta_wk0'], 4)} | {res['final']:+.4f} | {fs} | "
+        f"{'pass' if not gate['display_only'] else 'fail'} -> {gate['weight']:.2f} | "
+        f"residual on frozen composite; weeks 0-3 Δ {_sgn(res['delta_wk0_3'], 4)}; wk0 seasons Δ>0 "
+        f"{res['seasons_pos']}; training-only walk-forward {seasons[0]}-{seasons[-1]} (no fresh holdout) |",
+        "",
+        "weights.yaml block (append at the end):",
+        "offseason:",
+        "  draft:",
+        f"    weight: {gate['weight']:.2f}",
+        f"    display_only: {'true' if gate['display_only'] else 'false'}",
+        f"    chart: {draft.CHART}",
+        f"    winsor: [{lo:.2f}, {hi:.2f}]",
+        "    decay: linear_to0_by_wk4",
+        f"    fit_seasons: {draft.FIRST_DRAFT}-{TRAIN_LAST_SEASON}",
+        f"    test_seasons: {seasons[0]}-{seasons[-1]}",
+        f"    fitted: {res['final']:.4f}",
+        f'    fold_sign: "{fs}"',
+        f"    delta_wk0: {0.0 if res['delta_wk0'] is None else res['delta_wk0']:.4f}",
+        "    evidence: training-only walk-forward (no fresh holdout)",
+    ]
     return "\n".join(lines)

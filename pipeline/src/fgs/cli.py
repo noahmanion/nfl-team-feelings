@@ -10,7 +10,10 @@ from datetime import datetime, timezone
 import polars as pl
 
 from fgs import checks, draft, export, features, freeze, holdout, paths, score, sim
-from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
+from fgs.backtest import (
+    draft_gate, draft_walk_forward, format_draft_report, format_proposal, format_report, propose_weights,
+    run_backtest,
+)
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
 from fgs.expectation import load_win_totals, vegas_expectations
@@ -505,7 +508,32 @@ def _weights_frozen() -> bool:
         return False
 
 
+DRAFT_HOLDOUT_MSG = "the draft term is training-only; the holdout was consumed by Phase 6"
+DRAFT_UNFROZEN_MSG = "the draft term is fit on the frozen composite; run after the Phase 6 freeze"
+
+
+def _cmd_backtest_draft(args) -> int:
+    """`fgs backtest --draft`: the offseason draft term on top of the frozen composite, training
+    seasons only (Phase 7). Prints the gate verdict; writes nothing."""
+    if args.include_holdout:
+        print(f"error: {DRAFT_HOLDOUT_MSG}", file=sys.stderr)
+        return 1
+    if not _weights_frozen():
+        print(f"error: {DRAFT_UNFROZEN_MSG}", file=sys.stderr)
+        return 1
+    derived = derive(load_schedules(), scored=False, **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    if derived.get("draft") is None:
+        print("error: draft cache missing; run `uv run fgs build`", file=sys.stderr)
+        return 1
+    res = draft_walk_forward(derived, score.load_weights())
+    gate = draft_gate(res["fold_weights"], res["final"], res["delta_wk0"])
+    print(format_draft_report(res, gate, datetime.now(timezone.utc).date().isoformat()))
+    return 0
+
+
 def _cmd_backtest(args) -> int:
+    if getattr(args, "draft", False):
+        return _cmd_backtest_draft(args)
     # Refusal guards run before any data load (Phase 6): no refit proposal once frozen, and no
     # look at 2022-2025 before the one-time holdout result exists.
     if args.propose_weights and _weights_frozen():
@@ -733,6 +761,8 @@ def main(argv: list[str] | None = None) -> int:
                    help="also test 2022–2025; refused until the one-time `fgs holdout` result (HOLDOUT_RESULT.md) exists")
     p.add_argument("--propose-weights", action="store_true",
                    help="also print ridge weights fit on 1999–2021 (N=8) as a weights.yaml block")
+    p.add_argument("--draft", action="store_true",
+                   help="fit the offseason draft term on top of the frozen composite; training seasons only")
     p.set_defaults(func=_cmd_backtest)
 
     p = sub.add_parser("freeze", help="fit the final weights on 1999–2021 and freeze weights.yaml "
