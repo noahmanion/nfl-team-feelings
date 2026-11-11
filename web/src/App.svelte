@@ -225,6 +225,8 @@
       </StatusPanel>
     {:else if route.current.kind === 'history' && status === 'ready' && meta && latestFile}
       <HistoryPage {meta} latestRows={latestFile.rows} team={route.current.team} />
+    {:else if route.current.kind === 'history'}
+      <p class="loading" role="status">Loading…</p>
     {:else if route.current.kind === 'team' && status === 'ready' && meta && teamTarget}
       <TeamPage
         {meta}
