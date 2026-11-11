@@ -10,7 +10,8 @@ Callout (every type has exactly these keys):
   season, week, franchise
   headline, detail, evidence (str | None)
   stat      worried/hopeful: signed gap (record_rank - score rank); movers: score_delta;
-            misery/joy: streak length in days as of that week's date
+            misery/joy: streak length in days as of that week's date (the latest week: the
+            export date, matching records.json active)
   start     ISO date the streak started (misery/joy only); None otherwise
   band      the team's hysteresis band that week
 """
@@ -22,7 +23,7 @@ from datetime import date
 
 import polars as pl
 
-from fgs import season_config
+from fgs import asof, season_config
 
 GAP_TYPES = ("hopeful", "worried")
 MINUS = "−"
@@ -289,16 +290,23 @@ def all_runs(tl: pl.DataFrame, as_of: date) -> pl.DataFrame:
 
 def streak_callouts(
     run_df: pl.DataFrame, dates: pl.DataFrame, nicks: dict[str, str], bands: dict[tuple[int, int, str], int],
+    *, latest: tuple[int, int] | None = None, as_of: date | None = None,
 ) -> list[dict]:
     """Per (season, week) with date d: the longest misery run and the longest joy run that are
     ongoing at d (start <= d and (end is None or end > d)) and at least STREAK_CALLOUT_MIN_DAYS
-    old at d. At most one per kind per week; ties: earlier start, then franchise. bands maps
-    (season, week, franchise) -> the team's band that week. Copy never names the mood label
-    (hysteresis can disagree with the raw threshold, RESEARCH Pitfall 7)."""
+    old at the reference date. At most one per kind per week; ties: earlier start, then franchise.
+    bands maps (season, week, franchise) -> the team's band that week. Copy never names the mood
+    label (hysteresis can disagree with the raw threshold, RESEARCH Pitfall 7).
+
+    Reference date (WR-01): days count through d, except for the `latest` (season, week), which
+    counts through as_of (the export date), the same date records.json `active` uses, so the
+    latest board card and the team page's streak line always show the same number. The detail
+    names the reference date ("as of ...")."""
     floor = season_config.STREAK_CALLOUT_MIN_DAYS
     by_kind = {k: run_df.filter(pl.col("kind") == k).sort("start", "franchise_id").to_dicts() for k in STREAK_KINDS}
     out = []
     for season, week, d in dates.sort("season", "week").iter_rows():
+        ref = max(as_of, d) if as_of is not None and (int(season), int(week)) == latest else d
         for kind in STREAK_KINDS:
             best = None
             for r in by_kind[kind]:
@@ -306,7 +314,7 @@ def streak_callouts(
                     break
                 if r["end"] is not None and r["end"] <= d:
                     continue
-                days = (d - r["start"]).days
+                days = (ref - r["start"]).days
                 if days >= floor and (best is None or days > best[0]):
                     best = (days, r)
             if best is None:
@@ -319,10 +327,12 @@ def streak_callouts(
             nick = nicks.get(fid, fid)
             if kind == "misery":
                 headline = f"{nick} fans have been miserable for {days:,} straight days"
-                detail = f"Score under {season_config.MISERY_MAX + 1} since {date_text(r['start'])}."
+                detail = (f"Score under {season_config.MISERY_MAX + 1} since {date_text(r['start'])}, "
+                          f"as of {date_text(ref)}.")
             else:
                 headline = f"{nick} fans have been buying the jersey for {days:,} straight days"
-                detail = f"Score {season_config.JOY_MIN} or higher since {date_text(r['start'])}."
+                detail = (f"Score {season_config.JOY_MIN} or higher since {date_text(r['start'])}, "
+                          f"as of {date_text(ref)}.")
             out.append({
                 "type": kind, "season": int(season), "week": int(week), "franchise": fid,
                 "headline": headline, "detail": detail, "evidence": None, "stat": int(days),
@@ -335,11 +345,12 @@ def streak_callouts(
 
 def callouts_by_week(
     scored: pl.DataFrame, team_games: pl.DataFrame, nicks: dict[str, str], evidence: dict | None,
-    *, games: pl.DataFrame | None = None, as_of: date | None = None,
+    *, games: pl.DataFrame | None = None, as_of: date | None = None, latest: tuple[int, int] | None = None,
 ) -> dict[tuple[int, int], list[dict]]:
     """(season, week) -> gap callouts (by |gap|), then misery, joy, then mover_up, then mover_down.
     The single assembly point for every callout type. Streaks need games and as_of (to date the
-    snapshots); without them only gaps and movers are produced."""
+    snapshots); without them only gaps and movers are produced. latest = the (season, week) whose
+    streak days count through as_of (default: the latest played week of games)."""
     by: dict[tuple[int, int], list[dict]] = {}
     gaps = gap_callouts(record_ranks(scored, team_games), nicks, evidence)
     streaks: list[dict] = []
@@ -347,7 +358,10 @@ def callouts_by_week(
         dates = snapshot_dates(games, as_of)
         bands = {(int(a), int(b), c): int(d) for a, b, c, d in
                  scored.select("season", "week", "franchise_id", "band").iter_rows()}
-        streaks = streak_callouts(all_runs(timelines(scored, dates), as_of), dates, nicks, bands)
+        if latest is None:
+            latest = asof.latest_played(games)
+        streaks = streak_callouts(all_runs(timelines(scored, dates), as_of), dates, nicks, bands,
+                                  latest=latest, as_of=as_of)
     mv = movers(scored, nicks)
     for c in gaps + streaks + [m for m in mv if m["type"] == "mover_up"] + [m for m in mv if m["type"] == "mover_down"]:
         by.setdefault((c["season"], c["week"]), []).append(c)

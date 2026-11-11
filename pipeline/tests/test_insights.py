@@ -399,10 +399,26 @@ def test_streak_callouts_floor_and_one_per_kind_longest_wins():
     c = out[0]
     assert set(c) == CALLOUT_KEYS and c["evidence"] is None and c["band"] == 1
     assert c["headline"] == "AAAnick fans have been miserable for 105 straight days"
-    assert c["detail"] == "Score under 20 since Jan 1, 2020."
+    assert c["detail"] == "Score under 20 since Jan 1, 2020, as of Apr 15, 2020."
     j = next(x for x in out if x["type"] == "joy")
     assert j["headline"] == "CCCnick fans have been buying the jersey for 105 straight days"
-    assert j["detail"] == "Score 80 or higher since Jan 1, 2020."
+    assert j["detail"] == "Score 80 or higher since Jan 1, 2020, as of Apr 15, 2020."
+
+
+def test_streak_callouts_latest_week_counts_through_as_of():
+    """WR-01: the latest week counts through the export date (same as records.json active); earlier
+    weeks keep their own week date."""
+    dates = _weekly(20, D("2020-01-01"))  # week 19 = 2020-05-13
+    s = _tl([("AAA", 2020, w, 5) for w in range(20)])
+    tl = insights.timelines(s, dates)
+    bands = {(2020, w, "AAA"): 1 for w in range(20)}
+    as_of = D("2020-05-20")
+    run_df = insights.all_runs(tl, as_of)
+    out = insights.streak_callouts(run_df, dates, NICKS, bands, latest=(2020, 19), as_of=as_of)
+    by_week = {c["week"]: c for c in out}
+    assert by_week[19]["stat"] == 140 == run_df.filter(pl.col("active"))["days"].item()
+    assert by_week[19]["detail"].endswith("as of May 20, 2020.")
+    assert by_week[18]["stat"] == 7 * 18 and by_week[18]["detail"].endswith("as of May 6, 2020.")
 
 
 def test_streak_callouts_skip_ended_runs():

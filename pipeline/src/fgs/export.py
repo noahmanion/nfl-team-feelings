@@ -254,7 +254,11 @@ def build_export(
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
     ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence)
     as_of = date.fromisoformat(generated_at[:10])  # active streaks count through the export date
-    by_week = insights.callouts_by_week(scored, derived["team_games"], nicks, ev, games=games, as_of=as_of)
+    latest = asof.latest_played(games)
+    assert latest is not None, "no played games"
+    # WR-01: the latest week's streak cards count through as_of, like records.json active
+    by_week = insights.callouts_by_week(scored, derived["team_games"], nicks, ev, games=games, as_of=as_of,
+                                        latest=latest)
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
@@ -270,8 +274,6 @@ def build_export(
         "threshold": None if values is None or not draft_live else float(values[64]),
     }
 
-    latest = asof.latest_played(games)
-    assert latest is not None, "no played games"
     played, total = asof.week_progress(games, *latest)
 
     files: dict[str, object] = {}

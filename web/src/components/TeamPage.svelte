@@ -82,7 +82,7 @@
   })
 
   // ---- active streak (latest view only): records.json, failure-tolerant (no line on error) ----
-  let streak = $state<{ team: string; active: ActiveStreak | null } | null>(null)
+  let streak = $state<{ team: string; active: ActiveStreak | null; asOf: string | null } | null>(null)
 
   $effect(() => {
     const t = team
@@ -90,11 +90,11 @@
     let live = true
     loadRecords(meta).then(
       (r) => {
-        if (live) streak = { team: t, active: r.active?.[t] ?? null }
+        if (live) streak = { team: t, active: r.active?.[t] ?? null, asOf: r.as_of ?? null }
       },
       (err) => {
         console.error(err)
-        if (live) streak = { team: t, active: null }
+        if (live) streak = { team: t, active: null, asOf: null }
       },
     )
     return () => {
@@ -104,12 +104,15 @@
 
   const activeStreak = $derived(latest && streak?.team === team ? streak.active : null)
   const streakText = $derived(streakLine(activeStreak))
+  const streakAsOf = $derived(latest && streak?.team === team ? streak.asOf : null)
+  // the same date the latest board card counts through (WR-01, IN-07): the count is frozen at export
+  const asOfText = $derived(streakAsOf ? ` (as of ${formatDate(streakAsOf)})` : '')
 
   const ready = $derived(seasonFile?.season === season)
   const row = $derived(ready && seasonFile ? findTeamRow(seasonFile, team, week) : undefined)
   const series = $derived(ready && seasonFile ? seasonSeries(seasonFile, team).filter((p) => p.week <= week) : [])
-  // With the streak line shown, drop this team's misery/joy cards: the week-dated callout and the
-  // as-of-export line would show two different day counts on one page.
+  // With the streak line shown, drop this team's misery/joy cards: the latest week's card counts
+  // through the same export date (WR-01), so it would only repeat the line.
   const teamCallouts = $derived(
     ready && seasonFile
       ? cardCallouts(forTeam(forWeek(seasonFile, week), team)).filter(
@@ -172,7 +175,7 @@
     </header>
 
     {#if streakText && activeStreak}
-      <p class="streak">{streakText}, since {formatDate(activeStreak.start)}</p>
+      <p class="streak">{streakText}, since {formatDate(activeStreak.start)}{asOfText}</p>
     {/if}
     {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
     {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
