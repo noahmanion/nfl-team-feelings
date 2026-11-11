@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { Snippet } from 'svelte'
+
   export interface StatusAction {
     label: string
     onClick: () => void
@@ -11,15 +13,30 @@
     actions = [],
     onDismiss,
     fatal = false,
+    children,
   }: {
     variant: 'notice' | 'error' | 'empty'
     title?: string
-    body: string
+    /** Plain-text body. Use `children` instead when the body needs markup (e.g. a <code> command). */
+    body?: string
     actions?: StatusAction[]
     onDismiss?: () => void
     fatal?: boolean
+    children?: Snippet
   } = $props()
 </script>
+
+{#snippet content()}
+  {#if title}<h2>{title}</h2>{/if}
+  <p>{#if children}{@render children()}{:else}{body}{/if}</p>
+  {#if actions.length}
+    <div class="actions">
+      {#each actions as action (action.label)}
+        <button type="button" onclick={action.onClick}>{action.label}</button>
+      {/each}
+    </div>
+  {/if}
+{/snippet}
 
 {#if variant === 'notice'}
   <div class="notice" role="status">
@@ -28,18 +45,10 @@
       <button type="button" class="dismiss" aria-label="Dismiss" onclick={onDismiss}>×</button>
     {/if}
   </div>
+{:else if fatal}
+  <section class="panel" role="alert">{@render content()}</section>
 {:else}
-  <section class="panel" role={fatal ? 'alert' : 'status'}>
-    {#if title}<h2>{title}</h2>{/if}
-    <p>{body}</p>
-    {#if actions.length}
-      <div class="actions">
-        {#each actions as action (action.label)}
-          <button type="button" onclick={action.onClick}>{action.label}</button>
-        {/each}
-      </div>
-    {/if}
-  </section>
+  <section class="panel" role="status">{@render content()}</section>
 {/if}
 
 <style>
@@ -83,6 +92,15 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
   }
+  .panel p {
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
+  }
+  .panel :global(code) {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.9em;
+    overflow-wrap: anywhere;
+  }
   h2 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
@@ -104,5 +122,13 @@
     transition:
       background-color 120ms ease,
       color 120ms ease;
+  }
+  .actions button:hover {
+    background: var(--bg);
+  }
+  .actions button:focus-visible,
+  .dismiss:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
 </style>

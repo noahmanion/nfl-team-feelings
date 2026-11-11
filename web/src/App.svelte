@@ -13,17 +13,21 @@
 
   let meta = $state<Meta | null>(null)
   let latestFile = $state<WeekFile | null>(null)
-  let failed = $state(false)
+  let status = $state<'loading' | 'ready' | 'error'>('loading')
 
+  // Initial load: meta + latest in parallel. "Try again" on the fatal panel re-runs this.
   async function boot() {
-    failed = false
+    status = 'loading'
     try {
       const [m, latest] = await Promise.all([loadMeta(), loadLatest()])
       meta = m
       latestFile = latest
+      status = 'ready'
     } catch (err) {
       console.error(err)
-      failed = true
+      meta = null
+      latestFile = null
+      status = 'error'
     }
   }
 
@@ -129,15 +133,11 @@
   <SiteHeader />
 
   <main>
-    {#if failed}
-      <section class="panel" role="alert">
-        <h2>Couldn’t load the mood board</h2>
-        <p>
-          The data files are missing or unreadable. If you’re running this locally, run <code>uv run fgs refresh</code>
-          in <code>pipeline/</code>, then try again.
-        </p>
-        <button type="button" onclick={boot}>Try again</button>
-      </section>
+    {#if status === 'error'}
+      <StatusPanel variant="error" fatal title="Couldn’t load the mood board" actions={[{ label: 'Try again', onClick: boot }]}>
+        The data files are missing or unreadable. If you’re running this locally, run <code>uv run fgs refresh</code>
+        in <code>pipeline/</code>, then try again.
+      </StatusPanel>
     {:else}
       <Scrubber
         {meta}
@@ -145,12 +145,12 @@
         week={target?.week ?? 0}
         isLatest={!!target?.latest}
         {partial}
-        disabled={!meta}
+        disabled={status !== 'ready'}
         {onSeasonChange}
         {onWeekInput}
         onLatest={toLatest}
       />
-      {#if meta && target && seasonMeta}
+      {#if status === 'ready' && meta && target && seasonMeta}
         {#if notice}
           <StatusPanel
             variant="notice"
@@ -177,26 +177,17 @@
             isLatest={target.latest}
             scoreKind={meta.score_kind}
           />
-          {#if !pending && currentRows && currentRows.length === 0}
-            <StatusPanel
-              variant="empty"
-              title="No moods to report"
-              body="We don’t have any teams for this week. Jump to the latest week to see the current board."
-              actions={[{ label: 'Go to latest', onClick: toLatest }]}
-            />
-          {:else}
-            <div class="board-wrap" class:pending aria-busy={pending}>
-              <MoodBoard rows={shown.rows} teams={meta.teams} bands={meta.bands} week={shown.week} />
-            </div>
-          {/if}
+          <MoodBoard rows={shown.rows} {meta} week={shown.week} busy={pending} />
+        {:else}
+          <MoodBoard loading />
         {/if}
       {:else}
-        <p class="visually-hidden">Loading the mood board…</p>
+        <MoodBoard loading />
       {/if}
     {/if}
   </main>
 
-  {#if meta && !failed}
+  {#if status === 'ready' && meta}
     <SiteFooter {meta} />
   {/if}
 </div>
@@ -209,36 +200,6 @@
   }
   main {
     margin-top: var(--space-lg);
-  }
-  .board-wrap.pending {
-    opacity: 0.6;
-  }
-  .panel {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--space-sm);
-    padding: var(--space-lg);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-  }
-  .panel h2 {
-    font-size: var(--text-heading);
-    line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
-  }
-  .panel button {
-    min-height: var(--tap-min);
-    padding: 0 var(--space-md);
-    background: var(--surface);
-    color: var(--text);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition:
-      background-color 120ms ease,
-      color 120ms ease;
   }
   @media (min-width: 1024px) {
     .page {
