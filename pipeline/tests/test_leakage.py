@@ -50,6 +50,24 @@ def _assert_unchanged(before: pl.DataFrame, after: pl.DataFrame) -> None:
     for c in exact:
         bad = j.filter(~pl.col(c).eq_missing(pl.col(f"{c}_n")))
         assert bad.is_empty(), f"{c} changed in {bad.height} rows, e.g. {bad.select(KEY).head(3).to_dicts()}"
+    _assert_draft_unchanged(before, after)
+
+
+def _assert_draft_unchanged(before: pl.DataFrame, after: pl.DataFrame) -> None:
+    """Phase 7: draft surplus / z (null-aware) and the cross-season week-0 deltas of past rows."""
+    cols = [c for c in ("draft_surplus", "draft_z") if c in before.columns]
+    assert cols == ["draft_surplus", "draft_z"], "draft display columns missing from the scored frame"
+    w0 = ["score_delta", "rank_delta"]
+    j = before.select(KEY + cols + w0).join(after.select(KEY + cols + w0), on=KEY, how="inner", suffix="_n")
+    for c in cols:
+        bad = j.filter(
+            (pl.col(c).is_null() != pl.col(f"{c}_n").is_null()) | ((pl.col(c) - pl.col(f"{c}_n")).abs() > TOL)
+        )
+        assert bad.is_empty(), f"{c} changed in {bad.height} rows, e.g. {bad.select(KEY).head(3).to_dicts()}"
+    wk0 = j.filter(pl.col("week") == 0)
+    for c in w0:
+        bad = wk0.filter(~pl.col(c).eq_missing(pl.col(f"{c}_n")))
+        assert bad.is_empty(), f"week-0 {c} changed in {bad.height} rows"
 
 
 def _latest_played(raw: pl.DataFrame) -> tuple[int, int]:

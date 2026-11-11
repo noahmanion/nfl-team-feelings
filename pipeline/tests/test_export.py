@@ -17,16 +17,17 @@ from fgs.franchises import CANONICAL, normalize_code
 from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
-from fgs.score import load_weights
+from fgs.score import load_offseason, load_weights
 from fgs import season_config
 from fgs.season_config import SEEDS, n_teams, playoff_teams
 from conftest import derive_inputs
 
 ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
             "wins", "losses", "ties", "score_delta", "rank_delta", "contribs", "points", "blurb",
-            "playoff_prob", "expectation_source", "qb"}
+            "playoff_prob", "expectation_source", "qb", "draft"}
+DRAFT_KEYS = {"surplus", "z", "equiv_pick", "rank", "text", "moves_score"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
-             "seasons", "bands", "hysteresis", "teams", "factors", "baseline"}
+             "seasons", "bands", "hysteresis", "teams", "factors", "baseline", "offseason"}
 GEN = "2026-11-11T18:40:00+00:00"
 
 
@@ -85,14 +86,21 @@ def test_contract_meta(real_files):
     assert [b["label"] for b in meta["bands"]] == [b["label"] for b in BANDS]
     weights = load_weights()
     yaml_weights = yaml.safe_load(WEIGHTS_PATH.read_text())["weights"]
-    assert [f["key"] for f in meta["factors"]] == list(weights) == list(yaml_weights)
+    cfg = load_offseason()
+    extra = ["draft"] if cfg["weight"] != 0 else []
+    assert [f["key"] for f in meta["factors"]] == list(weights) + extra and list(weights) == list(yaml_weights)
+    assert meta["offseason"] == {"draft": {"weight": cfg["weight"], "display_only": cfg["display_only"],
+                                           "chart": cfg["chart"], "decay": [1.0, 0.75, 0.5, 0.25]}}
     for f in meta["factors"]:
+        if f["key"] == "draft":
+            assert f["weight"] == cfg["weight"] and f["label"] == "Draft capital over slot"
+            continue
         assert set(f) == {"key", "label", "weight", "description"}
         assert f["weight"] == yaml_weights[f["key"]] and f["label"] and f["description"]
     for s in meta["seasons"]:
         assert set(s) == {"season", "max_week", "reg_weeks", "n_teams", "week_labels"}
         assert set(s["week_labels"]) == {str(w) for w in range(s["max_week"] + 1)}
-        assert s["week_labels"]["0"] == "Preseason"
+        assert s["week_labels"]["0"] == "Preseason (after draft)"
         if s["max_week"] > s["reg_weeks"]:
             assert s["week_labels"][str(s["reg_weeks"] + 1)] == "Wild Card"
         if s["max_week"] == s["reg_weeks"] + 4:
@@ -112,16 +120,48 @@ def test_contract_rows(real_files):
         assert list(r["contribs"]) == factor_keys
         for v in r["contribs"].values():
             assert type(v) in (int, float) and math.isfinite(v) and round(v, 2) == v
-        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs", "points", "blurb", "expectation_source", "qb"}:
+        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs", "points", "blurb", "expectation_source", "qb",
+                             "draft"}:
             assert r[k] is None or type(r[k]) is int, (season, week, k, r[k])
         assert 0 <= r["score"] <= 100
         assert r["label"] == meta["bands"][r["band"]]["label"]
         assert r["emoji"] == meta["bands"][r["band"]]["emoji"]
-        if week == 0:
-            assert r["score_delta"] is None and r["rank_delta"] is None
         by_week.setdefault((season, week), []).append(r)
     for (season, _week), rows in by_week.items():
         assert [r["rank"] for r in rows] == list(range(1, n_teams(season) + 1))
+
+
+def test_week0_deltas_and_draft(real_files):
+    """Week 0 compares with the end of last season; every derivable week-0 row carries draft info."""
+    _, files = real_files
+    meta = files["meta.json"]
+    weight = meta["offseason"]["draft"]["weight"]
+    first = min(s["season"] for s in meta["seasons"])
+    for season, week, r in _all_rows(files):
+        if week != 0:
+            assert r["draft"] is None
+            continue
+        if season == first or (r["franchise"], season) == ("HOU", 2002):
+            assert r["score_delta"] is None and r["rank_delta"] is None, (season, r["franchise"])
+        else:
+            assert type(r["score_delta"]) is int and type(r["rank_delta"]) is int, (season, r["franchise"])
+        if season < 2000:
+            assert r["draft"] is None
+            continue
+        d = r["draft"]
+        assert d is not None and set(d) == DRAFT_KEYS, (season, r["franchise"])
+        assert round(d["surplus"], 1) == d["surplus"] and round(d["z"], 2) == d["z"]
+        assert type(d["equiv_pick"]) is int and 1 <= d["equiv_pick"] <= 262
+        assert d["moves_score"] is (weight != 0)
+        assert d["text"].startswith("Draft haul: ")
+        assert d["text"].endswith(" — doesn't move the score." if weight == 0 else ".")
+        assert "great draft" not in d["text"] and "drafted well" not in d["text"]
+    for path, obj in files.items():
+        if path.startswith("snapshots/") and obj["season"] >= 2000:
+            rows = obj["weeks"]["0"]
+            assert sorted(r["draft"]["rank"] for r in rows) == list(range(1, len(rows) + 1))
+            by_rank = sorted(rows, key=lambda r: r["draft"]["rank"])
+            assert all(a["draft"]["surplus"] >= b["draft"]["surplus"] for a, b in zip(by_rank, by_rank[1:]))
 
 
 def test_contract_latest(real_files):
@@ -320,6 +360,8 @@ def test_points_sum_to_score(real_files):
 def test_blurbs(real_files):
     _, files = real_files
     lead0 = "Preseason, carrying last season's form: the "
+    leads0 = (lead0, "Preseason, carrying last season's form plus extra draft capital: the ",
+              "Preseason, carrying last season's form minus some draft capital: the ")
     first = min(int(s["season"]) for s in files["meta.json"]["seasons"])
     for season, week, r in _all_rows(files):
         b = r["blurb"]
@@ -329,9 +371,14 @@ def test_blurbs(real_files):
         elif week == 0 and season == first:
             assert b.startswith("Preseason: no history yet, so the "), b
         elif week == 0:
-            assert b.startswith(lead0), b
+            assert b.startswith(leads0), b
+            d = r["draft"]
+            if b.startswith(leads0[1]):
+                assert d is not None and d["surplus"] > 0, b
+            elif b.startswith(leads0[2]):
+                assert d is not None and d["surplus"] < 0, b
         else:
-            assert b.startswith("The ") and not b.startswith(lead0), b
+            assert b.startswith("The ") and not b.startswith("Preseason"), b
         assert "0 straight" not in b and "1 straight" not in b, b
 
 
@@ -470,3 +517,82 @@ def test_contract_methodology(real_files):
     assert m["walk_forward"] is not None and m["frozen"] is not None
     assert m["split"]["live"] == meta["latest"]["season"]
     json.dumps(m, allow_nan=False)
+
+
+# --- Phase 7: the nonzero draft-weight path (synthetic, fake weight) ------------------------
+
+def test_export_with_live_draft_weight(monkeypatch):
+    """A fake offseason weight of 1.0: draft is in contribs/points/meta.factors on weeks 0-3, 0.0
+    from week 4, and every row's points still sum to score - baseline."""
+    import numpy as np
+
+    from conftest import make_games
+    from fgs import score
+    from fgs.cli import derive_games
+
+    teams = ["BUF", "MIA", "NE", "NYJ"]
+    rows = []
+    for season in (2023, 2024):
+        for w in range(1, 6):
+            a, b, c, d = (teams[(w + i) % 4] for i in range(4))
+            day = f"{season}-09-{w + 9:02d}"
+            rows.append((f"{season}_{w:02d}_{b}_{a}", season, w, "REG", day, a, b, 20 + w, 17, False))
+            rows.append((f"{season}_{w:02d}_{d}_{c}", season, w, "REG", day, c, d, 14, 21 + w, False))
+    games = make_games(rows)
+    real_reg_weeks = season_config.reg_weeks
+    monkeypatch.setattr(season_config, "reg_weeks", lambda s: 5 if s in (2023, 2024) else real_reg_weeks(s))
+    monkeypatch.setattr(season_config, "REF_SEASONS", (2023, 2023))
+
+    cfg = {"weight": 1.0, "display_only": False, "chart": "stuart", "winsor": (-17.0, 16.0),
+           "decay": [1.0, 0.75, 0.5, 0.25]}
+    weights = {"elo": 2.0, "season_record": 1.0}
+    derived = derive_games(games, weights=weights, offseason={**cfg, "weight": 0.0})
+    feats = derived["features"].drop("composite_inseason", "draft_surplus", "draft_z")
+    dz = pl.DataFrame({"season": [2024] * 4, "franchise_id": teams,
+                       "surplus": [50.0, -30.0, 0.2, 5.0], "draft_z": [1.2, -1.5, 0.0, 0.3]})
+    feats = score.apply_offseason(feats, dz, cfg)
+    values = np.concatenate([[np.nan], np.linspace(60.0, 0.5, 262)])
+    files = build_export({**derived, "features": feats, "offseason": cfg, "draft_values": values},
+                         _fake_teams(), generated_at=GEN)
+    meta = files["meta.json"]
+    assert [f["key"] for f in meta["factors"]] == ["elo", "season_record", "draft"]
+    assert meta["factors"][-1]["label"] == "Draft capital over slot" and meta["factors"][-1]["weight"] == 1.0
+    assert meta["offseason"]["draft"] == {"weight": 1.0, "display_only": False, "chart": "stuart",
+                                          "decay": [1.0, 0.75, 0.5, 0.25]}
+    assert all(s["week_labels"]["0"] == "Preseason (after draft)" for s in meta["seasons"])
+    base = meta["baseline"]
+    z = dict(zip(dz["franchise_id"], dz["draft_z"]))
+    seen = 0
+    for season, week, r in _all_rows(files):
+        assert sum(r["points"].values()) == r["score"] - base
+        assert list(r["contribs"]) == ["elo", "season_record", "draft"]
+        if season == 2024 and week <= 3:
+            assert r["contribs"]["draft"] == round(z[r["franchise"]] * (1 - week / 4), 2) + 0.0
+        else:
+            assert r["contribs"]["draft"] == 0.0
+        if season == 2024 and week == 0:
+            seen += 1
+            d = r["draft"]
+            assert d["moves_score"] is True and not d["text"].endswith("doesn't move the score.")
+            assert d["rank"] == {"BUF": 1, "NYJ": 2, "NE": 3, "MIA": 4}[r["franchise"]]
+            if r["franchise"] == "BUF":  # 50 >= values[64] (~45.6): the extra-capital lead
+                assert r["blurb"].startswith("Preseason, carrying last season's form plus extra draft capital: ")
+            if r["franchise"] == "NE":
+                assert d["text"] == "Draft haul: right at their original slots."
+        else:
+            assert r["draft"] is None
+    assert seen == 4
+    assert all(r["score_delta"] is not None for r in files["snapshots/2024.json"]["weeks"]["0"])
+
+
+def test_export_without_draft_values_has_null_draft(synthetic_games):
+    """Real weights.yaml (weight 0), no draft inputs: _draft_info is None for every row."""
+    from fgs import export
+    from fgs.cli import derive_games
+
+    derived = derive_games(synthetic_games)
+    assert derived["draft_values"] is None and derived["features"]["draft_surplus"].null_count() == derived["features"].height
+    ctx = {"values": None, "moves_score": False, "ranks": {}, "threshold": None}
+    for r in derived["features"].iter_rows(named=True):
+        assert export._draft_info(r, ctx) is None
+    assert load_offseason()["weight"] == derived["offseason"]["weight"]

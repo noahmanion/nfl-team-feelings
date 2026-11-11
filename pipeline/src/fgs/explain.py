@@ -15,7 +15,7 @@ than the sign of its points, plus a "fade" suffix when the two disagree (negativ
 import numpy as np
 import polars as pl
 
-from fgs import mood
+from fgs import draft, mood
 from fgs.features import STREAK_CAP
 
 # --- attribution ---------------------------------------------------------------------------
@@ -163,6 +163,10 @@ FADE = {"hi": " (that tends to fade)", "lo": " (that tends to even out)"}
 STRONG = {"elo": 20}  # Elo dominates |points|, so its strong tier needs more
 STRONG_DEFAULT = 10
 PRESEASON = "Preseason, carrying last season's form: "
+# Week-0 carry leads when the team's draft capital over its original slots is at least the chart
+# value of pick 64 (either way); the export passes that value as draft_threshold.
+PRESEASON_DRAFT_PLUS = "Preseason, carrying last season's form plus extra draft capital: "
+PRESEASON_DRAFT_MINUS = "Preseason, carrying last season's form minus some draft capital: "
 # Week-0 kinds: "carry" (has a prior season in the data), "fresh" (first season in the data: no
 # history for anyone), "expansion" (first season of a seeded expansion/re-entry franchise).
 PRESEASON_KINDS = ("carry", "fresh", "expansion")
@@ -194,10 +198,19 @@ def _phrase(row: dict, f: str, pts: int, week: int) -> str | None:
     return text
 
 
-def blurb(row: dict, factor_keys: list[str], nick: str, week: int, preseason: str = "carry") -> str:
+def _preseason_lead(row: dict, draft_threshold: float | None) -> str:
+    s = row.get("draft_surplus")
+    if draft_threshold is not None and s is not None and abs(float(s)) >= draft_threshold:
+        return PRESEASON_DRAFT_PLUS if s > 0 else PRESEASON_DRAFT_MINUS
+    return PRESEASON
+
+
+def blurb(row: dict, factor_keys: list[str], nick: str, week: int, preseason: str = "carry", *,
+          draft_threshold: float | None = None) -> str:
     """One deterministic plain-English sentence naming the row's top-2 drivers.
 
-    At week 0, `preseason` says whether there is last-season form to talk about (see PRESEASON_KINDS)."""
+    At week 0, `preseason` says whether there is last-season form to talk about (see PRESEASON_KINDS).
+    A "carry" week-0 lead mentions draft capital when |row["draft_surplus"]| >= draft_threshold."""
     if week == 0 and preseason == "expansion":
         return f"Preseason: the {nick} are an expansion team starting below average."
     if week == 0 and preseason == "fresh":
@@ -212,10 +225,28 @@ def blurb(row: dict, factor_keys: list[str], nick: str, week: int, preseason: st
             picks.append((p, pts))
         if len(picks) == 2:
             break
-    lead = f"{PRESEASON}the {nick}" if week == 0 else f"The {nick}"
+    lead = f"{_preseason_lead(row, draft_threshold)}the {nick}" if week == 0 else f"The {nick}"
     if not picks:
         return f"{lead} are about as average as it gets right now."
     if len(picks) == 1:
         return f"{lead} {picks[0][0]}."
     conj = "and" if (picks[0][1] > 0) == (picks[1][1] > 0) else "but"
     return f"{lead} {picks[0][0]}, {conj} {picks[1][0]}."
+
+
+# --- draft capital (Phase 7, display text) -------------------------------------------------
+# Wording rule: it is capital over/under the ORIGINAL slots (trades), never "drafted well".
+
+
+def draft_text(surplus: float | None, values: np.ndarray, moves_score: bool) -> str | None:
+    """Plain-English draft line for a week-0 row; None when the surplus isn't derivable."""
+    if surplus is None:
+        return None
+    s = float(surplus)
+    tail = "." if moves_score else " — doesn't move the score."
+    if abs(s) < 0.5:
+        return f"Draft haul: right at their original slots{tail}"
+    noun = draft.pick_noun(draft.equiv_pick(s, values))
+    if s > 0:
+        return f"Draft haul: +{round(s)} over their original slots (about one extra {noun}){tail}"
+    return f"Draft haul: \u2212{round(-s)} under their original slots (about one {noun} given up){tail}"

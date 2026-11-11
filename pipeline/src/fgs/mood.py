@@ -103,6 +103,8 @@ def score_frame(
 
     Reference = `value` over rows with season in ref_seasons (inclusive) and week <= reg_weeks
     (week 0 + REG). ref_seasons None -> season_config.REF_SEASONS, read at call time.
+    Deltas are vs the franchise's previous snapshot: week 0 compares with the end of last season.
+    Hysteresis restarts each team-season.
     """
     ref = reference_values(df, value, ref_seasons)
     df = df.with_columns(
@@ -113,10 +115,13 @@ def score_frame(
     df = df.sort(["season", "week", value, "franchise_id"], descending=[False, False, True, False])
     df = df.with_columns(pl.int_range(1, pl.len() + 1, dtype=pl.Int32).over(["season", "week"]).alias("rank"))
 
+    # Deltas run over the franchise's whole history (Phase 7): week 0 compares with the franchise's
+    # last snapshot of the prior season, so the board shows offseason movement. Null only on a
+    # franchise's very first row (the first season in the data, or an expansion team's first season).
     grp = ["franchise_id", "season"]
     df = df.sort(["franchise_id", "season", "week"]).with_columns(
-        (pl.col("score") - pl.col("score").shift(1).over(grp)).alias("score_delta"),
-        (pl.col("rank").shift(1).over(grp) - pl.col("rank")).alias("rank_delta"),
+        (pl.col("score") - pl.col("score").shift(1).over("franchise_id")).alias("score_delta"),
+        (pl.col("rank").shift(1).over("franchise_id") - pl.col("rank")).alias("rank_delta"),
     )
 
     # Hysteresis per team-season, carried with its (franchise, season, week) keys and joined back,

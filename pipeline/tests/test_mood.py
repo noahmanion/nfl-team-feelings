@@ -174,6 +174,26 @@ def test_rank_ties_broken_by_franchise_and_deltas():
     assert all(sd[f] == s1[f] - s0[f] for f in s0)
 
 
+def test_week0_deltas_vs_end_of_last_season():
+    """Week 0 of season 2 compares with the franchise's last snapshot of season 1 (Phase 7)."""
+    elos = {"AAA": [1500, 1520, 1560, 1450, 1460, 1470], "BBB": [1500, 1480, 1440, 1600, 1590, 1580],
+            "CCC": [1400, 1420, 1410, 1500, 1510, 1520]}
+    rows = [(2023 + i // 3, i % 3, f, float(e)) for f, es in elos.items() for i, e in enumerate(es)]
+    rows += [(2024, w, "DDD", 1300.0 + w) for w in range(3)]  # expansion: first row in season 2
+    rows += _filler(2023, 0, n=20) + _filler(2024, 0, n=20)
+    out = score_frame(_snap(rows), value="elo", ref_seasons=REF)
+    get = {(r["season"], r["week"], r["franchise_id"]): r for r in out.iter_rows(named=True)}
+    for f in ("AAA", "BBB", "CCC"):
+        s1_0, s1_2, s2_0 = get[(2023, 0, f)], get[(2023, 2, f)], get[(2024, 0, f)]
+        assert s1_0["score_delta"] is None and s1_0["rank_delta"] is None
+        assert s2_0["score_delta"] == s2_0["score"] - s1_2["score"]
+        assert s2_0["rank_delta"] == s1_2["rank"] - s2_0["rank"]
+        s2_1 = get[(2024, 1, f)]
+        assert s2_1["score_delta"] == s2_1["score"] - s2_0["score"]
+    assert get[(2024, 0, "DDD")]["score_delta"] is None and get[(2024, 0, "DDD")]["rank_delta"] is None
+    assert get[(2024, 1, "DDD")]["score_delta"] is not None
+
+
 def test_frozen_reference_ignores_later_seasons():
     rows = _filler(2023, 0, n=20) + _filler(2023, 1, n=20)
     a = score_frame(_snap(rows), value="elo", ref_seasons=(2023, 2023))

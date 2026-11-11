@@ -12,7 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, explain, methodology, mood, score, season_config
+from fgs import asof, draft, explain, methodology, mood, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 from fgs.season_config import SEEDS
@@ -39,7 +39,7 @@ def _season_meta(season: int, snaps: pl.DataFrame, games: pl.DataFrame) -> dict:
     reg = g.filter(pl.col("game_type") == "REG")
     rw = int(reg["week"].max()) if not reg.is_empty() else season_config.reg_weeks(season)
     assert rw == season_config.reg_weeks(season), f"{season}: reg_weeks {rw} != config"
-    labels = {"0": "Preseason"}
+    labels = {"0": "Preseason (after draft)"}
     for w in range(1, max_week + 1):
         if w <= rw:
             labels[str(w)] = f"Week {w}"
@@ -110,7 +110,40 @@ def _playoff_int(r: dict) -> int | None:
     return None if v is None else int(v)
 
 
-def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: int) -> dict:
+def _draft_ranks(scored: pl.DataFrame) -> dict[tuple[int, str], int]:
+    """(season, franchise) -> 1-based rank of week-0 draft surplus within the season (highest first,
+    ties by franchise id), over rows with a derivable draft only."""
+    if "draft_surplus" not in scored.columns:
+        return {}
+    w0 = (
+        scored.filter((pl.col("week") == 0) & pl.col("draft_surplus").is_not_null())
+        .sort(["season", "draft_surplus", "franchise_id"], descending=[False, True, False])
+        .with_columns(pl.int_range(1, pl.len() + 1).over("season").alias("_drank"))
+    )
+    return {(int(s), f): int(k) for s, f, k in zip(w0["season"], w0["franchise_id"], w0["_drank"])}
+
+
+def _draft_info(r: dict, ctx: dict) -> dict | None:
+    """Row.draft: only on week-0 rows with a derivable draft (and a value chart); None otherwise."""
+    s = r.get("draft_surplus")
+    values = ctx.get("values")
+    if int(r["week"]) != 0 or s is None or values is None:
+        return None
+    moves = bool(ctx["moves_score"])
+    return {
+        "surplus": round(float(s), 1) + 0.0,
+        "z": round(float(r["draft_z"]), 2) + 0.0,
+        "equiv_pick": draft.equiv_pick(float(s), values),
+        "rank": ctx["ranks"][(int(r["season"]), r["franchise_id"])],
+        "text": explain.draft_text(float(s), values, moves),
+        "moves_score": moves,
+    }
+
+
+def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: int,
+         draft_ctx: dict | None = None) -> dict:
+    """One snapshot row. draft_ctx = {"values", "moves_score", "ranks", "threshold"} (None: no draft)."""
+    draft_ctx = draft_ctx or {}
     return {
         "franchise": r["franchise_id"], "rank": int(r["rank"]), "score": int(r["score"]),
         "elo": int(round(r["elo"])), "band": int(r["band"]), "label": r["label"], "emoji": r["emoji"],
@@ -122,12 +155,13 @@ def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: i
         "points": {k: int(r[f"pts_{k}"]) for k in factor_keys},
         "blurb": explain.blurb(
             r, factor_keys, nicks.get(r["franchise_id"], r["franchise_id"]), int(r["week"]),
-            _preseason(r, first_season),
+            _preseason(r, first_season), draft_threshold=draft_ctx.get("threshold"),
         ),
         "playoff_prob": _playoff_int(r),
         # display columns; None when the features frame lacks them
         "expectation_source": r.get("expectation_source"),
         "qb": r.get("qb_name"),
+        "draft": _draft_info(r, draft_ctx),
     }
 
 
@@ -160,7 +194,9 @@ def _export_weights(derived: dict, scored: pl.DataFrame) -> dict[str, float]:
     missing = [c for k in weights for c in (f"z_{k}", f"contrib_{k}") if c not in scored.columns]
     if missing:
         raise ValueError(f"features frame lacks {missing}; it was not derived with these weights")
-    extra = sorted(c for c in scored.columns if c.startswith("contrib_") and c.removeprefix("contrib_") not in weights)
+    # contrib_draft is the offseason term (weights.yaml offseason.draft), not a weights: factor
+    extra = sorted(c for c in scored.columns if c.startswith("contrib_") and c != "contrib_draft"
+                   and c.removeprefix("contrib_") not in weights)
     if extra:
         raise ValueError(f"features frame has contributions {extra} for factors not in the weights")
     for k, w in weights.items():
@@ -175,7 +211,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
     weights = _export_weights(derived, scored)
-    factor_keys = list(weights)
+    cfg = derived.get("offseason") or score.load_offseason()
+    draft_live = cfg["weight"] != 0 and "contrib_draft" in scored.columns
+    factor_keys = list(weights) + (["draft"] if draft_live else [])
     ref = mood.reference_values(derived["features"])  # the same frozen reference score_frame used
     baseline = explain.baseline(ref)
     scored = explain.add_points(scored, factor_keys, ref)
@@ -187,6 +225,14 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
     ]
+    if draft_live:
+        od = score.OFFSEASON_FACTORS["draft"]
+        factors.append({"key": "draft", "label": od["label"], "weight": cfg["weight"], "description": od["description"]})
+    values = derived.get("draft_values")
+    draft_ctx = {
+        "values": values, "moves_score": cfg["weight"] != 0, "ranks": _draft_ranks(scored),
+        "threshold": None if values is None else float(values[64]),
+    }
 
     latest = asof.latest_played(games)
     assert latest is not None, "no played games"
@@ -200,7 +246,7 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         seasons_meta.append(_season_meta(int(season), snaps, games))
         weeks: dict[str, list] = {}
         for r in snaps.iter_rows(named=True):
-            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks, first_season))
+            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks, first_season, draft_ctx))
         files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks}
         files[f"games/{season}.json"] = _games_file(games, int(season))
 
@@ -212,6 +258,10 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         "data_through": asof.data_through(games, s, w),
         "latest": {"season": s, "week": w}, "partial_week": played < total,
         "seasons": seasons_meta, "bands": bands_meta(), "hysteresis": HYSTERESIS, "teams": teams,
+        "offseason": {"draft": {
+            "weight": cfg["weight"], "display_only": cfg["display_only"], "chart": cfg["chart"],
+            "decay": [float(d) for d in cfg["decay"]],  # weeks 0-3: [1, 0.75, 0.5, 0.25]
+        }},
     }
 
     keys = [f"{sm['season']}-{wk}" for sm in seasons_meta for wk in range(sm["max_week"] + 1)]
