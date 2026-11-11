@@ -269,3 +269,43 @@ def test_vs_exp_zero_without_sim():
     snaps, tg, _, _ = _vs_inputs()
     f = build_features(snaps, tg)
     assert (f["vs_exp"] == 0.0).all() and f["expectation_source"].null_count() == f.height
+
+
+# --- po_trend (MODEL-12) --------------------------------------------------------------------
+
+def _po_inputs():
+    """BUF across 2002 (wk 16) and 2003 (wk 0, 1, 2, 5) with hand-set raw sim playoff_prob."""
+    S = {"season": pl.Int32, "week": pl.Int32, "franchise_id": pl.String}
+    pts = [(2002, 16, 0.90), (2003, 0, 0.20), (2003, 1, 0.30), (2003, 2, 0.35), (2003, 5, 0.60)]
+    snaps = pl.DataFrame(
+        [dict(season=s, week=w, franchise_id="BUF", elo=1505.0, wins=0, losses=0, ties=0, win_pct=None)
+         for s, w, _ in pts],
+        schema={**S, "elo": pl.Float64, "wins": pl.Int64, "losses": pl.Int64, "ties": pl.Int64, "win_pct": pl.Float64},
+    )
+    sim = pl.DataFrame(
+        [dict(season=s, week=w, franchise_id="BUF", playoff_prob=p, exp_wins=8.0) for s, w, p in pts],
+        schema={**S, "playoff_prob": pl.Float64, "exp_wins": pl.Float64},
+    )
+    tg = build_team_games(make_games([("g", 2003, 1, "REG", "2003-09-07", "BUF", "MIA", 20, 10, False)]))
+    return snaps, tg, sim
+
+
+def test_po_trend_three_week_lag():
+    snaps, tg, sim = _po_inputs()
+    f = build_features(snaps, tg, sim=sim)
+    assert _v(f, 2003, 5, "BUF", "po_trend") == pytest.approx(0.60 - 0.35)  # p(5) - p(2)
+    assert _v(f, 2003, 2, "BUF", "po_trend") == pytest.approx(0.35 - 0.20)  # p(2) - p(max(-1, 0))
+    assert _v(f, 2003, 0, "BUF", "po_trend") == 0.0
+
+
+def test_po_trend_lag_stays_in_season():
+    snaps, tg, sim = _po_inputs()
+    f = build_features(snaps, tg, sim=sim)
+    assert _v(f, 2003, 1, "BUF", "po_trend") == pytest.approx(0.30 - 0.20)  # 2003 week 0, not 2002
+    assert "po_trend" in FEATURE_COLUMNS
+
+
+def test_po_trend_zero_without_sim():
+    snaps, tg, _ = _po_inputs()
+    f = build_features(snaps, tg)
+    assert (f["po_trend"] == 0.0).all()
