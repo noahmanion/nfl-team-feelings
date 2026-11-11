@@ -15,6 +15,8 @@
   import { cardCallouts, forWeek, moverCallouts, orderCallouts } from './lib/callouts'
   import { findSeason, isLatest as isLatestWeek, loadCallouts, loadLatest, loadMeta, loadSeason } from './lib/data'
   import { carryWeek } from './lib/format'
+  import { validMyTeam } from './lib/myteam'
+  import { myTeam } from './lib/myteam.svelte'
   import { go, replace, route } from './lib/route.svelte'
   import { boardHash, teamHash, type Route } from './lib/router'
   import type { Callout, Meta, Row, SeasonFile, WeekFile } from './lib/types'
@@ -177,7 +179,7 @@
       }
   })
   // 08-05 replaces null with the pinned team.
-  const shownCards = $derived(shown ? orderCallouts(cardCallouts(shown.callouts), null) : [])
+  const shownCards = $derived(shown ? orderCallouts(cardCallouts(shown.callouts), validMyTeam(myTeam.abbr, meta?.teams)) : [])
   const shownMovers = $derived(shown ? moverCallouts(shown.callouts) : { up: [], down: [] })
 
   const seasonFailed = $derived(!!target && !target.latest && seasonError === target.season)

@@ -5,7 +5,9 @@
   import TeamChip from './TeamChip.svelte'
   import { findSeason, loadRecords } from '../lib/data'
   import { formatRecord, moodToken, weekLabel } from '../lib/format'
-  import { dateRange, formatDate, formatDays, seasonsSpan } from '../lib/records'
+  import { validMyTeam } from '../lib/myteam'
+  import { myTeam } from '../lib/myteam.svelte'
+  import { dateRange, formatDate, formatDays, seasonsSpan, streakLine } from '../lib/records'
   import { teamHash } from '../lib/router'
   import type { ExtremeEntry, Meta, RecordsFile, StreakEntry } from '../lib/types'
 
@@ -54,6 +56,9 @@
       ? teamHash(s.franchise)
       : teamHash(s.franchise, s.end_season, s.end_week)
 
+  const mine = $derived(validMyTeam(myTeam.abbr, meta.teams))
+  const myStreak = $derived(mine && records ? streakLine(records.active?.[mine]) : null)
+
   const excludedText = $derived(
     records?.excluded.map((x) => `the ${x.season} ${teamName(x.franchise)}`).join(' and ') ?? '',
   )
@@ -76,18 +81,25 @@
   {:else if !records}
     <p class="muted" role="status">Loading…</p>
   {:else}
+    {#if mine && myStreak}
+      <p class="mine-line">
+        Your team: <a href={teamHash(mine)}>{myStreak}</a>
+      </p>
+    {/if}
+
     {#snippet extremes(id: string, title: string, list: ExtremeEntry[], caption: string)}
       <section aria-labelledby={id}>
         <h3 id={id}>{title}</h3>
         <ol class="rows">
           {#each list as e, i (`${e.season}-${e.franchise}`)}
             {@const tm = meta.teams[e.franchise]}
-            <li>
+            <li class:mine={e.franchise === mine}>
               <a class="row" href={teamHash(e.franchise, e.season, e.week)} style:--stripe-color={scoreStripe(e.score)}>
                 <span class="rank">{i + 1}</span>
                 <span class="team">
                   <TeamChip primary={tm?.primary} secondary={tm?.secondary} />
                   <span class="name">{e.season} {teamName(e.franchise)}</span>
+                  {#if e.franchise === mine}<span class="mine-badge"><Badge variant="neutral">My team</Badge></span>{/if}
                 </span>
                 <span class="meta">
                   {formatRecord(e.wins, e.losses, e.ties)}<Sep />{whenLabel(e)}<Sep />{formatDate(e.date)}<Sep />Season avg {e.mean}
@@ -106,12 +118,13 @@
         <ol class="rows">
           {#each list as s, i (`${s.franchise}-${s.start}`)}
             {@const tm = meta.teams[s.franchise]}
-            <li>
+            <li class:mine={s.franchise === mine}>
               <a class="row" href={streakHref(s)} style:--stripe-color={streakStripe(kind)}>
                 <span class="rank">{i + 1}</span>
                 <span class="team">
                   <TeamChip primary={tm?.primary} secondary={tm?.secondary} />
                   <span class="name">{teamName(s.franchise)} {seasonsSpan(s)}</span>
+                  {#if s.franchise === mine}<span class="mine-badge"><Badge variant="neutral">My team</Badge></span>{/if}
                 </span>
                 <span class="meta">
                   {dateRange(s.start, s.end)}{#if s.active}<span class="still"><Badge variant="accent">Still going</Badge></span>{/if}
@@ -199,6 +212,17 @@
   }
   .row:hover {
     background: var(--bg);
+  }
+  /* My team (UI-SPEC rule 7): same tint as the board row, stripe unchanged. */
+  .mine .row {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .mine-badge {
+    flex: none;
+    display: inline-flex;
+  }
+  .mine-line {
+    font-weight: var(--weight-semibold);
   }
   .row:focus-visible {
     outline: 2px solid var(--accent);

@@ -15,6 +15,8 @@
     weekOf,
     type Point,
   } from '../lib/history'
+  import { validMyTeam } from '../lib/myteam'
+  import { myTeam } from '../lib/myteam.svelte'
   import { go, replace } from '../lib/route.svelte'
   import { historyHash, teamHash } from '../lib/router'
   import type { HistoryFile, Meta, Row } from '../lib/types'
@@ -48,7 +50,10 @@
   $effect(() => {
     if (team && !valid) replace(historyHash())
   })
-  const selected = $derived((valid ? team : defaultTeam(latestRows)) ?? Object.keys(meta.teams)[0])
+  // The hash wins, then my team, then the top team on the latest board.
+  const selected = $derived(
+    (valid ? team : defaultTeam(latestRows, validMyTeam(myTeam.abbr, meta.teams))) ?? Object.keys(meta.teams)[0],
+  )
   const teamMeta = $derived(meta.teams[selected])
 
   const options = $derived(
