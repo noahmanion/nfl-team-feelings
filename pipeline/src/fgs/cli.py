@@ -459,13 +459,16 @@ def _cmd_refresh(args) -> int:
     _write_derived(derived)
     sim.save_sim_cache(derived["sim"], sims)
     export.write_export(files, WEB_DATA_DIR)
-    check_path = _write_records_check(files)
     marker.unlink()  # every output written: the set is consistent again
+    # the hand-check is not part of the web data set, so it is written after the marker is gone
+    # (a failure here cannot leave an "incomplete refresh" behind) (IN-04)
+    check_path = _write_records_check(files)
     meta = files["meta.json"]
     print(
         f"refreshed in {time.perf_counter() - t0:.1f}s: exported {len(files)} files; latest {meta['latest']['season']} week "
         f"{meta['latest']['week']} (partial={meta['partial_week']}); data through {meta['data_through']}"
     )
+    print(f"records hand-check written to {check_path}")
     return 0
 
 
