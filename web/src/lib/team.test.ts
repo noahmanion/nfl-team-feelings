@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barRows, findTeamRow, recentGames, seasonSeries, signed } from './team'
+import { barRows, findTeamRow, recentGames, seasonSeries, signed, sparkDomain } from './team'
 import type { FactorMeta, GamesFile, Row, SeasonFile } from './types'
 
 type G = [week: number, asof: number, home: string, away: string, hs: number | null, as: number | null, day: string, neutral?: boolean]
@@ -141,5 +141,20 @@ describe('findTeamRow / seasonSeries', () => {
       { week: 2, score: 60 },
     ])
     expect(seasonSeries(season, 'BBB').map((p) => p.week)).toEqual([1, 2])
+  })
+})
+
+describe('sparkDomain', () => {
+  it('pads the season range by at least 3 points', () => {
+    expect(sparkDomain([{ score: 85 }, { score: 96 }, { score: 90 }])).toEqual({ lo: 85, hi: 96, domain: [82, 99] })
+  })
+  it('pads by 15% of a wide range and clamps to 0..100', () => {
+    const d = sparkDomain([{ score: 2 }, { score: 98 }])
+    expect(d.lo).toBe(2)
+    expect(d.hi).toBe(98)
+    expect(d.domain).toEqual([0, 100])
+  })
+  it('handles a flat series', () => {
+    expect(sparkDomain([{ score: 50 }, { score: 50 }]).domain).toEqual([47, 53])
   })
 })

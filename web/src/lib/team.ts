@@ -93,3 +93,16 @@ export function seasonSeries(file: SeasonFile, team: string): { week: number; sc
 
 /** Integer with an explicit sign: '+12', '−7' (U+2212), '0'. */
 export const signed = (n: number): string => (n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0')
+
+/**
+ * Sparkline y-domain: the season's score range padded by max(3, 15% of the range), clamped to
+ * 0..100, so a team moving 85 -> 96 is visible instead of a flat line on a fixed 0..100 scale.
+ * lo/hi are the real extremes (for the min/max labels).
+ */
+export function sparkDomain(series: { score: number }[]): { lo: number; hi: number; domain: [number, number] } {
+  const scores = series.map((p) => p.score)
+  const lo = Math.min(...scores)
+  const hi = Math.max(...scores)
+  const pad = Math.max(3, (hi - lo) * 0.15)
+  return { lo, hi, domain: [Math.max(0, lo - pad), Math.min(100, hi + pad)] }
+}

@@ -149,7 +149,7 @@
 
         {#if series.length >= 2}
           <h3 class="spark-heading">This season</h3>
-          <Sparkline {series} primary={teamMeta?.primary} secondary={teamMeta?.secondary} />
+          <Sparkline {series} primary={teamMeta?.primary} secondary={teamMeta?.secondary} {baseline} />
         {/if}
         <a class="more" href={historyHash(team)}>Mood over time →</a>
       </section>
