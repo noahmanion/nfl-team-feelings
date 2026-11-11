@@ -11,7 +11,7 @@
 - [x] **DATA-02**: Every team maps to a stable franchise ID so relocated teams (OAK→LV, SD→LAC, STL→LA) and renames (Washington) have one unbroken history
 - [x] **DATA-03**: A season-config table encodes era rules (31 teams 1999–2001, HOU from 2002, 16→17 games in 2021, 12→14 playoff teams in 2020, divisions)
 - [x] **DATA-04**: Ties (0.5), neutral sites, and cancelled games (BUF–CIN 2022) are handled without crashes or miscounts
-- [ ] **DATA-05**: Per-team-game play-by-play aggregates (EPA/play, garbage-time filtered; QB EPA/dropback + success rate) are computed for 1999→present, with 1999–2000 flagged low-confidence
+- [x] **DATA-05**: Per-team-game play-by-play aggregates (EPA/play, garbage-time filtered; QB EPA/dropback + success rate) are computed for 1999→present, with 1999–2000 flagged low-confidence
 - [ ] **DATA-06**: Draft picks and a draft-value chart are loaded for every season
 - [x] **DATA-07**: Data checks assert franchise counts per season, games per team-season, and no unmatched team abbreviations
 
@@ -21,15 +21,15 @@
 - [x] **MODEL-02**: A (season, week, franchise) snapshot grid holds every team's as-of state each week, including bye weeks and a week-0 preseason snapshot
 - [x] **MODEL-03**: Factor: current-season record
 - [x] **MODEL-04**: Factor: rolling last-16-games record across season boundaries
-- [ ] **MODEL-05**: Factor: efficiency trajectory (EWMA of opponent-adjusted EPA vs season-to-date level) as the "WAR improvement" proxy
+- [x] **MODEL-05**: Factor: efficiency trajectory (EWMA of opponent-adjusted EPA vs season-to-date level) as the "WAR improvement" proxy
 - [x] **MODEL-06**: Factor: strength of win — margin of victory, as its own input
 - [x] **MODEL-07**: Factor: opponent quality — opponent's pre-game rating, as its own input
-- [ ] **MODEL-08**: Factor: performance vs preseason expectation (model-derived expected wins; Vegas win totals override where available, with source tagged)
+- [x] **MODEL-08**: Factor: performance vs preseason expectation (model-derived expected wins; Vegas win totals override where available, with source tagged)
 - [x] **MODEL-09**: Factor: current win/loss streak
 - [x] **MODEL-10**: Factor: close-game luck (one-score game results)
-- [ ] **MODEL-11**: Factor: QB play trend for the current starting QB
-- [ ] **MODEL-12**: Factor: playoff-odds trend
-- [ ] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
+- [x] **MODEL-11**: Factor: QB play trend for the current starting QB
+- [x] **MODEL-12**: Factor: playoff-odds trend
+- [x] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
 - [x] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
 - [ ] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
 - [ ] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
@@ -109,22 +109,22 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-02 | Phase 1 | Complete |
 | DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
-| DATA-05 | Phase 5 | Pending |
+| DATA-05 | Phase 5 | Complete |
 | DATA-06 | Phase 7 | Pending |
 | DATA-07 | Phase 1 | Complete |
 | MODEL-01 | Phase 1 | Complete |
 | MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 3 | Complete |
 | MODEL-04 | Phase 3 | Complete |
-| MODEL-05 | Phase 5 | Pending |
+| MODEL-05 | Phase 5 | Complete |
 | MODEL-06 | Phase 4 | Complete |
 | MODEL-07 | Phase 4 | Complete |
-| MODEL-08 | Phase 5 | Pending |
+| MODEL-08 | Phase 5 | Complete |
 | MODEL-09 | Phase 4 | Complete |
 | MODEL-10 | Phase 4 | Complete |
-| MODEL-11 | Phase 5 | Pending |
-| MODEL-12 | Phase 5 | Pending |
-| MODEL-13 | Phase 5 | Pending |
+| MODEL-11 | Phase 5 | Complete |
+| MODEL-12 | Phase 5 | Complete |
+| MODEL-13 | Phase 5 | Complete |
 | MODEL-14 | Phase 3 | Complete |
 | MODEL-15 | Phase 6 | Pending |
 | MODEL-16 | Phase 7 | Pending |
