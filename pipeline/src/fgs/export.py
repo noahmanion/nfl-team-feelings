@@ -12,7 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, explain, mood, score, season_config
+from fgs import asof, explain, methodology, mood, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 from fgs.season_config import SEEDS
@@ -231,6 +231,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         }
     files["history.json"] = {"keys": keys, "teams": hist}
     files["callouts.json"] = []
+    # built from committed evidence only (weights.yaml + FREEZE_RESULT + optional HOLDOUT_RESULT);
+    # in `files` so write_export swaps it in atomically with everything else (Pitfall 3)
+    files["methodology.json"] = methodology.build_methodology(weights, *methodology.load_evidence(), live=int(s))
     return files
 
 

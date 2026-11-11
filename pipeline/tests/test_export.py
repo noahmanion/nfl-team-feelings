@@ -69,7 +69,7 @@ def _all_rows(files):
 def test_contract_files(real_files):
     derived, files = real_files
     seasons = sorted(derived["snapshots"]["season"].unique().to_list())
-    assert {"meta.json", "latest.json", "history.json", "callouts.json"} <= set(files)
+    assert {"meta.json", "latest.json", "history.json", "callouts.json", "methodology.json"} <= set(files)
     assert sorted(int(p[10:-5]) for p in files if p.startswith("snapshots/")) == seasons
     assert sorted(p[6:-5] for p in files if p.startswith("teams/")) == sorted(CANONICAL)
     assert files["callouts.json"] == []
@@ -454,3 +454,19 @@ def test_export_never_refits(synthetic_games, monkeypatch):
         pytest.skip("no cached schedules/teams for the full build_export check")
     files = build_export(derive(load_schedules(), **derive_inputs()), load_teams(), generated_at=GEN)
     assert {f["key"] for f in files["meta.json"]["factors"]} == set(load_weights())
+
+
+def test_contract_methodology(real_files):
+    """methodology.json agrees with meta.json and weights.yaml; no holdout until the one-time run."""
+    from fgs import paths
+
+    _, files = real_files
+    m, meta = files["methodology.json"], files["meta.json"]
+    weights = load_weights()
+    assert [f["key"] for f in m["factors"]] == [f["key"] for f in meta["factors"]] == list(weights)
+    assert [f["weight"] for f in m["factors"]] == [f["weight"] for f in meta["factors"]] == list(weights.values())
+    if not paths.HOLDOUT_JSON_PATH.exists():
+        assert m["holdout"] is None
+    assert m["walk_forward"] is not None and m["frozen"] is not None
+    assert m["split"]["live"] == meta["latest"]["season"]
+    json.dumps(m, allow_nan=False)
