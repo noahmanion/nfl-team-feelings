@@ -90,3 +90,56 @@ def test_build_prints_data_through(derived, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "derive", lambda raw: derived)
     assert cli.main(["build"]) == 0
     assert "data through 2024-09-15" in capsys.readouterr().out
+
+
+# --- fgs refresh: check-then-write (network mocked by reading the caches) -------------------
+
+def _cached_inputs():
+    from fgs.paths import CACHE_DIR
+    if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
+        pytest.skip("no cached schedules/teams")
+    from fgs.ingest import load_schedules, load_teams
+    return load_schedules(), load_teams()
+
+
+@pytest.fixture
+def refresh_dirs(tmp_path, monkeypatch):
+    derived_dir, web_dir = tmp_path / "derived", tmp_path / "web"
+    for d in (derived_dir, web_dir):
+        d.mkdir()
+        (d / "SENTINEL").write_bytes(b"untouched\n")
+    monkeypatch.setattr(cli, "DERIVED_DIR", derived_dir)
+    monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
+    return derived_dir, web_dir
+
+
+def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, capsys):
+    import polars as pl
+    raw, teams = _cached_inputs()
+    bad = raw.head(1).with_columns(pl.lit("XXX").alias("home_team"), pl.lit("2099_01_XXX_BUF").alias("game_id"))
+    monkeypatch.setattr(cli, "load_schedules", lambda **kw: pl.concat([raw, bad]))
+    monkeypatch.setattr(cli, "load_teams", lambda **kw: teams)
+    assert cli.main(["refresh"]) == 1
+    cap = capsys.readouterr()
+    assert "FAIL" in cap.out and "JSON not regenerated" in cap.err
+    for d in refresh_dirs:
+        assert [p.name for p in d.iterdir()] == ["SENTINEL"]
+        assert (d / "SENTINEL").read_bytes() == b"untouched\n"
+
+
+def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, capsys):
+    raw, teams = _cached_inputs()
+    calls = []
+    monkeypatch.setattr(cli, "load_schedules", lambda **kw: (calls.append(kw), raw)[1])
+    monkeypatch.setattr(cli, "load_teams", lambda **kw: (calls.append(kw), teams)[1])
+    assert cli.main(["refresh"]) == 0
+    assert calls == [{"refresh": True}, {"refresh": True}]
+    derived_dir, web_dir = refresh_dirs
+    for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet"):
+        assert (derived_dir / f).exists()
+    for f in ("meta.json", "latest.json", "callouts.json", "history.json"):
+        assert (web_dir / f).exists()
+    assert len(list((web_dir / "teams").iterdir())) == 32
+    assert any((web_dir / "snapshots").iterdir())
+    out = capsys.readouterr().out
+    assert "all checks passed" in out and "refreshed: exported" in out

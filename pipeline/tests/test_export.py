@@ -6,9 +6,10 @@ import polars as pl
 import pytest
 
 import fgs.cli as cli
+from fgs.asof import week_progress
 from fgs.cli import derive
 from fgs.export import build_export, team_meta, write_export
-from fgs.franchises import CANONICAL
+from fgs.franchises import CANONICAL, normalize_code
 from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR
@@ -167,3 +168,64 @@ def test_cli_export_writes_to_monkeypatched_dir(tmp_path, monkeypatch, capsys):
     assert cli.main(["export"]) == 0
     assert (tmp_path / "meta.json").exists()
     assert "exported" in capsys.readouterr().out
+
+
+# --- partial weeks (calendar-robust: derive (s, w) from the data, never hardcode) ------------
+
+def _raw_and_latest():
+    if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
+        pytest.skip("no cached schedules/teams")
+    raw = load_schedules()
+    played = raw.filter(pl.col("result").is_not_null())
+    s = int(played["season"].max())
+    w = int(played.filter(pl.col("season") == s)["week"].max())
+    return raw, s, w
+
+
+def test_partial_current_week_by_kickoff():
+    raw, s, w = _raw_and_latest()
+    wk = raw.filter((pl.col("season") == s) & (pl.col("week") == w) & pl.col("result").is_not_null())
+    if wk.height < 2:
+        pytest.skip(f"{s} week {w} has only one played game")
+    last = wk.sort(["gameday", "gametime"])["game_id"][-1]
+    mutated = raw.with_columns(
+        [pl.when(pl.col("game_id") == last).then(None).otherwise(pl.col(c)).alias(c)
+         for c in ("result", "home_score", "away_score")]
+    )
+    meta = build_export(derive(mutated), load_teams(), generated_at=GEN)["meta.json"]
+    assert meta["latest"] == {"season": s, "week": w}
+    assert meta["partial_week"] is True
+
+
+def test_partial_next_week_one_game_played():
+    raw, s, w = _raw_and_latest()
+    nxt = raw.filter((pl.col("season") == s) & (pl.col("week") == w + 1) & pl.col("result").is_null())
+    if nxt.is_empty():
+        pytest.skip(f"{s} has no unplayed game in week {w + 1}")
+    g = nxt.sort(["gameday", "gametime"]).row(0, named=True)
+    mutated = raw.with_columns(
+        pl.when(pl.col("game_id") == g["game_id"]).then(pl.lit(v)).otherwise(pl.col(c)).cast(raw.schema[c]).alias(c)
+        for c, v in (("home_score", 27), ("away_score", 20), ("result", 7))
+    )
+    files = build_export(derive(mutated), load_teams(), generated_at=GEN)
+    meta = files["meta.json"]
+    assert meta["latest"] == {"season": s, "week": w + 1}
+    assert meta["partial_week"] is True
+    weeks = files[f"snapshots/{s}.json"]["weeks"]
+    now, prev = weeks[str(w + 1)], {r["franchise"]: r for r in weeks[str(w)]}
+    assert len(now) == n_teams(s)
+    playing = {normalize_code(g["home_team"]), normalize_code(g["away_team"])}
+    for r in now:
+        if r["franchise"] in playing:
+            continue
+        assert r["elo"] == prev[r["franchise"]]["elo"], r["franchise"]
+        assert r["score_delta"] == 0, r["franchise"]
+
+
+def test_partial_flag_matches_week_progress_on_real_data(real_files):
+    derived, files = real_files
+    meta = files["meta.json"]
+    played, total = week_progress(derived["games"], meta["latest"]["season"], meta["latest"]["week"])
+    assert meta["partial_week"] is (played < total)
+    if played == total:
+        assert meta["partial_week"] is False
