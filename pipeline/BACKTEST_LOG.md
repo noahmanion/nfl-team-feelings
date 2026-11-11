@@ -15,3 +15,11 @@ Append-only, one row per factor added. Deltas are walk-forward (test seasons 200
 | 2026-11-11 | qb_trend | +0.0028 | +0.0037 | + (0.63) | `ridge:+qb_trend` minus `ridge:+epa_traj` (0.52189 → 0.52464); ΔBrier −0.00081 (0.21888 → 0.21807); definition = current QB form level (research revision A1): dropback-weighted EWMA (h=4) of EPA/dropback over the current starter's own starts, any team/season, <2 starts or week 0 → 0; literal CONTEXT definition (QB form − team season-to-date EPA/dropback) Δ −0.0009; last fold 2021 sign + (0.60) |
 | 2026-11-11 | vs_exp | +0.0019 | +0.0021 | − (−1.24) | `ridge:+vs_exp` minus `ridge:+qb_trend` (mixed sources, 0.52464 → 0.52653); ΔBrier −0.00027 (0.21807 → 0.21781); model-only Δ −0.0006 (vs_exp built with vegas=None for all rows, 0.52464 → 0.52400); deployment condition (train mixed, test model-sourced, as 2021+) Δ −0.0012 vs no vs_exp (0.52347); alpha 0.001·n → 0.01·n; season_record weight 0.59 → 1.83 (corr 0.92 with vs_exp); last fold 2021 sign − (−1.10). FLAG Phase 6: Vegas-dependent signal |
 | 2026-11-11 | po_trend | −0.0003 | −0.0005 | − (−0.01) | `ridge:+po_trend` minus `ridge:+vs_exp` (0.52653 → 0.52619); ΔBrier +0.00006 (0.21781 → 0.21787); weight ≈0, kept per CONTEXT; corr with 3-week ΔElo 0.70 (re-run in scratch, 1999–2021, week > 0); definition = raw sim playoff_prob(week) − playoff_prob(max(week − 3, 0)), same season, null → 0; last fold 2021 sign − (−0.006). Final interim fit: 11 factors |
+
+## Offseason terms (Phase 7)
+
+The draft term sits on top of the frozen composite (residual fit, weeks 0–3, decaying to 0 by week 4) and is judged by training-only walk-forward (test seasons 2003–2021, no fresh holdout: 2022–2025 was consumed by Phase 6); the 1999 draft is not derivable, so the surplus / winsor distribution is 2000–2021. Gate: fitted > 0, ≥ 60% of folds share its sign, wk0 Δ > 0; otherwise weight 0 (display only).
+
+| Date | Term | wk0 ΔSpearman (N=8) | Fitted weight | Fold-sign consistency | Gate | Notes |
+| ---- | ---- | ------------------- | ------------- | --------------------- | ---- | ----- |
+| 2026-11-11 | draft | +0.0002 | -0.2828 | 8/19 | fail -> 0.00 | residual on frozen composite; weeks 0-3 Δ +0.0003; wk0 seasons Δ>0 6/19; partial check wk0 coef -0.367 (t -1.53); training-only walk-forward 2003-2021 (no fresh holdout) |

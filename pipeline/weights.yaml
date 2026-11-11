@@ -65,3 +65,28 @@ fit:  # per-factor evidence (ignored by load_weights)
   qb_trend: {raw: 0.631521, sign: "+", fold_sign: [19, 19]}
   vs_exp: {raw: -1.221338, sign: "-", fold_sign: [18, 19]}
   po_trend: {raw: -0.051305, sign: "-", fold_sign: [17, 19]}
+
+# ---------------------------------------------------------------------------------------------
+# OFFSEASON draft term (Phase 7, MODEL-16): separate from the frozen in-season weights above,
+# which it never changes (load_weights reads only `weights:`; fgs.score.load_offseason reads this).
+# Fit with `uv run fgs backtest --draft` on 2026-11-11: residual on the FROZEN composite
+# (y8 - composite ~ 1 + decay(week) * draft_z, weeks 0-3), surplus z from drafts 2000-2021
+# (1999 not derivable), walk-forward test seasons 2003-2021. The evidence is training-only
+# walk-forward: the 2022-2025 holdout was consumed by Phase 6, so there is no fresh holdout.
+# Gate: weight = fitted (2 dp) only if fitted > 0 AND >= 60% of folds share its sign AND
+# wk0 ΔSpearman (N=8) > 0; otherwise weight 0 and display only (surplus shown, not scored).
+# Verdict: gate failed: fitted -0.28, 8/19 folds share its sign, wk0 ΔSpearman +0.0002
+# -> weight 0, display only.
+offseason:
+  draft:
+    weight: 0.00
+    display_only: true
+    chart: stuart
+    winsor: [-17.29, 16.19]  # p5/p95 of 2000-2021 surplus
+    decay: linear_to0_by_wk4  # weeks 0,1,2,3 -> 1, .75, .5, .25
+    fit_seasons: 2000-2021
+    test_seasons: 2003-2021
+    fitted: -0.2828
+    fold_sign: "8/19"
+    delta_wk0: 0.0002
+    evidence: training-only walk-forward (no fresh holdout)
