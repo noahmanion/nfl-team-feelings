@@ -40,8 +40,9 @@ export function formatDateOnly(ymd: string): string {
   return dateOnly.format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])))
 }
 
-export function bandIndexForLabel(label: string, bands: Band[]): number {
-  return bands.findIndex((b) => b.label === label)
+/** The row's band index (hysteresis-adjusted, from the export) if it is a valid index into bands, else -1. */
+export function bandIndex(band: unknown, bands: Band[]): number {
+  return typeof band === 'number' && Number.isInteger(band) && band >= 0 && band < bands.length ? band : -1
 }
 
 /** Map band index i of n bands onto the 7 --mood-N tokens. */

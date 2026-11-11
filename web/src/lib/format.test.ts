@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  bandIndexForLabel,
+  bandIndex,
   formatDate,
   formatDateOnly,
   formatDelta,
@@ -59,8 +59,10 @@ describe('bands', () => {
   const bands: Band[] = ['a', 'b', 'c', 'd', 'Cautiously smug', 'f', 'g'].map((label, i) => ({
     min: i * 10, max: i * 10 + 9, label, emoji: '',
   }))
-  it('finds the band by label', () => expect(bandIndexForLabel('Cautiously smug', bands)).toBe(4))
-  it('unknown label is -1', () => expect(bandIndexForLabel('nope', bands)).toBe(-1))
+  it('uses the exported band index', () => expect(bandIndex(4, bands)).toBe(4))
+  it('out-of-range or malformed band is -1', () => {
+    for (const b of [-1, 7, 2.5, Number.NaN, null, undefined, '4']) expect(bandIndex(b, bands)).toBe(-1)
+  })
   it('moodToken is identity for 7 bands', () => {
     expect([0, 1, 2, 3, 4, 5, 6].map((i) => moodToken(i, 7))).toEqual([0, 1, 2, 3, 4, 5, 6])
   })

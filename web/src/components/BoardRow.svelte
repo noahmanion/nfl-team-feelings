@@ -2,13 +2,13 @@
   import Delta from './Delta.svelte'
   import MoodLabel from './MoodLabel.svelte'
   import TeamChip from './TeamChip.svelte'
-  import { bandIndexForLabel, formatRecord, moodToken } from '../lib/format'
+  import { bandIndex, formatRecord, moodToken } from '../lib/format'
   import type { Band, Row, TeamMeta } from '../lib/types'
 
   let { row, team, bands, week }: { row: Row; team: TeamMeta | undefined; bands: Band[]; week: number } = $props()
 
-  // Stripe follows the visible label (hysteresis), never the raw score.
-  const bandIdx = $derived(bandIndexForLabel(row.label, bands))
+  // Stripe follows the exported band (hysteresis-adjusted, same as the label), never the raw score.
+  const bandIdx = $derived(bandIndex(row.band, bands))
   const stripe = $derived(bandIdx < 0 ? 'var(--border)' : `var(--mood-${moodToken(bandIdx, bands.length)})`)
   const name = $derived(team?.name ?? row.franchise)
   // Defensive: malformed data renders "–", never "NaN"/"null"/"undefined".
