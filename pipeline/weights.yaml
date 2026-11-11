@@ -12,7 +12,14 @@
 #   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
 #   then rounded to 2 decimals by hand. Code proposes; this file decides.
 #
-# The weekly refresh never refits these (BACK-04). Phase 6 refits once all factors exist.
+# INTERIM: these 7 weights stand until the Phase 6 freeze. The weekly refresh never refits
+# them (BACK-04). Phase 6 refits once all factors exist.
+#
+# Negative weights, one line each (no positivity constraint is applied):
+#   last16  - given Elo, a hot recent record runs ahead of real strength and regresses
+#   sow     - given Elo and margins, results running ahead of margins regress
+#   streak  - given the rest, a hot streak slightly fades (~0 backtest gain, kept)
+#   luck    - close-game wins and losses are mostly coin flips, so they even out
 #
 # last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
 # record tends to run ahead of real strength, so it predicts slightly worse future margins.
@@ -27,10 +34,14 @@
 #
 # streak (signed current win/loss streak, capped at 8) is slightly negative and adds ~0 to
 # the backtest; kept per the phase decision. Given the other factors a hot streak tends to fade.
+#
+# luck (one-score wins minus one-score losses, last 16 games) is negative, as expected: close
+# games are mostly coin flips, so a team winning lots of them is due to give some back.
 weights:
-  elo: 3.96
-  season_record: 0.86
-  last16: -0.94
-  mov: 1.54
-  sow: -1.24
-  streak: -0.15
+  elo: 3.75
+  season_record: 0.90
+  last16: -0.56
+  mov: 1.34
+  sow: -1.07
+  streak: -0.14
+  luck: -0.30
