@@ -1,4 +1,4 @@
-import type { Callout, GamesFile, HistoryFile, Meta, Methodology, SeasonFile, SeasonMeta, WeekFile } from './types'
+import type { Callout, GamesFile, HistoryFile, Meta, Methodology, RecordsFile, SeasonFile, SeasonMeta, WeekFile } from './types'
 
 export const dataUrl = (path: string): string => `${import.meta.env.BASE_URL}data/${path}`
 
@@ -52,6 +52,20 @@ export function loadMethodology(meta: Meta): Promise<Methodology> {
   methodologyCache = entry
   p.catch(() => {
     if (methodologyCache === entry) methodologyCache = null
+  })
+  return p
+}
+
+// records.json (08-03): one file, cached per meta.generated_at, evicted on failure.
+let recordsCache: { key: string; p: Promise<RecordsFile> } | null = null
+
+export function loadRecords(meta: Meta): Promise<RecordsFile> {
+  if (recordsCache && recordsCache.key === meta.generated_at) return recordsCache.p
+  const p = getJson<RecordsFile>(`records.json?v=${encodeURIComponent(meta.generated_at)}`)
+  const entry = { key: meta.generated_at, p }
+  recordsCache = entry
+  p.catch(() => {
+    if (recordsCache === entry) recordsCache = null
   })
   return p
 }

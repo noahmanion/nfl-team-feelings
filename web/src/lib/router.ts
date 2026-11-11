@@ -6,6 +6,7 @@ export type Route =
   | { kind: 'history'; team?: string }
   | { kind: 'team'; team: string; season?: number; week?: number }
   | { kind: 'methodology' }
+  | { kind: 'records' }
   | { kind: 'reserved' } // later-phase routes: fall back to #/ silently
   | { kind: 'invalid' }
 
@@ -13,7 +14,9 @@ const BOARD = /^\/board\/(\d{4})\/(\d{1,2})\/?$/
 const HISTORY = /^\/history(?:\/([A-Za-z]{2,3}))?\/?$/
 const TEAM = /^\/team\/([A-Za-z]{2,3})(?:\/(\d{4})(?:\/(\d{1,2}))?)?\/?$/
 const METHODOLOGY = /^\/methodology\/?$/
-const RESERVED = [/^\/records\/?$/]
+const RECORDS = /^\/records\/?$/
+// No routes are reserved right now; kept so a future placeholder route can fall back to #/.
+const RESERVED: RegExp[] = []
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#/, '')
@@ -30,6 +33,7 @@ export function parseHash(hash: string): Route {
     return tm[3] ? { kind: 'team', team, season: Number(tm[2]), week: Number(tm[3]) } : { kind: 'team', team, season: Number(tm[2]) }
   }
   if (METHODOLOGY.test(h)) return { kind: 'methodology' }
+  if (RECORDS.test(h)) return { kind: 'records' }
   if (RESERVED.some((re) => re.test(h))) return { kind: 'reserved' }
   return { kind: 'invalid' }
 }
@@ -46,3 +50,4 @@ export const teamHash = (team: string, season?: number, week?: number): string =
     : `#/team/${team.toUpperCase()}/${season}/${week}`
 
 export const methodologyHash = '#/methodology'
+export const recordsHash = '#/records'

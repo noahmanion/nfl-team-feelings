@@ -40,6 +40,19 @@ export interface Callout { type: CalloutType; season: number; week: number; fran
 export interface SeasonFile { season: number; weeks: Record<string, Row[]>
   /** Per-week callouts (08-01); optional so older cached files still type-check. */
   callouts?: Record<string, Callout[]> }
+// records.json (08-03; pipeline/src/fgs/records.py)
+export interface ExtremeEntry { season: number; franchise: string; score: number; week: number; date: string;
+  wins: number; losses: number; ties: number; mean: number }
+export interface SeasonRecord { season: number; wins: number; losses: number; ties: number }
+export interface StreakEntry { franchise: string; start: string; end: string | null; days: number; active: boolean;
+  start_season: number; start_week: number; end_season: number | null; end_week: number | null; seasons: SeasonRecord[] }
+export type StreakKind = 'misery' | 'joy'
+export interface ActiveStreak { kind: StreakKind; start: string; days: number; start_season: number; start_week: number }
+export interface ExcludedSeason { season: number; franchise: string; reason: string }
+export interface NotableEntry { season: number; franchise: string; list: string; rank: number; score: number; mean: number;
+  wins: number; losses: number; ties: number }
+export interface RecordsFile { as_of: string; saddest: ExtremeEntry[]; happiest: ExtremeEntry[]; misery: StreakEntry[];
+  joy: StreakEntry[]; active: Record<string, ActiveStreak>; excluded: ExcludedSeason[]; notable: NotableEntry[] }
 export interface HistoryFile { keys: string[]; teams: Record<string, (number | null)[]> }
 /** games/{season}.json, columnar (04-01). asof_week = first snapshot week that includes the result. */
 export interface GamesFile { season: number; week: number[]; asof_week: number[]; home: string[]; away: string[];
