@@ -46,11 +46,11 @@
 ### Insights
 
 - [x] **INSIGHT-01**: Every score maps to a playful mood label from historical percentile bands, with hysteresis so labels don't flicker week to week
-- [ ] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
-- [ ] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
+- [x] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
+- [x] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
 - [ ] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
 - [x] **INSIGHT-05**: Each team gets an auto-generated plain-English one-liner explaining its biggest score drivers
-- [ ] **INSIGHT-06**: Week-over-week biggest movers are computed
+- [x] **INSIGHT-06**: Week-over-week biggest movers are computed
 
 ### Site
 
@@ -58,11 +58,11 @@
 - [x] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
 - [x] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
 - [x] **SITE-04**: User can scrub the mood board to any season/week since 1999
-- [ ] **SITE-05**: User sees a biggest-movers strip for the current week
-- [ ] **SITE-06**: User can browse a records page of historical extremes and longest misery/joy streaks
+- [x] **SITE-05**: User sees a biggest-movers strip for the current week
+- [x] **SITE-06**: User can browse a records page of historical extremes and longest misery/joy streaks
 - [x] **SITE-07**: User can read a methodology page explaining the factors, fitted weights and signs, and a backtest chart vs baselines
-- [ ] **SITE-08**: User can pin "my team" and see it highlighted across views (remembered locally)
-- [ ] **SITE-09**: Shareable callouts are surfaced on the board and team pages
+- [x] **SITE-08**: User can pin "my team" and see it highlighted across views (remembered locally)
+- [x] **SITE-09**: Shareable callouts are surfaced on the board and team pages
 - [x] **SITE-10**: Site works on mobile and shows a "last updated" stamp; every view has a hash deep link
 
 ### Pipeline
@@ -135,20 +135,20 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BACK-05 | Phase 6 | Complete |
 | BACK-06 | Phase 6 | Complete (PASS by prereg rule: +0.0039 Spearman N=8, CI incl. 0; verdict "slight") |
 | INSIGHT-01 | Phase 2 | Complete |
-| INSIGHT-02 | Phase 8 | Pending |
-| INSIGHT-03 | Phase 8 | Pending |
-| INSIGHT-04 | Phase 8 | Pending |
+| INSIGHT-02 | Phase 8 | Complete |
+| INSIGHT-03 | Phase 8 | Complete |
+| INSIGHT-04 | Phase 8 | Pending (computed + RECORDS_CHECK.md generated; manual top-10 sanity check not yet signed off) |
 | INSIGHT-05 | Phase 4 | Complete |
-| INSIGHT-06 | Phase 8 | Pending |
+| INSIGHT-06 | Phase 8 | Complete |
 | SITE-01 | Phase 2 | Complete |
 | SITE-02 | Phase 4 | Complete |
 | SITE-03 | Phase 3 | Complete |
 | SITE-04 | Phase 2 | Complete |
-| SITE-05 | Phase 8 | Pending |
-| SITE-06 | Phase 8 | Pending |
+| SITE-05 | Phase 8 | Complete |
+| SITE-06 | Phase 8 | Complete |
 | SITE-07 | Phase 6 | Complete |
-| SITE-08 | Phase 8 | Pending |
-| SITE-09 | Phase 8 | Pending |
+| SITE-08 | Phase 8 | Complete |
+| SITE-09 | Phase 8 | Complete |
 | SITE-10 | Phase 2 | Complete |
 | PIPE-01 | Phase 2 | Complete |
 | PIPE-02 | Phase 2 | Complete |
