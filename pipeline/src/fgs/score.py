@@ -28,6 +28,10 @@ FACTORS: dict[str, dict[str, str]] = {
         "label": "Last 16 games",
         "description": "Win % over the last 16 games, including last season and playoffs",
     },
+    "mov": {
+        "label": "Margin of victory",
+        "description": "Average point margin over the last 8 games (each capped at 24), including last season and playoffs",
+    },
 }
 
 SNAPSHOT = ("season", "week")

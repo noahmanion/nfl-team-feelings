@@ -89,6 +89,30 @@ def test_build_features_shape_and_no_nulls(synthetic_games):
     assert f.height == snap.height
     assert f.select("season", "week", "franchise_id").equals(snap.select("season", "week", "franchise_id"))
     assert set(SNAPSHOT_COLUMNS) | set(FEATURE_COLUMNS) <= set(f.columns)
-    for c in ("season_record", "last16", "pd_pg"):
+    for c in FEATURE_COLUMNS[1:]:
         assert f[c].null_count() == 0
         assert not f[c].is_nan().any()
+
+
+def test_mov_hand_computed(synthetic_games):
+    f = _feats(synthetic_games)
+    for team in ("BUF", "MIA", "NE", "NYJ"):
+        assert _v(f, 2023, 0, team, "mov") == 0.0  # no prior games
+    assert _v(f, 2023, 2, "BUF", "mov") == pytest.approx((7 + 17) / 2)
+    assert _v(f, 2023, 3, "BUF", "mov") == pytest.approx(12.0)  # bye carries forward
+    assert _v(f, 2024, 0, "BUF", "mov") == pytest.approx(9.0)   # last season incl. the WC game
+    assert _v(f, 2024, 1, "BUF", "mov") == pytest.approx(7.5)
+    assert _v(f, 2023, 3, "MIA", "mov") == pytest.approx((-7 + 7 + 24) / 3)
+
+
+def test_mov_caps_each_game_and_uses_last_8():
+    # A wins week 1 by 40 (capped to 24), then weeks 2-9 by 10. B mirrors.
+    rows = [("g1", 2023, 1, "REG", "2023-09-01", "A", "B", 50, 10, False)]
+    for w in range(2, 10):
+        rows.append((f"g{w}", 2023, w, "REG", f"2023-09-{w:02d}", "A", "B", 20, 10, False))
+    f = _feats(make_games(rows))
+    assert _v(f, 2023, 1, "A", "mov") == pytest.approx(24.0)
+    assert _v(f, 2023, 1, "B", "mov") == pytest.approx(-24.0)
+    assert _v(f, 2023, 2, "A", "mov") == pytest.approx((24 + 10) / 2)
+    assert _v(f, 2023, 8, "A", "mov") == pytest.approx((24 + 7 * 10) / 8)
+    assert _v(f, 2023, 9, "A", "mov") == pytest.approx(10.0)  # week-1 game has left the window
