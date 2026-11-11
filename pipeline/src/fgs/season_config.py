@@ -121,3 +121,17 @@ def division_of(season: int, franchise_id: str) -> str:
 
 def conference_of(season: int, franchise_id: str) -> str:
     return division_of(season, franchise_id).split()[0]
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 callouts (INSIGHT-02, INSIGHT-06). Read at call time (module attribute) by fgs.insights.
+#
+#   GAP_THRESHOLD   |record rank - score rank| that flags a perception gap
+#   GAP_CAP         max gap callouts per (season, week, flavor), largest |gap| first
+#   GAP_FIRST_WEEK  first REG week that can flag; the last is reg_weeks(season) - 1
+#   MOVERS_N        risers and fallers shown per week
+# ---------------------------------------------------------------------------
+GAP_THRESHOLD = 8
+GAP_CAP = 3
+GAP_FIRST_WEEK = 4
+MOVERS_N = 3
