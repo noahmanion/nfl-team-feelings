@@ -102,15 +102,22 @@ def _cached_inputs():
     return load_schedules(), load_teams()
 
 
+CACHE_FILES = ("schedules.parquet", "teams.parquet")
+
+
 @pytest.fixture
 def refresh_dirs(tmp_path, monkeypatch):
-    derived_dir, web_dir = tmp_path / "derived", tmp_path / "web"
+    derived_dir, web_dir, cache_dir = tmp_path / "derived", tmp_path / "web", tmp_path / "cache"
     for d in (derived_dir, web_dir):
         d.mkdir()
         (d / "SENTINEL").write_bytes(b"untouched\n")
+    cache_dir.mkdir()
+    for f in CACHE_FILES:  # stand-ins for the last good raw cache
+        (cache_dir / f).write_bytes(b"good cache: " + f.encode())
     monkeypatch.setattr(cli, "DERIVED_DIR", derived_dir)
     monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
-    return derived_dir, web_dir
+    monkeypatch.setattr(cli, "CACHE_DIR", cache_dir)
+    return derived_dir, web_dir, cache_dir
 
 
 def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, capsys):
@@ -121,10 +128,14 @@ def test_refresh_aborts_without_writing_on_bad_code(refresh_dirs, monkeypatch, c
     monkeypatch.setattr(cli, "load_teams", lambda **kw: teams)
     assert cli.main(["refresh"]) == 1
     cap = capsys.readouterr()
-    assert "FAIL" in cap.out and "JSON not regenerated" in cap.err
-    for d in refresh_dirs:
+    assert "FAIL" in cap.out and "cache and JSON not updated" in cap.err
+    derived_dir, web_dir, cache_dir = refresh_dirs
+    for d in (derived_dir, web_dir):
         assert [p.name for p in d.iterdir()] == ["SENTINEL"]
         assert (d / "SENTINEL").read_bytes() == b"untouched\n"
+    assert sorted(p.name for p in cache_dir.iterdir()) == list(CACHE_FILES)
+    for f in CACHE_FILES:  # the bad download never replaced the good raw cache
+        assert (cache_dir / f).read_bytes() == b"good cache: " + f.encode()
 
 
 def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, capsys):
@@ -133,8 +144,11 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     monkeypatch.setattr(cli, "load_schedules", lambda **kw: (calls.append(kw), raw)[1])
     monkeypatch.setattr(cli, "load_teams", lambda **kw: (calls.append(kw), teams)[1])
     assert cli.main(["refresh"]) == 0
-    assert calls == [{"refresh": True}, {"refresh": True}]
-    derived_dir, web_dir = refresh_dirs
+    assert calls == [{"refresh": True, "write_cache": False}, {"refresh": True, "write_cache": False}]
+    derived_dir, web_dir, cache_dir = refresh_dirs
+    import polars as pl
+    assert pl.read_parquet(cache_dir / "schedules.parquet").equals(raw)  # cache saved only after checks
+    assert pl.read_parquet(cache_dir / "teams.parquet").equals(teams)
     for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet"):
         assert (derived_dir / f).exists()
     for f in ("meta.json", "latest.json", "callouts.json", "history.json"):

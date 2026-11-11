@@ -10,8 +10,8 @@ from fgs import checks, export
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
-from fgs.ingest import load_schedules, load_teams
-from fgs.paths import DERIVED_DIR, WEB_DATA_DIR
+from fgs.ingest import load_schedules, load_teams, save_cache
+from fgs.paths import CACHE_DIR, DERIVED_DIR, WEB_DATA_DIR
 from fgs.snapshots import build_grid
 
 
@@ -139,15 +139,22 @@ def _cmd_check(args) -> int:
 
 
 def _cmd_refresh(args) -> int:
-    """D-09: re-download -> derive -> check (abort, writing nothing) -> parquet -> site JSON."""
-    raw = load_schedules(refresh=True)
-    teams = load_teams(refresh=True)
+    """D-09: re-download (in memory) -> derive -> check (abort, writing nothing) -> raw cache -> parquet -> JSON.
+
+    The downloads are not persisted until every check passes and the export builds, so a bad
+    nflverse file never replaces the good raw cache that `fgs export`/`build`/`check` read.
+    """
+    raw = load_schedules(refresh=True, write_cache=False)
+    teams = load_teams(refresh=True, write_cache=False)
     ok, derived, _ = _checked_derive(raw)
     if not ok:
-        print("checks failed; JSON not regenerated", file=sys.stderr)
+        print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     files = export.build_export(derived, teams, generated_at=generated_at)  # pure; may still raise before writes
+    cache_dir = CACHE_DIR  # module global read at call time (tests monkeypatch it)
+    save_cache(raw, "schedules.parquet", cache_dir)
+    save_cache(teams, "teams.parquet", cache_dir)
     _write_derived(derived)
     export.write_export(files, WEB_DATA_DIR)
     meta = files["meta.json"]
