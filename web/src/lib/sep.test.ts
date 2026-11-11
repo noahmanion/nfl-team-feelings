@@ -27,6 +27,16 @@ describe('Sep separator', () => {
     expect(offenders).toEqual([])
   })
 
+  it('travels with the following link in the site nav, so wrapped lines never end in a dangling dot', () => {
+    const header = sources['../components/SiteHeader.svelte']
+    const nav = /<nav[\s\S]*?<\/nav>/.exec(header)?.[0] ?? ''
+    // every separator sits right before a link, inside a no-wrap item
+    expect(nav.match(/<Sep \/>/g)?.length).toBe(3)
+    expect(nav.match(/<span class="item"\s*><Sep \/><a /g)?.length).toBe(3)
+    expect(nav).not.toMatch(/<\/a>\s*<Sep \/>/)
+    expect(header).toMatch(/\.item\s*\{[^}]*white-space:\s*nowrap/)
+  })
+
   it('is used on every team page header meta line', () => {
     const team = sources['../components/TeamPage.svelte']
     // three separators: when · Now, record · rank, odds · QB

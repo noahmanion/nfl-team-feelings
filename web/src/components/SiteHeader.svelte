@@ -9,14 +9,20 @@
   <p class="wordmark">Feel-Good Score</p>
   <h1>How should you feel about your team?</h1>
   <p class="subhead">Every NFL team, ranked by how good their fans should feel right now.</p>
+  <!-- WR-10: each separator travels with the link after it, so a wrapped line (320-375px) starts
+       with "· How it works" instead of leaving a dangling "·" at the end of the line above. -->
   <nav aria-label="Views">
     <a href="#/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
-    <Sep />
-    <a href="#/history" aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a>
-    <Sep />
-    <a href="#/records" aria-current={current === 'records' ? 'page' : undefined}>Records</a>
-    <Sep />
-    <a href="#/methodology" aria-current={current === 'methodology' ? 'page' : undefined}>How it works</a>
+    <span class="item"
+      ><Sep /><a href="#/history" aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a></span
+    >
+    <span class="item"
+      ><Sep /><a href="#/records" aria-current={current === 'records' ? 'page' : undefined}>Records</a></span
+    >
+    <span class="item"
+      ><Sep /><a href="#/methodology" aria-current={current === 'methodology' ? 'page' : undefined}>How it works</a
+      ></span
+    >
   </nav>
 </header>
 
@@ -42,8 +48,14 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: var(--space-xs);
+    /* the Sep's own margin-inline is the only horizontal spacing */
+    gap: 0;
     margin-top: var(--space-sm);
+  }
+  .item {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
   }
   nav a {
     display: inline-flex;
