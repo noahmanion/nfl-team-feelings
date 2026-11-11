@@ -1,3 +1,5 @@
+import functools
+
 import polars as pl
 import pytest
 
@@ -57,9 +59,36 @@ def real_cache():
     return path
 
 
-@pytest.fixture(scope="session")
-def real_inputs():
-    """Optional derive() inputs from the real cache (pbp_games may be None without a pbp cache)."""
+_SESSION: dict = {}
+
+
+@pytest.fixture(scope="session", autouse=True)
+def sim_cache_dir(tmp_path_factory):
+    """One content-addressed sim cache shared by every real-data derive in the session (RESEARCH
+    Pitfall 10: a cold full-history sim is ~10 s). Never the real data/derived/sim."""
     from fgs import cli
 
-    return cli.cached_inputs()
+    d = tmp_path_factory.mktemp("sim_cache")
+    _SESSION["sim_cache_dir"] = d
+    mp = pytest.MonkeyPatch()
+    mp.setattr(cli, "SIM_CACHE_DIR", d)  # `fgs check/export/backtest/build` in tests use it too
+    yield d
+    mp.undo()
+
+
+@functools.cache
+def _cached_inputs() -> dict:
+    from fgs import cli
+
+    return cli.cached_inputs()  # read the pbp/win_totals cache once per session
+
+
+def derive_inputs() -> dict:
+    """derive() kwargs for real-data tests: cached pbp + Vegas inputs and the session sim cache."""
+    return {**_cached_inputs(), "sim_cache_dir": _SESSION["sim_cache_dir"]}
+
+
+@pytest.fixture(scope="session")
+def real_inputs(sim_cache_dir):
+    """Optional derive() inputs from the real cache (pbp_games may be None without a pbp cache)."""
+    return derive_inputs()

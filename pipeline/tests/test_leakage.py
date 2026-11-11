@@ -17,7 +17,7 @@ import fgs
 from fgs import cli, explain, features, mood, season_config
 from fgs.cli import derive, derive_games
 from fgs.mood import score_frame
-from conftest import _ROWS, make_games
+from conftest import _ROWS, derive_inputs, make_games
 
 KEY = ["season", "week", "franchise_id"]
 FLOAT_EXACT = [c for c in features.FEATURE_COLUMNS] + ["composite"]  # + every z_* / contrib_* column
@@ -30,9 +30,8 @@ def _with_points(derived: dict) -> pl.DataFrame:
     return explain.add_points(score_frame(feats), list(derived["weights"]), mood.reference_values(feats))
 
 
-@functools.cache
 def _inputs() -> dict:
-    return cli.cached_inputs()  # read the pbp cache once per session
+    return derive_inputs()  # cached pbp + Vegas inputs and the session sim cache
 
 
 def _pipeline(raw: pl.DataFrame) -> pl.DataFrame:
@@ -113,7 +112,7 @@ def test_fake_future_pbp_changes_nothing(real_raw, real_base):
     if real_raw.filter(future).is_empty():
         pytest.skip("no unplayed games after the latest played week")
     faked = _set_result(real_raw, future, 60, 0)
-    tg = derive(faked, scored=False)["team_games"]
+    tg = derive(faked, scored=False, **_inputs())["team_games"]
     new = tg.join(tge.select("game_id", "franchise_id"), on=["game_id", "franchise_id"], how="anti").filter(
         pl.col("played") & ((pl.col("season") > s) | ((pl.col("season") == s) & (pl.col("week") > w)))
     )  # future games only (a few old games legitimately have no pbp)
@@ -126,7 +125,7 @@ def test_fake_future_pbp_changes_nothing(real_raw, real_base):
         for r in new.select("game_id", "season", "franchise_id").to_dicts()
     ]
     fake_tge = pl.concat([tge, pl.DataFrame(rows, schema=tge.schema)])
-    fake = _with_points(derive(faked, pbp_games=fake_tge))
+    fake = _with_points(derive(faked, **{**_inputs(), "pbp_games": fake_tge}))
     assert fake.height > real_base.height
     _assert_unchanged(real_base, fake)
 
@@ -155,6 +154,7 @@ def test_synthetic_leakage(monkeypatch):
 def test_backtest_not_imported_upstream():
     src = Path(fgs.__file__).parent
     imp = re.compile(r"^\s*(from|import)\s+[\w., ]*backtest", re.M)
-    for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py"):
+    for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py",
+                 "sim.py", "expectation.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())
         assert not imp.search(code), f"{name} imports the backtest harness"

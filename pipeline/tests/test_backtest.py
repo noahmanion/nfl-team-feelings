@@ -13,6 +13,7 @@ from fgs.backtest import (
 from fgs.ingest import load_schedules
 from fgs.paths import WEIGHTS_PATH
 from fgs.score import load_weights
+from conftest import derive_inputs
 
 TG_SCHEMA = {
     "game_id": pl.String, "season": pl.Int32, "week": pl.Int32, "asof_week": pl.Int32,
@@ -122,7 +123,7 @@ def real_report():
     if not (CACHE_DIR / "schedules.parquet").exists():
         pytest.skip("no cached schedules; run `uv run fgs build` first")
     raw = load_schedules()
-    return raw, run_backtest(cli.derive(raw, **cli.cached_inputs()))
+    return raw, run_backtest(cli.derive(raw, **derive_inputs()))
 
 
 def test_holdout_test_seasons():
@@ -145,7 +146,7 @@ def test_holdout_sealed_by_default(real_report):
         pl.when(pl.col("season") == 2024).then(pl.col("home_score")).otherwise(pl.col("away_score")).alias("away_score"),
         pl.when(pl.col("season") == 2024).then(-pl.col("result")).otherwise(pl.col("result")).alias("result"),
     )
-    assert run_backtest(cli.derive(swapped, **cli.cached_inputs())) == report
+    assert run_backtest(cli.derive(swapped, **derive_inputs())) == report
 
 
 def test_baselines_real_cache(real_report):
@@ -196,7 +197,7 @@ def test_choose_alpha_returns_grid_value():
 
 def test_propose_weights_holdout_sealed(real_report):
     raw, _ = real_report
-    prop = propose_weights(cli.derive(raw, **cli.cached_inputs()))
+    prop = propose_weights(cli.derive(raw, **derive_inputs()))
     assert prop["seasons"] == [1999, 2021] and prop["target"] == "y8"
     late = pl.col("season") >= 2022
     swapped = raw.with_columns(
@@ -204,7 +205,7 @@ def test_propose_weights_holdout_sealed(real_report):
         pl.when(late).then(pl.col("home_score")).otherwise(pl.col("away_score")).alias("away_score"),
         pl.when(late).then(-pl.col("result")).otherwise(pl.col("result")).alias("result"),
     )
-    assert propose_weights(cli.derive(swapped, **cli.cached_inputs())) == prop
+    assert propose_weights(cli.derive(swapped, **derive_inputs())) == prop
 
 
 RIDGE_NAMES = ("ridge:elo", "ridge:+season_record", "ridge:+last16", "ridge:+mov", "ridge:+sow", "ridge:+streak", "ridge:+luck",
@@ -225,7 +226,7 @@ def test_ridge_composites_in_report(real_report):
     assert 0.519 <= c["ridge:+luck"]["N8"]["all"]["spearman"] <= 0.525
     assert 0.5199 <= c["ridge:+epa_traj"]["N8"]["all"]["spearman"] <= 0.5239
     assert 0.5226 <= c["ridge:+qb_trend"]["N8"]["all"]["spearman"] <= 0.5266
-    prop = propose_weights(cli.derive(raw, **cli.cached_inputs()))
+    prop = propose_weights(cli.derive(raw, **derive_inputs()))
     assert set(prop["weights"]) == set(FINAL_KEYS)
     assert all(math.isfinite(v) for v in prop["weights"].values())
 

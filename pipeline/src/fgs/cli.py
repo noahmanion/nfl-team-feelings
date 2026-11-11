@@ -3,14 +3,16 @@
 import argparse
 import json
 import sys
+import time
 from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, export, features, score
+from fgs import checks, export, features, score, sim
 from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
+from fgs.expectation import load_win_totals, vegas_expectations
 from fgs.games import build_games, build_team_games
 from fgs.ingest import load_schedules, load_teams, save_cache
 from fgs.paths import CACHE_DIR, DERIVED_DIR, WEB_DATA_DIR
@@ -20,36 +22,47 @@ from fgs.snapshots import build_grid
 
 def derive_games(
     games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
-    scored: bool = True, *, pbp_games: pl.DataFrame | None = None,
+    scored: bool = True, *, pbp_games: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
+    sim_cache_dir=None, sim_write_cache: bool = True,
 ) -> dict:
-    """Pure (apart from reading weights.yaml when weights is None): normalized games ->
+    """Pure (apart from reading weights.yaml when weights is None and the sim cache): normalized games ->
     games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
     the exact weights dict that produced the contributions (export reports these, not a re-read).
 
     scored=False stops after the Elo grid (no features, no weights): the backtest rebuilds its
     own features and must not need a valid weights.yaml to propose one.
 
-    pbp_games (pbp.team_game_epa frame, or None) is carried through as derived["team_game_epa"]."""
+    pbp_games (pbp.team_game_epa frame, or None) is carried through as derived["team_game_epa"].
+    The season simulator always runs (derived["sim"], also when scored=False), reusing
+    sim_cache_dir/{model_version}.parquet when given; sim_write_cache=False leaves that cache
+    untouched (refresh saves it after the checks pass). vegas (expectation.vegas_expectations
+    frame, or None) is carried through as derived["vegas"]."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
+    sim_frame = sim.simulate_all(games, snapshots, cache_dir=sim_cache_dir, write_cache=sim_write_cache)
+    base = {
+        "games": games, "team_games": team_games, "snapshots": snapshots, "team_game_epa": pbp_games,
+        "sim": sim_frame, "vegas": vegas,
+    }
     if not scored:
-        return {"games": games, "team_games": team_games, "snapshots": snapshots, "team_game_epa": pbp_games}
-    feats = features.build_features(snapshots, team_games, pbp_games=pbp_games)
+        return base
+    feats = features.build_features(snapshots, team_games, pbp_games=pbp_games, sim=sim_frame, vegas=vegas)
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
-    return {
-        "games": games, "team_games": team_games, "snapshots": snapshots, "features": feats, "weights": w,
-        "team_game_epa": pbp_games,
-    }
+    return {**base, "features": feats, "weights": w}
 
 
 def derive(
     raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
-    scored: bool = True, *, pbp_games: pl.DataFrame | None = None,
+    scored: bool = True, *, pbp_games: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
+    sim_cache_dir=None, sim_write_cache: bool = True,
 ) -> dict:
-    """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file."""
-    return derive_games(build_games(raw), params, weights, scored=scored, pbp_games=pbp_games)
+    """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file and sim cache."""
+    return derive_games(
+        build_games(raw), params, weights, scored=scored, pbp_games=pbp_games, vegas=vegas,
+        sim_cache_dir=sim_cache_dir, sim_write_cache=sim_write_cache,
+    )
 
 
 PBP_FIRST_SEASON = 1999
@@ -72,13 +85,28 @@ def pbp_seasons(games: pl.DataFrame) -> list[int]:
     return list(range(PBP_FIRST_SEASON, _current_season(games) + 1))
 
 
+def _cached_vegas(cache_dir) -> pl.DataFrame | None:
+    """Normalized Vegas expectations from the cached win_totals.csv (never downloads)."""
+    wt = cache_dir / "win_totals.csv"
+    return vegas_expectations(pl.read_csv(wt)) if wt.exists() else None
+
+
 def cached_inputs(cache_dir=None) -> dict:
     """Optional derive() inputs read from the cache only (no network). None when not cached."""
     cache_dir = CACHE_DIR if cache_dir is None else cache_dir  # module global read at call time
+    vegas = _cached_vegas(cache_dir)
     seasons = cached_seasons(cache_dir)
     if not seasons:
-        return {"pbp_games": None}
-    return {"pbp_games": team_game_epa(load_all_pbp(seasons, cache_dir, write_cache=False))}
+        return {"pbp_games": None, "vegas": vegas}
+    return {"pbp_games": team_game_epa(load_all_pbp(seasons, cache_dir, write_cache=False)), "vegas": vegas}
+
+
+SIM_CACHE_DIR = None  # None -> DERIVED_DIR / "sim"; the test suite points it at a session tmp dir
+
+
+def sim_cache_dir():
+    """Sim cache location (module globals read at call time so tests can monkeypatch them)."""
+    return DERIVED_DIR / "sim" if SIM_CACHE_DIR is None else SIM_CACHE_DIR
 
 
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
@@ -87,7 +115,8 @@ def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     current = seasons[-1]
     plays = load_all_pbp(seasons, CACHE_DIR, refresh_seasons=[current] if refresh else ())
     tge = team_game_epa(plays)
-    out = derive(raw, pbp_games=tge)
+    vegas = vegas_expectations(load_win_totals())  # frozen file, downloaded once
+    out = derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sim_cache_dir())
     _write_derived(out)
     print(
         f"built: raw {raw.height} rows, games {out['games'].height}, "
@@ -182,7 +211,7 @@ def _cmd_elo(args) -> int:
 
 
 def _checked_derive(
-    raw: pl.DataFrame, pbp_games: pl.DataFrame | None = None,
+    raw: pl.DataFrame, pbp_games: pl.DataFrame | None = None, **derive_kw,
 ) -> tuple[bool, dict[str, pl.DataFrame] | None, EloParams]:
     """Pre-derive checks (columns, codes), then derive and run every post-derive check. No file I/O."""
     params = EloParams()
@@ -192,7 +221,7 @@ def _checked_derive(
     if failed:
         print("raw data failed pre-derive checks; not deriving")
         return False, None, params
-    derived = derive(raw, params, pbp_games=pbp_games)
+    derived = derive(raw, params, pbp_games=pbp_games, **derive_kw)
     for name, fails in checks.run_checks(raw, derived, params):
         if name == "columns":
             continue  # already reported above
@@ -203,7 +232,7 @@ def _checked_derive(
 
 def _cmd_check(args) -> int:
     raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
-    ok, _, _ = _checked_derive(raw, **cached_inputs())
+    ok, _, _ = _checked_derive(raw, **cached_inputs(), sim_cache_dir=sim_cache_dir())
     return 0 if ok else 1
 
 
@@ -213,6 +242,7 @@ def _cmd_refresh(args) -> int:
     The downloads are not persisted until every check passes and the export builds, so a bad
     nflverse file never replaces the good raw cache that `fgs export`/`build`/`check` read.
     """
+    t0 = time.perf_counter()
     cache_dir = CACHE_DIR  # module global read at call time (tests monkeypatch it)
     raw = load_schedules(refresh=True, write_cache=False)
     teams = load_teams(refresh=True, write_cache=False)
@@ -226,7 +256,11 @@ def _cmd_refresh(args) -> int:
     cached = [s for s in seasons if s not in fetched]
     frames = ([load_all_pbp(cached, cache_dir, write_cache=False)] if cached else []) + list(fetched.values())
     tge = team_game_epa(pl.concat(frames, how="diagonal_relaxed"))
-    ok, derived, _ = _checked_derive(raw, pbp_games=tge)
+    # Vegas comes from the real cache (frozen file; never downloaded here). The sim cache is read
+    # but only written after every check passes, so only changed seasons are re-simulated.
+    vegas = _cached_vegas(cache_dir)
+    sims = sim_cache_dir()
+    ok, derived, _ = _checked_derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sims, sim_write_cache=False)
     if not ok:
         print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
@@ -237,17 +271,18 @@ def _cmd_refresh(args) -> int:
     for s, df in sorted(fetched.items()):
         save_cache(df, f"{PBP_SUBDIR}/{s}.parquet", cache_dir)
     _write_derived(derived)
+    sim.save_sim_cache(derived["sim"], sims)
     export.write_export(files, WEB_DATA_DIR)
     meta = files["meta.json"]
     print(
-        f"refreshed: exported {len(files)} files; latest {meta['latest']['season']} week "
+        f"refreshed in {time.perf_counter() - t0:.1f}s: exported {len(files)} files; latest {meta['latest']['season']} week "
         f"{meta['latest']['week']} (partial={meta['partial_week']}); data through {meta['data_through']}"
     )
     return 0
 
 
 def _cmd_export(args) -> int:
-    derived = derive(load_schedules(), **cached_inputs())  # cache only (schedules download once if missing)
+    derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())  # cache only (schedules download once if missing)
     teams = load_teams()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     files = export.build_export(derived, teams, generated_at=generated_at)
@@ -264,7 +299,7 @@ def _cmd_export(args) -> int:
 def _cmd_backtest(args) -> int:
     # cache only (downloads once if missing). Unscored: the backtest builds its own features,
     # so a missing/invalid weights.yaml must not block proposing new weights.
-    derived = derive(load_schedules(), scored=False, **cached_inputs())
+    derived = derive(load_schedules(), scored=False, **cached_inputs(), sim_cache_dir=sim_cache_dir())
     report = run_backtest(derived, include_holdout=args.include_holdout)
     print(format_report(report))
     out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it

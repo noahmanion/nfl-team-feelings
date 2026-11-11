@@ -7,6 +7,7 @@ from fgs.elo import replay
 from fgs.games import build_team_games
 from fgs.season_config import MEAN_ELO, n_teams
 from fgs.snapshots import SNAPSHOT_COLUMNS, build_grid
+from conftest import derive_inputs
 
 
 @pytest.fixture
@@ -109,7 +110,7 @@ def real():
     from fgs.cli import derive
 
     raw = pl.read_parquet(path)
-    return raw, derive(raw)
+    return raw, derive(raw, sim_cache_dir=derive_inputs()["sim_cache_dir"])
 
 
 def test_real_2025_grid_and_eliminated_team_frozen(real):

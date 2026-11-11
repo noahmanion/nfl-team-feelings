@@ -89,13 +89,18 @@ def test_build_prints_data_through(derived, tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(cli, "load_all_pbp", lambda seasons, cache_dir, refresh_seasons=(): calls.append(
         (list(seasons), list(refresh_seasons))))
     monkeypatch.setattr(cli, "team_game_epa", lambda plays: tge)
-    monkeypatch.setattr(cli, "derive", lambda raw, pbp_games=None: {**derived, "team_game_epa": pbp_games})
+    monkeypatch.setattr(cli, "load_win_totals", lambda: "wt")
+    monkeypatch.setattr(cli, "vegas_expectations", lambda wt: None)
+    seen = {}
+    monkeypatch.setattr(cli, "derive", lambda raw, pbp_games=None, **kw: (
+        seen.update(kw), {**derived, "team_game_epa": pbp_games})[1])
     assert cli.main(["build"]) == 0
     assert calls == [(list(range(1999, 2025)), [])]
     out = capsys.readouterr().out
     assert "data through 2024-09-15" in out
     assert "pbp: 1 team-games, seasons 1999-2024" in out
     assert (tmp_path / "team_game_epa.parquet").exists()
+    assert seen["sim_cache_dir"] == cli.sim_cache_dir() and "vegas" in seen
 
 
 # --- fgs refresh: check-then-write (network mocked by reading the caches) -------------------
@@ -153,6 +158,7 @@ def refresh_dirs(tmp_path, monkeypatch):
     monkeypatch.setattr(cli, "DERIVED_DIR", derived_dir)
     monkeypatch.setattr(cli, "WEB_DATA_DIR", web_dir)
     monkeypatch.setattr(cli, "CACHE_DIR", cache_dir)
+    monkeypatch.setattr(cli, "SIM_CACHE_DIR", None)  # sim cache under the tmp derived dir
     return derived_dir, web_dir, cache_dir
 
 
@@ -198,12 +204,53 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
         assert (cache_dir / "pbp" / f"{current}.parquet").exists()
         assert sorted(p.name for p in (cache_dir / "pbp").iterdir()) == [f"{current}.parquet"]
         assert (derived_dir / "team_game_epa.parquet").exists()
+    sims = list((derived_dir / "sim").glob("*.parquet"))  # written only after checks pass
+    assert [p.name for p in sims] == [f"{cli.sim.model_version()}.parquet"]
     for f in ("meta.json", "latest.json", "callouts.json", "history.json"):
         assert (web_dir / f).exists()
     assert len(list((web_dir / "teams").iterdir())) == 32
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
-    assert "all checks passed" in out and "refreshed: exported" in out
+    assert "all checks passed" in out and re.search(r"refreshed in \d+\.\ds: exported", out)
+
+
+def test_refresh_recomputes_only_current_season(refresh_dirs, monkeypatch, capsys):
+    """Warm the tmp sim cache as of last week (current season's latest played week unplayed),
+    then refresh: only the current season is re-simulated, once per snapshot week."""
+    import polars as pl
+
+    from fgs import sim
+
+    raw, teams = _cached_inputs()
+    derived_dir = refresh_dirs[0]
+    current = _current(raw)
+    played = raw.filter(pl.col("result").is_not_null() & (pl.col("season") == current))
+    if played.is_empty():
+        pytest.skip("current season has no played games")
+    last_week = int(played["week"].max())
+    stale = raw.with_columns(
+        pl.when((pl.col("season") == current) & (pl.col("week") == last_week)).then(None)
+        .otherwise(pl.col(c)).alias(c)
+        for c in ("home_score", "away_score", "result")
+    )
+    cli.derive(stale, scored=False, sim_cache_dir=derived_dir / "sim")  # warm cache, last week
+
+    monkeypatch.setattr(cli, "load_schedules", lambda **kw: raw)
+    monkeypatch.setattr(cli, "load_teams", lambda **kw: teams)
+    _mock_pbp(monkeypatch, current)
+    calls = []
+    real = sim.simulate_season
+
+    def counting(sg, *a, **k):
+        calls.append(int(sg["season"][0]))
+        return real(sg, *a, **k)
+
+    monkeypatch.setattr(sim, "simulate_season", counting)
+    assert cli.main(["refresh"]) == 0
+    snaps = pl.read_parquet(derived_dir / "elo_snapshots.parquet")
+    n_weeks = snaps.filter(pl.col("season") == current)["week"].n_unique()
+    assert set(calls) == {current} and len(calls) == n_weeks
+    assert "refreshed in" in capsys.readouterr().out
 
 
 def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkeypatch):
@@ -211,7 +258,8 @@ def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkey
 
     monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", tmp_path / "missing.yaml")
     out = cli.derive_games(synthetic_games, scored=False)
-    assert set(out) == {"games", "team_games", "snapshots", "team_game_epa"}
+    assert set(out) == {"games", "team_games", "snapshots", "team_game_epa", "sim", "vegas"}
+    assert out["sim"].height == out["snapshots"].height  # sims run even when unscored
     assert out["team_game_epa"] is None
 
 

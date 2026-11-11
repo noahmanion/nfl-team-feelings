@@ -288,8 +288,20 @@ def _sealed_pbp(derived: dict, last: int) -> pl.DataFrame | None:
     return None if tge is None else tge.filter(pl.col("season") <= last)
 
 
-def _z_frame(snaps: pl.DataFrame, team_games: pl.DataFrame, pbp_games: pl.DataFrame | None = None) -> pl.DataFrame:
-    feats = build_features(snaps, team_games, pbp_games=pbp_games)
+def _sealed_sim(derived: dict, last: int) -> tuple[pl.DataFrame | None, pl.DataFrame | None]:
+    """(sim, vegas) restricted to seasons <= last. Each sim season only depends on its own
+    as-of inputs; Vegas lines are preseason; both are filtered anyway so nothing later leaks."""
+    sim, vegas = derived.get("sim"), derived.get("vegas")
+    sim = None if sim is None else sim.filter(pl.col("season") <= last)
+    vegas = None if vegas is None else vegas.filter(pl.col("season") <= last)
+    return sim, vegas
+
+
+def _z_frame(
+    snaps: pl.DataFrame, team_games: pl.DataFrame, pbp_games: pl.DataFrame | None = None,
+    sim: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
+) -> pl.DataFrame:
+    feats = build_features(snaps, team_games, pbp_games=pbp_games, sim=sim, vegas=vegas)
     return zscore(feats, PROPOSAL_FACTORS)
 
 
@@ -301,7 +313,7 @@ def propose_weights(derived: dict) -> dict:
     team_games = derived["team_games"].filter(pl.col("season") <= hi)
     pbp_games = _sealed_pbp(derived, hi)
     d = (
-        _z_frame(snaps, team_games, pbp_games)
+        _z_frame(snaps, team_games, pbp_games, *_sealed_sim(derived, hi))
         .join(targets(team_games, snaps, (8,)), on=KEYS, how="left")
         .filter(pl.col("season").is_between(lo, hi) & pl.col(FIT_TARGET).is_not_null())
     )
@@ -384,7 +396,7 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     games = derived["games"].filter(pl.col("season") <= last_season)
     pbp_games = _sealed_pbp(derived, last_season)
 
-    feats = _z_frame(snaps, team_games, pbp_games)
+    feats = _z_frame(snaps, team_games, pbp_games, *_sealed_sim(derived, last_season))
     full = feats.join(targets(team_games, snaps, NS), on=KEYS, how="left").sort(KEYS)
     ng = next_game_frame(games, feats, list(CANDIDATES.values()))
 

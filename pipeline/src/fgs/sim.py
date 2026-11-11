@@ -222,6 +222,20 @@ def _simulate_one_season(sg, ss, n_sims, sigma, seed) -> pl.DataFrame:
     return pl.DataFrame(recs, schema=_OUT_SCHEMA)
 
 
+def _cache_path(cache_dir, version: str | None = None) -> Path:
+    return Path(cache_dir) / f"{version or model_version()}.parquet"
+
+
+def save_sim_cache(frame: pl.DataFrame, cache_dir: Path | str, version: str | None = None) -> Path:
+    """Atomically write a simulate_all frame (with its input_digest column) as the cache file."""
+    path = _cache_path(cache_dir, version)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    frame.write_parquet(tmp)
+    os.replace(tmp, path)
+    return path
+
+
 def simulate_all(
     games: pl.DataFrame,
     snapshots: pl.DataFrame,
@@ -230,18 +244,21 @@ def simulate_all(
     sigma: float = SIGMA,
     seed: int = SEED,
     cache_dir: Path | str | None = None,
+    write_cache: bool = True,
 ) -> pl.DataFrame:
-    """Every (season, week) in snapshots -> playoff_prob, exp_wins per franchise.
+    """Every (season, week) in snapshots -> playoff_prob, exp_wins per franchise, plus the
+    per-season input_digest column.
 
     With cache_dir, reuse `{cache_dir}/{model_version}.parquet` rows for seasons whose
-    input_digest is unchanged and recompute the rest (then rewrite the cache atomically)."""
+    input_digest is unchanged and recompute the rest. The cache is rewritten atomically unless
+    write_cache=False (refresh writes it via save_sim_cache only after the checks pass)."""
     reg = games.filter(pl.col("is_reg"))
     seasons = sorted(snapshots["season"].unique().to_list())
+    version = model_version(n_sims, sigma, seed)
 
     cached = None
-    path = None
     if cache_dir is not None:
-        path = Path(cache_dir) / f"{model_version(n_sims, sigma, seed)}.parquet"
+        path = _cache_path(cache_dir, version)
         if path.exists():
             cached = pl.read_parquet(path)
 
@@ -250,7 +267,7 @@ def simulate_all(
         sg = reg.filter(pl.col("season") == s)
         assert sg.height > 0, f"season {s} has snapshots but no REG games"
         ss = snapshots.filter(pl.col("season") == s)
-        dig = input_digest(sg, ss) if path is not None else ""
+        dig = input_digest(sg, ss)
         hit = None
         if cached is not None:
             hit = cached.filter((pl.col("season") == s) & (pl.col("input_digest") == dig))
@@ -270,9 +287,6 @@ def simulate_all(
         else pl.DataFrame(schema={**_OUT_SCHEMA, "input_digest": pl.String})
     ).sort("season", "week", "franchise_id")
 
-    if path is not None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.with_name(path.name + ".tmp")
-        full.write_parquet(tmp)
-        os.replace(tmp, path)
-    return full.drop("input_digest")
+    if cache_dir is not None and write_cache:
+        save_sim_cache(full, cache_dir, version)
+    return full

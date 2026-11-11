@@ -110,8 +110,14 @@ def test_epa_traj_game_without_pbp_is_absent():
     assert with_g7.select(cols).equals(without.select(cols))
 
 
+def _real_codes(rows):
+    """derive_games runs the season simulator, which needs franchises with a division."""
+    code = {"A": "BUF", "B": "MIA", "C": "NE"}
+    return [(*r[:5], code[r[5]], code[r[6]], *r[7:]) for r in rows]
+
+
 def test_epa_traj_zero_without_pbp():
-    feats = derive_games(make_games(ROWS), weights={"elo": 1.0})["features"]
+    feats = derive_games(make_games(_real_codes(ROWS)), weights={"elo": 1.0})["features"]
     assert "epa_traj" in feats.columns and (feats["epa_traj"] == 0.0).all()
 
 
@@ -185,5 +191,5 @@ def test_qb_week0_zero():
 
 
 def test_qb_without_pbp():
-    feats = derive_games(make_games(QB_ROWS), weights={"elo": 1.0})["features"]
+    feats = derive_games(make_games(_real_codes(QB_ROWS)), weights={"elo": 1.0})["features"]
     assert (feats["qb_trend"] == 0.0).all() and not feats["qb_new"].any() and feats["qb_name"].null_count() == feats.height

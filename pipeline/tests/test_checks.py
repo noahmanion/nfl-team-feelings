@@ -7,6 +7,7 @@ from fgs import checks, cli, season_config
 from fgs.cli import derive
 from fgs.ingest import load_schedules
 from fgs.paths import CACHE_DIR
+from conftest import derive_inputs
 
 
 @pytest.fixture(scope="module")
@@ -25,7 +26,7 @@ def real_raw(real_cache):
 
 @pytest.fixture(scope="module")
 def real_derived(real_raw):
-    return derive(real_raw, **cli.cached_inputs())
+    return derive(real_raw, **derive_inputs())
 
 
 def test_columns(real_raw):
@@ -150,8 +151,30 @@ def test_pbp_coverage_real(real_derived, real_raw):
 
 
 def test_pbp_coverage_skipped_without_pbp(real_raw):
-    d = derive(real_raw, scored=False)
+    d = derive(real_raw, scored=False, sim_cache_dir=derive_inputs()["sim_cache_dir"])
     assert dict(checks.run_checks(real_raw, d))["pbp_coverage"] == []
+
+
+def test_sim_sums_real(real_derived, real_raw):
+    assert real_derived["sim"] is not None
+    assert dict(checks.run_checks(real_raw, real_derived))["sim_sums"] == []
+
+
+def test_sim_sums_tampered(real_derived):
+    sim = real_derived["sim"]
+    s, w = 2010, 5
+    hit = (pl.col("season") == s) & (pl.col("week") == w) & (pl.col("franchise_id") == "BUF")
+    bad = sim.with_columns(pl.when(hit).then(pl.col("playoff_prob") + 0.01).otherwise(pl.col("playoff_prob")).alias("playoff_prob"))
+    fails = checks.check_sim(bad, real_derived["games"])
+    assert fails == [f"{s} week {w}: playoff_prob sums to {season_config.playoff_teams(s) + 0.01:.6f}, expected 12"]
+    worse = bad.with_columns(pl.when(hit).then(pl.col("exp_wins") - 1).otherwise(pl.col("exp_wins")).alias("exp_wins"))
+    assert len(checks.check_sim(worse, real_derived["games"])) == 2
+
+
+def test_sim_sums_skip_synthetic(synthetic_games):
+    d = cli.derive_games(synthetic_games, scored=False)
+    bad = d["sim"].with_columns(pl.col("playoff_prob") * 0)
+    assert checks.check_sim(bad, d["games"]) == []  # 4-team league: not a real season shape
 
 
 def test_week_date_order(real_derived):

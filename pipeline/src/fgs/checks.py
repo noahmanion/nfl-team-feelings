@@ -267,6 +267,33 @@ def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[st
     return out
 
 
+SIM_P_TOL = 1e-6
+SIM_W_TOL = 1e-3
+
+
+def check_sim(sim: pl.DataFrame, games: pl.DataFrame) -> list[str]:
+    """Per (season, week): playoff probabilities sum to the season's playoff spots and expected
+    wins sum to its REG game count. Seasons whose team count differs from the configured league
+    size (synthetic leagues) are skipped."""
+    present = dict(_season_teams(games).group_by("season").len().iter_rows())
+    reg = dict(games.filter(pl.col("is_reg")).group_by("season").len().iter_rows())
+    sums = (
+        sim.group_by("season", "week")
+        .agg(pl.col("playoff_prob").sum().alias("sp"), pl.col("exp_wins").sum().alias("sw"))
+        .sort("season", "week")
+    )
+    out = []
+    for s, w, sp, sw in sums.iter_rows():
+        if present.get(s) != season_config.n_teams(s):
+            continue
+        spots, n_reg = season_config.playoff_teams(s), reg.get(s, 0)
+        if abs(sp - spots) > SIM_P_TOL:
+            out.append(f"{s} week {w}: playoff_prob sums to {sp:.6f}, expected {spots}")
+        if abs(sw - n_reg) > SIM_W_TOL:
+            out.append(f"{s} week {w}: exp_wins sums to {sw:.4f}, expected {n_reg} REG games")
+    return out
+
+
 # (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
 CheckFn = Callable[[pl.DataFrame, dict[str, pl.DataFrame], EloParams], list[str]]
 CHECKS: list[tuple[str, CheckFn]] = [
@@ -283,6 +310,7 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("snapshot_grid", lambda raw, d, p: check_snapshot_grid(d["snapshots"], d["games"])),
     ("pbp_coverage", lambda raw, d, p: [] if d.get("team_game_epa") is None
      else pbp.check_pbp(d["team_game_epa"], d["team_games"])),
+    ("sim_sums", lambda raw, d, p: [] if d.get("sim") is None else check_sim(d["sim"], d["games"])),
 ]
 
 

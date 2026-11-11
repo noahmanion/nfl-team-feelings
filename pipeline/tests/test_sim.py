@@ -9,6 +9,7 @@ import pytest
 from conftest import make_games
 from fgs import season_config as sc
 from fgs import sim
+from conftest import derive_inputs
 
 SEASON = 2023
 
@@ -207,7 +208,18 @@ def test_version_cache_incremental(monkeypatch, tmp_path):
     assert set(calls) == {2023}
     cold = sim.simulate_all(games2, snaps, n_sims=200)
     assert warm.equals(cold)
-    assert warm.columns == ["season", "week", "franchise_id", "playoff_prob", "exp_wins"]
+    assert warm.columns == ["season", "week", "franchise_id", "playoff_prob", "exp_wins", "input_digest"]
+
+
+def test_cache_write_deferred(tmp_path):
+    games, snaps = _two_seasons()
+    path = tmp_path / f"{sim.model_version(200, sim.SIGMA, sim.SEED)}.parquet"
+    out = sim.simulate_all(games, snaps, n_sims=200, cache_dir=tmp_path, write_cache=False)
+    assert not path.exists()  # read-only: refresh writes after the checks pass
+    assert out["input_digest"].n_unique() == 2
+    sim.save_sim_cache(out, tmp_path, sim.model_version(200, sim.SIGMA, sim.SEED))
+    assert pl.read_parquet(path).equals(out)
+    assert not list(tmp_path.glob("*.tmp"))
 
 
 # --- real data (skips without the schedules cache) ---
@@ -222,9 +234,9 @@ def real_sim():
     from fgs.cli import derive
     from fgs.ingest import load_schedules
 
-    d = derive(load_schedules(), scored=False)
+    d = derive(load_schedules(), scored=False, **derive_inputs())
     t = time.time()
-    out = sim.simulate_all(d["games"], d["snapshots"])
+    out = d["sim"]  # computed by derive (session sim cache)
     print(f"\nsimulate_all: {out.select('season', 'week').unique().height} snapshots in {time.time() - t:.1f}s")
     return d, out
 

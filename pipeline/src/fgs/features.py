@@ -26,6 +26,11 @@ the dev-only evaluation harness (leakage firewall).
                  EWMA (half-life 4) of his EPA/dropback over his own starts on any team, any
                  season; 0.0 for a QB with < 2 starts, at week 0, or without pbp_games. CONTEXT's
                  literal "QB form minus team season-to-date" was measured and logged (worse).
+- playoff_prob, exp_wins: the season simulator's (fgs.sim) playoff probability and expected final
+                 REG wins as of this snapshot (as-of features, not score factors); 0.0 without sim
+- exp_total, expectation_source: the team-season's preseason expectation (fgs.expectation):
+                 normalized Vegas win total ("vegas", 2003-2020) else the model's week-0 sim
+                 exp_wins ("model"); null without sim
 - qb_name, qb_new: display columns (not factors): the current QB's name (null at week 0 / no
                  pbp) and whether he has fewer than 2 starts (False without pbp)
 """
@@ -33,10 +38,11 @@ the dev-only evaluation harness (leakage firewall).
 import numpy as np
 import polars as pl
 
-from fgs import efficiency
+from fgs import efficiency, expectation
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend",
+                   "playoff_prob", "exp_wins"]
 GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
@@ -193,11 +199,30 @@ def _game_factors(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
     return _asof(snap, g, GAME_FACTORS)
 
 
+def _sim_columns(snap: pl.DataFrame, sim: pl.DataFrame | None, vegas: pl.DataFrame | None) -> pl.DataFrame:
+    if sim is None:
+        return snap.with_columns(
+            pl.lit(0.0).alias("playoff_prob"), pl.lit(0.0).alias("exp_wins"),
+            pl.lit(None, pl.Float64).alias("exp_total"), pl.lit(None, pl.String).alias("expectation_source"),
+        )
+    s = sim.select(
+        pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32), "franchise_id",
+        pl.col("playoff_prob").cast(pl.Float64), pl.col("exp_wins").cast(pl.Float64),
+    )
+    return (
+        snap.join(s, on=["season", "week", "franchise_id"], how="left")
+        .with_columns(pl.col("playoff_prob").fill_null(0.0), pl.col("exp_wins").fill_null(0.0))
+        .join(expectation.expectations(sim, vegas), on=["season", "franchise_id"], how="left")
+    )
+
+
 def build_features(
-    snapshots: pl.DataFrame, team_games: pl.DataFrame, *, pbp_games: pl.DataFrame | None = None
+    snapshots: pl.DataFrame, team_games: pl.DataFrame, *, pbp_games: pl.DataFrame | None = None,
+    sim: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
 ) -> pl.DataFrame:
-    """Snapshot rows (same height and keys) plus season_record, last16, pd_pg, the game factors
-    and the pbp factors (0.0 when pbp_games, the pbp.team_game_epa frame, is None). No nulls added."""
+    """Snapshot rows (same height and keys) plus season_record, last16, pd_pg, the game factors,
+    the pbp factors (0.0 when pbp_games, the pbp.team_game_epa frame, is None) and the sim columns
+    (sim = fgs.sim.simulate_all frame, vegas = expectation.vegas_expectations frame)."""
     snap = snapshots.with_columns(pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32))
     snap = snap.with_columns(pl.col("win_pct").fill_null(0.5).cast(pl.Float64).alias("season_record"))
     snap = _last16(snap, team_games)
@@ -210,4 +235,5 @@ def build_features(
         )
     else:
         snap = efficiency.epa_factors(snap, team_games, pbp_games)
+    snap = _sim_columns(snap, sim, vegas)
     return snap.sort("season", "week", "franchise_id")
