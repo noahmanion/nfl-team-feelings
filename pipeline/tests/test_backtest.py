@@ -293,3 +293,120 @@ def test_is_frozen_only_when_true(tmp_path):
     assert not is_frozen(p)
     with pytest.raises(ValueError, match="not found"):
         load_weights_doc(tmp_path / "missing.yaml")
+
+
+# ---------------------------------------------------------------------------
+# Offseason draft term: training-only walk-forward + gate (plan 07-03)
+# ---------------------------------------------------------------------------
+
+from fgs.backtest import _draft_fit, draft_gate, draft_walk_forward, format_draft_report  # noqa: E402
+
+
+def test_draft_gate_pitfall4_sign_vs_final():
+    g = draft_gate([0.1] * 12 + [-0.1] * 7, final_w=-0.25, d_wk0=0.0002)
+    assert g["weight"] == 0.0 and g["display_only"] is True
+    assert g["fold_sign_consistency"] == pytest.approx(7 / 19)
+    assert (g["k"], g["n"]) == (7, 19)
+
+
+def test_draft_gate_passes():
+    g = draft_gate([0.2] * 15 + [-0.1] * 4, final_w=0.18, d_wk0=0.001)
+    assert g["weight"] == 0.18 and g["display_only"] is False
+
+
+def test_draft_gate_needs_positive_delta():
+    g = draft_gate([0.3] * 19, final_w=0.3, d_wk0=-0.0001)
+    assert g["weight"] == 0.0 and g["display_only"] is True
+
+
+def test_draft_gate_needs_60pct_folds():
+    g = draft_gate([0.2] * 11 + [-0.2] * 8, final_w=0.2, d_wk0=0.01)
+    assert g["weight"] == 0.0 and g["display_only"] is True
+
+
+def _draft_synth(w=0.5, seed=3):
+    rng = np.random.default_rng(seed)
+    rows = []
+    for s in range(2000, 2022):
+        for wk in range(0, 6):
+            for t in range(32):
+                zd = float(rng.normal())
+                comp = float(rng.normal(0, 3))
+                dec = max(0.0, 1 - wk / 4)
+                rows.append((s, wk, f"T{t}", comp, comp + w * dec * zd, zd))
+    return pl.DataFrame(rows, schema=["season", "week", "franchise_id", "composite", "y8", "draft_z"],
+                        orient="row")
+
+
+def test_draft_fit_recovers_synthetic_weight():
+    res = _draft_fit(_draft_synth(0.5), list(range(2003, 2022)))
+    assert res["final"] == pytest.approx(0.5, abs=1e-9)
+    assert res["fold_seasons"] == list(range(2003, 2022))
+    assert all(fw == pytest.approx(0.5, abs=1e-9) for fw in res["fold_weights"])
+    assert res["delta_wk0"] > 0
+    g = draft_gate(res["fold_weights"], res["final"], res["delta_wk0"])
+    assert g["weight"] == 0.5 and not g["display_only"]
+
+
+def test_draft_fit_refuses_holdout_rows():
+    bad = pl.concat([_draft_synth(), _draft_synth().filter(pl.col("season") == 2021).with_columns(
+        pl.lit(2022).cast(pl.Int64).alias("season"))])
+    with pytest.raises(AssertionError):
+        _draft_fit(bad, list(range(2003, 2022)))
+
+
+def test_draft_report_contains_block():
+    res = _draft_fit(_draft_synth(-0.2), list(range(2003, 2022)))
+    res["winsor"] = [-17.29, 16.19]
+    g = draft_gate(res["fold_weights"], res["final"], res["delta_wk0"])
+    txt = format_draft_report(res, g, "2026-11-11")
+    assert "offseason:" in txt and "  draft:" in txt and "display_only: true" in txt
+    assert "winsor: [-17.29, 16.19]" in txt and "evidence: training-only walk-forward (no fresh holdout)" in txt
+    assert "| 2026-11-11 | draft |" in txt
+
+
+def test_draft_walk_forward_never_sees_holdout(real_derived, monkeypatch):
+    import fgs.backtest as bt
+    import fgs.draft as dr
+
+    _, derived = real_derived
+    if derived.get("draft") is None:
+        pytest.skip("no draft cache")
+    assert derived["snapshots"]["season"].max() > 2021  # the input does include later seasons
+    seen = []
+    orig_t, orig_z = bt.targets, dr.draft_z
+
+    def spy_t(team_games, snapshots, ns=(4, 8)):
+        seen.append(("targets", int(team_games["season"].max()), int(snapshots["season"].max())))
+        return orig_t(team_games, snapshots, ns)
+
+    def spy_z(surplus, winsor):
+        seen.append(("draft_z", int(surplus["season"].max())))
+        return orig_z(surplus, winsor)
+
+    monkeypatch.setattr(bt, "targets", spy_t)
+    monkeypatch.setattr(dr, "draft_z", spy_z)
+    res = draft_walk_forward(derived, load_weights())
+    assert seen and all(max(v[1:]) <= 2021 for v in seen)
+    assert res["fold_seasons"] == list(range(2003, 2022))
+    assert res["n_rows"] > 0 and len(res["winsor"]) == 2
+
+
+def test_draft_walk_forward_requires_draft_cache():
+    with pytest.raises(ValueError, match="draft cache missing"):
+        draft_walk_forward({"draft": None}, {"elo": 1.0})
+
+
+def test_cli_backtest_draft_refuses_include_holdout(capsys):
+    assert cli.main(["backtest", "--draft", "--include-holdout"]) == 1
+    assert "training-only" in capsys.readouterr().err
+
+
+def test_cli_backtest_draft_refuses_unfrozen(tmp_path, monkeypatch, capsys):
+    import fgs.paths
+
+    p = tmp_path / "w.yaml"
+    p.write_text("weights:\n  elo: 1.0\n")
+    monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", p)
+    assert cli.main(["backtest", "--draft"]) == 1
+    assert "freeze" in capsys.readouterr().err
