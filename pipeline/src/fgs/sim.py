@@ -34,6 +34,10 @@ from fgs import season_config as sc
 from fgs.elo import EloParams
 
 SIM_VERSION = "sim-v1"
+# WR-06: the cache key covers this module's source, so any edit to the simulator (tiebreaks,
+# noise, win-prob formula, _static) invalidates the cache without a manual SIM_VERSION bump.
+# Conservative: comment/docstring edits also re-simulate (one cold run).
+SIM_CODE_HASH = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 N_SIMS = 2000
 SIGMA = 100.0
 SEED = 20261111
@@ -189,6 +193,7 @@ def model_version(n_sims: int = N_SIMS, sigma: float = SIGMA, seed: int = SEED) 
         "sigma": float(sigma),
         "seed": int(seed),
         "sim": SIM_VERSION,
+        "code": SIM_CODE_HASH,
     }
     return _sha(payload)[:12]
 

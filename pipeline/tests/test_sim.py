@@ -161,6 +161,19 @@ def test_version_changes_with_params(monkeypatch):
     orig = sim.EloParams
     monkeypatch.setattr(sim, "EloParams", lambda: dataclasses.replace(orig(), k=25.0))
     assert sim.model_version() != base
+    monkeypatch.undo()
+    assert sim.model_version() == base
+
+
+def test_version_covers_simulator_source(monkeypatch):
+    """WR-06: editing the simulator code changes the cache key without a manual SIM_VERSION bump."""
+    import hashlib
+    from pathlib import Path
+
+    assert sim.SIM_CODE_HASH == hashlib.sha256(Path(sim.__file__).read_bytes()).hexdigest()
+    base = sim.model_version()
+    monkeypatch.setattr(sim, "SIM_CODE_HASH", "edited")
+    assert sim.model_version() != base
 
 
 def _two_seasons():
