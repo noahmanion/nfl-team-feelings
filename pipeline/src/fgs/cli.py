@@ -93,6 +93,9 @@ def _cmd_elo(args) -> int:
     if week < 0:
         print(f"week must be >= 0, got {week}", file=sys.stderr)
         return 1
+    if args.top is not None and args.top < 1:
+        print(f"--top must be >= 1, got {args.top}", file=sys.stderr)
+        return 1
     if week > latest_week:
         print(f"{season} week {week} not played yet; latest played week is {latest_week}", file=sys.stderr)
         return 1

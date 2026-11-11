@@ -72,6 +72,12 @@ def test_top_limits_rows_and_default_prints_all(derived, capsys):
     assert len(_rows(capsys.readouterr().out)) == 4
 
 
+@pytest.mark.parametrize("top", ["0", "-3"])
+def test_top_rejects_non_positive(derived, capsys, top):
+    assert cli.main(["elo", "--season", "2023", "--week", "1", "--top", top]) == 1
+    assert "--top must be >= 1" in capsys.readouterr().err
+
+
 def test_week0_uses_prior_data_and_lists_all_teams(derived, capsys):
     assert cli.main(["elo", "--season", "2024", "--week", "0"]) == 0
     out = capsys.readouterr().out
