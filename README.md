@@ -43,4 +43,15 @@ uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = pr
 - The reference set includes the current season, so a historical score can shift by 1 point after a refresh.
 - A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
+## Backtest target
+
+This target was written down before any score weights were fit. Weights get tuned against it, not the other way round.
+
+- **What it predicts.** For every team at every (season, week), the target is the mean **adjusted margin** over the team's next N games in the same season, regular season and playoffs. N = 8 is the headline number; N = 4 is reported too. Snapshots with fewer than 2 games left that season are skipped.
+- **Adjusted margin** = actual point margin + (opponent's pre-game Elo − 1505) / 25 − (signed home-field Elo) / 25. Home-field is +HFA at home, −HFA away, 0 at a neutral site. Beating a strong team on the road counts for more than beating a weak one at home.
+- **Only who you played and where.** The adjustment never uses the team's own rating. Subtracting your own Elo turns the target into "beat Elo's expectation", and then plain Elo scores a Spearman of about 0.02 instead of about 0.51 (research measurement, 2003–2021, N=8). That would make every rating look useless by construction.
+- **Metrics.** Spearman rank correlation and R² (squared Pearson) between the score and the target, pooled over test seasons and per season. Next-game Brier score is a secondary metric. Everything is also split into week 0, weeks 1–6, 7–12 and 13+ (including playoffs).
+- **Walk-forward by season.** Anything fit for test season S uses only earlier seasons. The first test season is 2003.
+- **Sealed holdout.** Seasons 2022–2025 are a holdout that `fgs backtest` only touches with `--include-holdout`. The 2026 season in progress is never a test season.
+
 **Status:** Phase 2 is done: an Elo-only mood board with week scrubbing and deep links. Next is Phase 3: the backtest harness and the additive score.

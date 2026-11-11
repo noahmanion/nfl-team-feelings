@@ -23,6 +23,20 @@ HFA_BY_ERA: tuple[tuple[int, int, float], ...] = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Backtest splits (Phase 3). All ranges are inclusive.
+#
+#   FIRST_TEST_SEASON  first walk-forward test season (fits use only earlier seasons)
+#   TRAIN_LAST_SEASON  last season any fit or default metric may see
+#   HOLDOUT_SEASONS    sealed; only `fgs backtest --include-holdout` touches them
+#   REF_SEASONS        frozen percentile reference set for the score (plan 03-03)
+# ---------------------------------------------------------------------------
+FIRST_TEST_SEASON = 2003
+TRAIN_LAST_SEASON = 2021
+HOLDOUT_SEASONS: tuple[int, int] = (2022, 2025)
+REF_SEASONS: tuple[int, int] = (1999, 2021)
+
+
 def hfa_for(season: int) -> float:
     # Single source of truth: HFA_BY_ERA (looked up at call time so tuning/monkeypatching takes effect).
     for lo, hi, hfa in HFA_BY_ERA:
