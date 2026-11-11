@@ -235,7 +235,7 @@ def blurb(row: dict, factor_keys: list[str], nick: str, week: int, preseason: st
 
 
 # --- draft capital (Phase 7, display text) -------------------------------------------------
-# Wording rule: it is capital over/under the ORIGINAL slots (trades), never "drafted well".
+# Wording rule: it is capital over/under the ORIGINAL slots (trades), never a verdict on draft quality.
 
 
 def draft_text(surplus: float | None, values: np.ndarray, moves_score: bool) -> str | None:

@@ -215,3 +215,49 @@ def test_no_harness_imports():
 
     code = Path(methodology.__file__).read_text()
     assert not re.search(r"^\s*(from|import)\s+[\w., ]*(backtest|freeze|holdout|bootstrap)", code, re.M)
+
+
+# --- Phase 7: the offseason draft note -------------------------------------------------------
+
+OFF0 = {"weight": 0.0, "display_only": True, "fitted": -0.25, "fold_sign": "7/19", "delta_wk0": 0.0002}
+
+
+def test_draft_note_weight_zero():
+    m = build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": OFF0}}, FREEZE, None, live=2026)
+    note = next(n for n in m["notes"] if n["key"] == "draft")
+    assert note["values"] == {"weight": 0.0, "fitted": -0.25, "fold_sign_k": 7, "fold_sign_of": 19, "delta_wk0": 0.0002}
+    t = note["text"]
+    assert "−0.25" in t and "7/19" in t and "+0.0002" in t
+    assert "training-only walk-forward (2003–2021)" in t and "2022–2025 holdout was already used" in t
+    assert "doesn’t move the score" in t
+    assert [f["key"] for f in m["factors"]] == list(WEIGHTS)  # display only: not a factor
+    assert all(isinstance(v, (int, float)) for v in note["values"].values())  # web Note.values is numeric
+    json.dumps(m, allow_nan=False)
+
+
+def test_draft_note_positive_weight_and_factor():
+    off = {**OFF0, "weight": 0.31, "display_only": False, "fitted": 0.31, "fold_sign": "15/19"}
+    m = build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": off}}, FREEZE, None, live=2026)
+    t = next(n for n in m["notes"] if n["key"] == "draft")["text"]
+    assert "+0.31 × the capped draft z to scores at week 0, fading to nothing by week 4" in t
+    assert "doesn’t move the score" not in t and "training-only" in t
+    f = m["factors"][-1]
+    assert f["key"] == "draft" and f["label"] == "Draft capital over slot" and f["weight"] == 0.31
+    assert f["fold_sign"] == {"k": 15, "of": 19} and f["sign"] == "+"
+
+
+def test_no_draft_note_without_offseason_block():
+    m = build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)
+    assert "draft" not in {n["key"] for n in m["notes"]}
+
+
+def test_real_draft_note_matches_weights_yaml():
+    doc, freeze, holdout = load_evidence()
+    block = (doc.get("offseason") or {}).get("draft")
+    if block is None:
+        pytest.skip("weights.yaml has no offseason.draft block")
+    m = build_methodology(dict(doc["weights"]), doc, freeze, holdout, live=2026)
+    v = next(n for n in m["notes"] if n["key"] == "draft")["values"]
+    k, n = (int(x) for x in block["fold_sign"].split("/"))
+    assert v == {"weight": block["weight"], "fitted": block["fitted"], "fold_sign_k": k, "fold_sign_of": n,
+                 "delta_wk0": block["delta_wk0"]}

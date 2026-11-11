@@ -143,6 +143,52 @@ def describe_weight(w: float, folds: tuple[int, int] | None) -> str:
     return f"{head} ({tail})"
 
 
+def _offseason_draft(doc: dict | None) -> dict | None:
+    """weights.yaml offseason.draft block (Phase 7) with its recorded evidence, or None."""
+    off = (doc or {}).get("offseason")
+    block = off.get("draft") if isinstance(off, dict) else None
+    return block if isinstance(block, dict) else None
+
+
+def _fold_pair(fs) -> tuple[int, int] | None:
+    """Recorded fold-sign agreement "k/n" (or [k, n]) -> (k, n)."""
+    if isinstance(fs, str) and "/" in fs:
+        k, n = fs.split("/", 1)
+        return int(k), int(n)
+    if isinstance(fs, (list, tuple)) and len(fs) == 2:
+        return int(fs[0]), int(fs[1])
+    return None
+
+
+def _draft_note(block: dict) -> dict:
+    """The 'draft' honest note: every number templated from weights.yaml offseason.draft."""
+    w = float(block.get("weight", 0.0))
+    fitted, delta = block.get("fitted"), block.get("delta_wk0")
+    folds = _fold_pair(block.get("fold_sign"))
+    values: dict[str, float] = {"weight": w}
+    parts = []
+    if fitted is not None:
+        values["fitted"] = float(fitted)
+        parts.append(f"The fitted weight was {fmt_weight(fitted)}")
+    if folds:
+        values["fold_sign_k"], values["fold_sign_of"] = folds
+        parts.append(f"{folds[0]}/{folds[1]} walk-forward folds agreed with its sign")
+    if delta is not None:
+        values["delta_wk0"] = float(delta)
+        parts.append(f"the week-0 change in Spearman was {fmt_delta(delta)}")
+    evidence = (", ".join(parts[:-1]) + ", and " + parts[-1]) if len(parts) > 1 else "".join(parts)
+    text = "Draft capital over original slots was tested as an offseason term on top of the frozen score."
+    if round(w, 2) == 0:
+        verdict = "it didn’t pass the gate and the draft doesn’t move the score (it’s shown as text only)"
+    else:
+        verdict = (f"it passed the gate: it adds {fmt_weight(w)} × the capped draft z to scores at week 0, "
+                   "fading to nothing by week 4")
+    text += f" {evidence}, so {verdict}." if evidence else f" So {verdict}."
+    text += (" This evidence is training-only walk-forward (2003–2021); the 2022–2025 holdout was already used "
+             "to judge the in-season score.")
+    return {"key": "draft", "text": text, "values": values}
+
+
 def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) -> list[dict]:
     notes: list[dict] = []
     labels = {k: score.FACTORS[k]["label"] for k in weights}
@@ -325,6 +371,10 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
         )
     notes.append({"key": "not_betting", "text": nb + ".", "values": nb_values})
 
+    od = _offseason_draft(doc)
+    if od is not None:
+        notes.append(_draft_note(od))
+
     if holdout is None:
         notes.append({"key": "holdout_pending", "text": HOLDOUT_PENDING, "values": {}})
     return notes
@@ -349,6 +399,20 @@ def build_methodology(weights: dict[str, float], doc: dict | None, freeze: dict 
             "fold_sign": {"k": folds[0], "of": folds[1]} if folds else None,
             "delta_spearman_n8": ff.get("delta_spearman_n8"),
             "baseline_spearman_n8": ff.get("baseline_spearman_n8"),
+        })
+
+    od = _offseason_draft(doc)
+    if od is not None and round(float(od.get("weight", 0.0)), 2) != 0:
+        # a live offseason term is a real score input: list it (never at weight 0, display only)
+        w = float(od["weight"])
+        rw = round(w, 2) + 0.0
+        folds = _fold_pair(od.get("fold_sign"))
+        factors.append({
+            "key": "draft", "label": score.OFFSEASON_FACTORS["draft"]["label"],
+            "description": score.OFFSEASON_FACTORS["draft"]["description"],
+            "weight": w, "sign": _sign(rw), "effect": _effect(rw),
+            "fold_sign": {"k": folds[0], "of": folds[1]} if folds else None,
+            "delta_spearman_n8": od.get("delta_wk0"), "baseline_spearman_n8": None,
         })
 
     walk_forward = None

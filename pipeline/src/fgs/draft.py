@@ -10,7 +10,7 @@ forfeits, and trailing extras in rounds 3-7 are compensatory picks (excluded fro
 
 So surplus measures capital gained or lost by TRADES (including picks spent on veterans), not draft
 position: a team that kept its own #1 pick has surplus exactly 0, and tanking is never rewarded.
-It does not say a team "drafted well"; text must say "over/under their original slots".
+It is not a verdict on draft quality; text must say "over/under their original slots".
 
 Chart: nflverse draft_values.csv `stuart` (AV-based). `otc` was checked: surplus from the two
 correlates at 0.98, and stuart is closer to slot-neutral (Spearman with slot -0.06 vs -0.09).

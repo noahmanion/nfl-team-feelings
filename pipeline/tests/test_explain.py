@@ -210,3 +210,67 @@ def test_blurb_random_rows_well_formed(seed):
         r[f"pts_{f}"] = int(rng.integers(-25, 26))
     out = blurb(r, FACTORS7, "Bills", int(rng.integers(0, 3)))
     assert out.endswith(".") and "0 straight" not in out and "1 straight" not in out
+
+
+# --- Phase 7: draft text + preseason draft lead ---------------------------------------------
+
+def _values() -> np.ndarray:
+    """A decreasing chart: 60 at pick 1, 16 at pick 20, 0.5 at pick 262."""
+    v = np.full(263, np.nan)
+    v[1:] = np.interp(np.arange(1, 263), [1, 20, 262], [60.0, 16.0, 0.5])
+    return v
+
+
+def test_draft_text_forms():
+    from fgs import draft
+
+    v = _values()
+    p = draft.equiv_pick(16.2, v)
+    noun = draft.pick_noun(p)
+    assert explain.draft_text(16.2, v, False) == \
+        f"Draft haul: +16 over their original slots (about one extra {noun}) — doesn't move the score."
+    out = explain.draft_text(-29.0, v, False)
+    assert out.startswith("Draft haul: −29 under their original slots (about one ")
+    assert out.endswith(" given up) — doesn't move the score.")
+    assert explain.draft_text(0.2, v, False) == "Draft haul: right at their original slots — doesn't move the score."
+    assert explain.draft_text(-0.4, v, True) == "Draft haul: right at their original slots."
+    live = explain.draft_text(16.2, v, True)
+    assert live.endswith("pick).") and "doesn't move" not in live
+    assert explain.draft_text(None, v, False) is None
+
+
+def test_draft_text_mid_first_round_example():
+    """The plan's example: +16 ~ one extra mid-first-round pick (chart value 16.2 at picks 16..24)."""
+    from fgs import draft
+
+    v = _values()
+    assert 16 <= draft.equiv_pick(16.2, v) <= 24
+    assert explain.draft_text(16.2, v, False) == \
+        "Draft haul: +16 over their original slots (about one extra mid-first-round pick) — doesn't move the score."
+
+
+def test_blurb_week0_draft_leads():
+    r = _row(z_elo=1.0, pts_elo=15)
+    plus = "Preseason, carrying last season's form plus extra draft capital: the Seahawks are a good team on paper."
+    minus = "Preseason, carrying last season's form minus some draft capital: the Seahawks are a good team on paper."
+    plain = "Preseason, carrying last season's form: the Seahawks are a good team on paper."
+    assert blurb({**r, "draft_surplus": 9.0}, FACTORS7, "Seahawks", 0, draft_threshold=9.0) == plus
+    assert blurb({**r, "draft_surplus": -12.0}, FACTORS7, "Seahawks", 0, draft_threshold=9.0) == minus
+    assert blurb({**r, "draft_surplus": 8.9}, FACTORS7, "Seahawks", 0, draft_threshold=9.0) == plain
+    assert blurb({**r, "draft_surplus": None}, FACTORS7, "Seahawks", 0, draft_threshold=9.0) == plain
+    assert blurb({**r, "draft_surplus": 30.0}, FACTORS7, "Seahawks", 0) == plain  # no threshold given
+    # other kinds and other weeks are untouched
+    assert blurb({**r, "draft_surplus": 30.0}, FACTORS7, "Cardinals", 0, "fresh", draft_threshold=9.0) == \
+        "Preseason: no history yet, so the Cardinals start even with everyone else."
+    assert blurb({**r, "draft_surplus": 30.0}, FACTORS7, "Texans", 0, "expansion", draft_threshold=9.0) == \
+        "Preseason: the Texans are an expansion team starting below average."
+    assert blurb({**r, "draft_surplus": 30.0}, FACTORS7, "Seahawks", 1, draft_threshold=9.0) == \
+        "The Seahawks are a good team on paper."
+
+
+def test_no_draft_quality_claims():
+    from pathlib import Path
+
+    src = (Path(explain.__file__)).read_text()
+    for bad in ("great draft", "drafted well"):
+        assert bad not in src
