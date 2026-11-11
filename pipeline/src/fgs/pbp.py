@@ -1,6 +1,7 @@
 """Play-by-play: slim per-season cache (I/O) and per-team-game EPA aggregates (pure)."""
 
 from collections.abc import Iterable
+from datetime import timedelta
 from pathlib import Path
 
 import polars as pl
@@ -132,13 +133,46 @@ def team_game_epa(p: pl.DataFrame) -> pl.DataFrame:
     return out.select(TGE_COLUMNS).sort("game_id", "franchise_id")
 
 
+PBP_LAG_DAYS = 3  # nflverse posts schedule results hours to days before the pbp release is rebuilt
+
+
+def _missing_pbp(tge: pl.DataFrame, team_games: pl.DataFrame) -> tuple[list[str], list[str]]:
+    """Played games without pbp (minus KNOWN_NO_PBP), split into (hard gaps, lagging).
+
+    Lagging (WR-02) = a current-season game (the latest season with a played game) played within
+    PBP_LAG_DAYS of that season's latest played gameday, or any current-season game when the
+    pbp has no current-season games at all (release not posted yet). The window is relative to
+    the data, not the wall clock, so the split is reproducible. team_games without season/gameday
+    columns (synthetic frames) treat every gap as hard."""
+    played_tg = team_games.filter(pl.col("played"))
+    played = set(played_tg["game_id"].to_list())
+    have = set(tge["game_id"].to_list())
+    missing = played - have - KNOWN_NO_PBP
+    lag: set[str] = set()
+    if missing and {"season", "gameday"} <= set(played_tg.columns):
+        g = played_tg.select("game_id", "season", pl.col("gameday").cast(pl.String).str.to_date(strict=False))
+        current = g["season"].max()
+        cur = g.filter(pl.col("season") == current)
+        cur_ids = set(cur["game_id"].to_list())
+        if not cur_ids & have:
+            lag = missing & cur_ids
+        else:
+            latest = cur["gameday"].max()
+            if latest is not None:
+                lo = latest - timedelta(days=PBP_LAG_DAYS)
+                lag = missing & set(cur.filter(pl.col("gameday") >= lo)["game_id"].to_list())
+    return sorted(missing - lag), sorted(lag)
+
+
 def check_pbp(tge: pl.DataFrame, team_games: pl.DataFrame) -> list[str]:
-    """Coverage: every played game has pbp (except KNOWN_NO_PBP), every pbp game is a played
-    schedule game, and every pbp team-game has both an offense and a defense EPA."""
+    """Coverage: every played game has pbp (except KNOWN_NO_PBP and the lagging current-season
+    games reported by pbp_lag), every pbp game is a played schedule game, and every pbp
+    team-game has both an offense and a defense EPA."""
     out: list[str] = []
     played = set(team_games.filter(pl.col("played"))["game_id"].to_list())
     have = set(tge["game_id"].to_list())
-    for g in sorted(played - have - KNOWN_NO_PBP):
+    hard, _ = _missing_pbp(tge, team_games)
+    for g in hard:
         out.append(f"{g}: played game has no pbp")
     for g in sorted(have - played):
         out.append(f"{g}: pbp game is not a played schedule game")
@@ -148,3 +182,11 @@ def check_pbp(tge: pl.DataFrame, team_games: pl.DataFrame) -> list[str]:
     if nulls.height > 10:
         out.append(f"... {nulls.height} team-games with null off/def EPA in total")
     return out
+
+
+def pbp_lag(tge: pl.DataFrame, team_games: pl.DataFrame) -> list[str]:
+    """Warnings (never failures): recent current-season games whose pbp is not released yet.
+    Their efficiency factors use the pbp that is available (a game without pbp is absent from
+    the EPA sequence, not 0) until a later refresh picks the pbp up."""
+    _, lag = _missing_pbp(tge, team_games)
+    return [f"{g}: played game has no pbp yet (pbp release lags the schedule)" for g in lag]

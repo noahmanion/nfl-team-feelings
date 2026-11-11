@@ -170,6 +170,41 @@ def test_check_pbp_flags_null_off_def():
     assert any("BUF" in f and "null" in f for f in fails)
 
 
+def _tg_dated(rows):
+    """team_games with season/gameday: rows = (game_id, season, gameday)."""
+    return pl.DataFrame(
+        [dict(game_id=g, season=s, gameday=d, franchise_id=t, played=True) for g, s, d in rows for t in ("AAA", "BBB")]
+    )
+
+
+def test_pbp_lag_recent_current_season_gap_warns_not_fails():
+    """WR-02: a current-season game played within PBP_LAG_DAYS of the latest played gameday and
+    missing from pbp is a warning; an older current-season gap still fails."""
+    t = pbp.team_game_epa(_synthetic())  # has G1 (2001) and G2 (2000)
+    tg = _tg_dated([
+        (G2, 2000, "2000-09-03"), (G1, 2001, "2001-09-09"),
+        ("2001_02_NE_NYJ", 2001, "2001-09-16"),  # 7 days before latest -> hard gap
+        ("2001_03_NE_MIA", 2001, "2001-09-21"),  # 2 days before latest -> lagging
+        ("2001_03_BUF_IND", 2001, "2001-09-23"),  # latest -> lagging
+    ])
+    fails = pbp.check_pbp(t, tg)
+    assert fails == ["2001_02_NE_NYJ: played game has no pbp"]
+    warns = pbp.pbp_lag(t, tg)
+    assert len(warns) == 2 and all("no pbp yet" in w for w in warns)
+    assert any("2001_03_NE_MIA" in w for w in warns) and any("2001_03_BUF_IND" in w for w in warns)
+
+
+def test_pbp_lag_missing_current_season_file_warns():
+    """No current-season pbp at all (file not released yet): every current-season gap warns."""
+    t = pbp.team_game_epa(_synthetic()).filter(pl.col("season") == 2000)
+    tg = _tg_dated([(G2, 2000, "2000-09-03"), (G1, 2001, "2001-09-09"), ("2001_05_NE_MIA", 2001, "2001-10-07")])
+    assert pbp.check_pbp(t, tg) == []
+    assert len(pbp.pbp_lag(t, tg)) == 2
+    # a prior-season gap is never lagging
+    tg_old = _tg_dated([(G2, 2000, "2000-09-03"), ("2000_02_NE_MIA", 2000, "2000-09-10"), (G1, 2001, "2001-09-09")])
+    assert pbp.check_pbp(pbp.team_game_epa(_synthetic()), tg_old) == ["2000_02_NE_MIA: played game has no pbp"]
+
+
 # --- real cache --------------------------------------------------------------------------
 
 @pytest.fixture(scope="module")

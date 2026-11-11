@@ -325,5 +325,21 @@ def run_checks(
     return [(name, fn(raw, derived, params)) for name, fn in CHECKS]
 
 
+# Soft checks (WR-02): same signature as CHECKS, but their messages are printed as warnings and
+# never fail `fgs check` / `fgs refresh`.
+WARNINGS: list[tuple[str, CheckFn]] = [
+    ("pbp_lag", lambda raw, d, p: [] if d.get("team_game_epa") is None
+     else pbp.pbp_lag(d["team_game_epa"], d["team_games"])),
+]
+
+
+def run_warnings(
+    raw: pl.DataFrame, derived: dict[str, pl.DataFrame], params: EloParams | None = None
+) -> list[tuple[str, list[str]]]:
+    """Per-warning results, in WARNINGS order."""
+    params = params or EloParams()
+    return [(name, fn(raw, derived, params)) for name, fn in WARNINGS]
+
+
 def run_all(raw: pl.DataFrame, derived: dict[str, pl.DataFrame], params: EloParams | None = None) -> list[str]:
     return [f"{name}: {msg}" for name, fails in run_checks(raw, derived, params) for msg in fails]

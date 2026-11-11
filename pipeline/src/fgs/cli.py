@@ -113,7 +113,13 @@ def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     raw = load_schedules(refresh=refresh)
     seasons = pbp_seasons(raw)
     current = seasons[-1]
-    plays = load_all_pbp(seasons, CACHE_DIR, refresh_seasons=[current] if refresh else ())
+    try:
+        plays = load_all_pbp(seasons, CACHE_DIR, refresh_seasons=[current] if refresh else ())
+    except Exception as e:  # noqa: BLE001 - WR-02: current-season pbp release missing/unavailable
+        print(f"warning: pbp download failed ({type(e).__name__}: {e}); building without new "
+              f"{current} pbp", file=sys.stderr)
+        keep = [s for s in seasons if s != current or s in cached_seasons(CACHE_DIR)]
+        plays = load_all_pbp(keep, CACHE_DIR)
     tge = team_game_epa(plays)
     vegas = vegas_expectations(load_win_totals())  # frozen file, downloaded once
     out = derive(raw, pbp_games=tge, vegas=vegas, sim_cache_dir=sim_cache_dir())
@@ -226,6 +232,8 @@ def _checked_derive(
         if name == "columns":
             continue  # already reported above
         failed |= _report(name, fails)
+    for name, warns in checks.run_warnings(raw, derived, params):
+        _warn(name, warns)
     print("FAILED" if failed else "all checks passed")
     return not failed, derived, params
 
@@ -234,6 +242,19 @@ def _cmd_check(args) -> int:
     raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
     ok, _, _ = _checked_derive(raw, **cached_inputs(), sim_cache_dir=sim_cache_dir())
     return 0 if ok else 1
+
+
+def _download_pbp(season: int, cache_dir) -> pl.DataFrame | None:
+    """In-memory pbp download for refresh; None (with a warning) when the release is missing or
+    unavailable (WR-02: e.g. the current season's file before its first game is processed). The
+    caller falls back to the cached season, else builds without it; pbp_coverage still fails
+    hard for any non-lagging gap that leaves."""
+    try:
+        return load_pbp_season(season, refresh=True, cache_dir=cache_dir, write_cache=False)
+    except Exception as e:  # noqa: BLE001 - any download failure degrades to a warning
+        print(f"warning: {season} pbp download failed ({type(e).__name__}: {e}); "
+              "using the cached season if any", file=sys.stderr)
+        return None
 
 
 def _cmd_refresh(args) -> int:
@@ -251,11 +272,19 @@ def _cmd_refresh(args) -> int:
     # Only the current season is re-downloaded; earlier seasons come from the cache. Any that
     # are missing are downloaded in memory too and saved with the rest after checks pass.
     have = set(cached_seasons(cache_dir))
-    fetched = {s: load_pbp_season(s, refresh=True, cache_dir=cache_dir, write_cache=False)
-               for s in seasons if s == current or s not in have}
-    cached = [s for s in seasons if s not in fetched]
+    fetched: dict[int, pl.DataFrame] = {}
+    cached: list[int] = []
+    for s in seasons:
+        if s == current or s not in have:
+            df = _download_pbp(s, cache_dir)
+            if df is not None:
+                fetched[s] = df
+            elif s in have:
+                cached.append(s)  # download failed: keep the last good cached season
+        else:
+            cached.append(s)
     frames = ([load_all_pbp(cached, cache_dir, write_cache=False)] if cached else []) + list(fetched.values())
-    tge = team_game_epa(pl.concat(frames, how="diagonal_relaxed"))
+    tge = team_game_epa(pl.concat(frames, how="diagonal_relaxed")) if frames else None
     # Vegas comes from the real cache (frozen file; never downloaded here). The sim cache is read
     # but only written after every check passes, so only changed seasons are re-simulated.
     vegas = _cached_vegas(cache_dir)
@@ -320,6 +349,17 @@ def _report(name: str, fails: list[str]) -> bool:
     for msg in fails:
         print(f"      - {msg}")
     return bool(fails)
+
+
+def _warn(name: str, warns: list[str], limit: int = 10) -> None:
+    """Print soft-check warnings (never fail). Silent when there are none."""
+    if not warns:
+        return
+    print(f"{'warn':<4}  {name}")
+    for msg in warns[:limit]:
+        print(f"      - {msg}")
+    if len(warns) > limit:
+        print(f"      - ... {len(warns)} in total")
 
 
 def main(argv: list[str] | None = None) -> int:

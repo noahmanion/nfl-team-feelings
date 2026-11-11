@@ -214,6 +214,33 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     assert "all checks passed" in out and re.search(r"refreshed in \d+\.\ds: exported", out)
 
 
+def test_refresh_tolerates_missing_current_season_pbp(refresh_dirs, monkeypatch, capsys):
+    """WR-02: the current season's pbp download fails (release not posted / lagging the schedule).
+    Refresh still succeeds: the lagging games are a warning, not a failed check, and nothing is
+    written for the season that failed to download."""
+    from fgs import pbp
+    from fgs.paths import CACHE_DIR
+
+    if not pbp.cached_seasons(CACHE_DIR):
+        pytest.skip("no pbp cache")
+    raw, teams = _cached_inputs()
+    monkeypatch.setattr(cli, "load_schedules", lambda **kw: raw)
+    monkeypatch.setattr(cli, "load_teams", lambda **kw: teams)
+    current = _current(raw)
+    _mock_pbp(monkeypatch, current)
+
+    def missing(season, **kw):
+        raise FileNotFoundError(f"no pbp release for {season}")
+
+    monkeypatch.setattr(cli, "load_pbp_season", missing)
+    assert cli.main(["refresh"]) == 0
+    cap = capsys.readouterr()
+    assert "pbp download failed" in cap.err
+    assert "warn  pbp_lag" in cap.out and "all checks passed" in cap.out
+    cache_dir = refresh_dirs[2]
+    assert not (cache_dir / "pbp" / f"{current}.parquet").exists()
+
+
 def test_refresh_recomputes_only_current_season(refresh_dirs, monkeypatch, capsys):
     """Warm the tmp sim cache as of last week (current season's latest played week unplayed),
     then refresh: only the current season is re-simulated, once per snapshot week."""
