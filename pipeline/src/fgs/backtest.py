@@ -366,10 +366,10 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     """Baselines vs the locked target, walk-forward by season. Seasons past the last test season
     (2021 by default) are dropped before any metric or fit, so the holdout stays sealed."""
     seasons = test_seasons(include_holdout)
-    last = seasons[-1]
-    snaps = derived["snapshots"].filter(pl.col("season") <= last)
-    team_games = derived["team_games"].filter(pl.col("season") <= last)
-    games = derived["games"].filter(pl.col("season") <= last)
+    last_season = seasons[-1]
+    snaps = derived["snapshots"].filter(pl.col("season") <= last_season)
+    team_games = derived["team_games"].filter(pl.col("season") <= last_season)
+    games = derived["games"].filter(pl.col("season") <= last_season)
 
     feats = _z_frame(snaps, team_games)
     full = feats.join(targets(team_games, snaps, NS), on=KEYS, how="left").sort(KEYS)
@@ -381,10 +381,10 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     ridge_meta: dict[str, dict] = {}
     pred_cols = []
     for name, factors in RIDGE_SETS.items():
-        pred, bs, bn, last = _ridge_walk_forward(full, ngz, seasons, factors)
+        pred, bs, bn, last_fold = _ridge_walk_forward(full, ngz, seasons, factors)
         col = f"pred_{name}"
         pred_cols.append(pl.Series(col, pred, dtype=pl.Float64).fill_nan(None))
-        ridge_meta[name] = {"col": col, "brier": bs, "brier_n": bn, "factors": factors, "last_fold": last}
+        ridge_meta[name] = {"col": col, "brier": bs, "brier_n": bn, "factors": factors, "last_fold": last_fold}
     full = full.with_columns(pred_cols)
 
     df = full.filter(pl.col("season").is_in(seasons)).with_columns(bucket_expr().alias("bucket"))
