@@ -193,8 +193,26 @@ Plans:
   3. The final score beats the plain-Elo baseline out of sample on the documented target.
   4. User can open a methodology page that explains each factor, shows the fitted weights and signs, and charts the backtest against the baselines.
 
-**Plans**: TBD
+**Plans**: 5 plans
 **UI hint**: yes
+
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Commit PREREGISTRATION.md first (model, pass rule, CIs, verdict wording, vs_exp diagnostic) + pure paired bootstrap module
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 06-02-PLAN.md — `fgs freeze` (fold signs, Δ, walk-forward CIs) + refit guards; run it, commit frozen weights.yaml + FREEZE_RESULT.json
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 06-03-PLAN.md — Holdout evaluator + guarded `fgs holdout`, tested only on the 2018–2021 stand-in and mocks
+- [ ] 06-04-PLAN.md — methodology.json (holdout: null) + `#/methodology` page, nav link, dot-and-whisker charts
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 06-05-PLAN.md — ONE-TIME `fgs holdout` run, commit HOLDOUT_RESULT.md/.json, re-export, README verdict
 
 ### Phase 7: Draft-Aware Offseason
 
