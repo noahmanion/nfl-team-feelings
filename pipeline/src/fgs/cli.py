@@ -1,10 +1,11 @@
-"""`fgs` command line: ingest, build, elo."""
+"""`fgs` command line: ingest, build, elo, check."""
 
 import argparse
 import sys
 
 import polars as pl
 
+from fgs import checks
 from fgs.elo import replay
 from fgs.games import build_games, build_team_games
 from fgs.ingest import load_schedules
@@ -66,6 +67,30 @@ def _cmd_elo(args) -> int:
     return 0
 
 
+def _cmd_check(args) -> int:
+    raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
+    failed = False
+    for name, fails in (("columns", checks.check_columns(raw)), ("codes", checks.check_codes(raw))):
+        failed |= _report(name, fails)
+    if failed:
+        print("raw data failed pre-derive checks; not deriving")
+        return 1
+    derived = derive(raw)
+    for name, fails in checks.run_checks(raw, derived):
+        if name == "columns":
+            continue  # already reported above
+        failed |= _report(name, fails)
+    print("FAILED" if failed else "all checks passed")
+    return 1 if failed else 0
+
+
+def _report(name: str, fails: list[str]) -> bool:
+    print(f"{'FAIL' if fails else 'ok':<4}  {name}")
+    for msg in fails:
+        print(f"      - {msg}")
+    return bool(fails)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="fgs", description="Feel-good score pipeline")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -85,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--week", type=int, required=True)
     p.add_argument("--top", type=int, default=None, help="show only the top N teams")
     p.set_defaults(func=_cmd_elo)
+
+    p = sub.add_parser("check", help="run all data-trust checks; exit 1 on any failure")
+    p.set_defaults(func=_cmd_check)
 
     args = parser.parse_args(argv)
     return args.func(args)
