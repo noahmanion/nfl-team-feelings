@@ -140,3 +140,28 @@ def test_sow_hand_computed(synthetic_games):
     assert _v(f, 2023, 1, "NE", "sow") == pytest.approx(n1)
     assert _v(f, 2023, 2, "NE", "sow") == pytest.approx((n1 + n2) / 2)
     assert _v(f, 2023, 3, "NE", "sow") == pytest.approx((n1 + n2) / 2)  # bye carries
+
+
+def test_streak_hand_computed(synthetic_games):
+    f = _feats(synthetic_games)
+    for team in ("BUF", "MIA", "NE", "NYJ"):
+        assert _v(f, 2023, 0, team, "streak") == 0.0
+    for (s, w, v) in [(2023, 1, 1), (2023, 2, 2), (2023, 3, 2), (2023, 19, 3), (2024, 0, 3), (2024, 1, 4)]:
+        assert _v(f, s, w, "BUF", "streak") == v
+    for (s, w, v) in [(2023, 1, 0), (2023, 2, -1), (2024, 1, 1)]:
+        assert _v(f, s, w, "NE", "streak") == v
+    for (s, w, v) in [(2023, 1, 0), (2023, 2, -1), (2023, 3, -2), (2024, 1, -3), (2024, 2, 1)]:
+        assert _v(f, s, w, "NYJ", "streak") == v
+
+
+def test_streak_caps_and_resets():
+    # A beats B weeks 1-10, B wins week 11, tie week 12.
+    rows = [(f"g{w}", 2023, w, "REG", f"2023-09-{w:02d}", "A", "B", 20, 10, False) for w in range(1, 11)]
+    rows.append(("g11", 2023, 11, "REG", "2023-09-11", "A", "B", 10, 20, False))
+    rows.append(("g12", 2023, 12, "REG", "2023-09-12", "A", "B", 10, 10, False))
+    f = _feats(make_games(rows))
+    assert _v(f, 2023, 10, "A", "streak") == 8
+    assert _v(f, 2023, 10, "B", "streak") == -8
+    assert _v(f, 2023, 11, "A", "streak") == -1
+    assert _v(f, 2023, 11, "B", "streak") == 1
+    assert _v(f, 2023, 12, "A", "streak") == 0

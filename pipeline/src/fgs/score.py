@@ -37,6 +37,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "description": "Results over the last 8 games compared with what an average team would do against the same opponents; "
         "given Elo and margins, results running ahead of margins tend to fade, so a high value lowers the score",
     },
+    "streak": {
+        "label": "Streak",
+        "description": "Current win or loss streak (ties end it), up to 8, carried across seasons; "
+        "given the other factors a hot streak tends to fade, so it slightly lowers the score",
+    },
 }
 
 SNAPSHOT = ("season", "week")

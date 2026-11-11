@@ -239,6 +239,7 @@ RIDGE_SETS = {
     "ridge:+last16": ["elo", "season_record", "last16"],
     "ridge:+mov": ["elo", "season_record", "last16", "mov"],
     "ridge:+sow": ["elo", "season_record", "last16", "mov", "sow"],
+    "ridge:+streak": ["elo", "season_record", "last16", "mov", "sow", "streak"],
 }
 PROPOSAL_FACTORS = RIDGE_SETS[list(RIDGE_SETS)[-1]]
 FIT_TARGET = "y8"

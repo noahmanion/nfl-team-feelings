@@ -15,17 +15,21 @@ the dev-only evaluation harness (leakage firewall).
 - sow:           mean over the last 8 played games of (result - p_avg), result 1/0.5/0 and
                  p_avg the chance a league-average (MEAN_ELO) team beats that opponent (its
                  pre-game Elo) at that venue; 0.0 with no games
+- streak:        signed current streak (+k after k straight wins, -k after k straight losses),
+                 a tie resets it to 0, capped at +/-8, carried across seasons; 0.0 with no games
 """
 
+import numpy as np
 import polars as pl
 
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow"]
-GAME_FACTORS = ["mov", "sow"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak"]
+GAME_FACTORS = ["mov", "sow", "streak"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
 SOW_N = 8
+STREAK_CAP = 8
 
 
 def _last16(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
@@ -137,8 +141,30 @@ def _asof(snap: pl.DataFrame, per_key: pl.DataFrame, cols: list[str]) -> pl.Data
     )
 
 
+def _streak(fid: np.ndarray, outcome: np.ndarray) -> np.ndarray:
+    """Sequential signed streak per franchise (rows already sorted by franchise, then as-of order)."""
+    out = np.zeros(len(outcome), dtype=float)
+    cur, prev = 0, None
+    for i, (f, o) in enumerate(zip(fid, outcome)):
+        if f != prev:
+            cur, prev = 0, f
+        if o == 1:
+            cur = max(cur, 0) + 1
+        elif o == 0:
+            cur = min(cur, 0) - 1
+        else:
+            cur = 0
+        cur = max(-STREAK_CAP, min(STREAK_CAP, cur))
+        out[i] = cur
+    return out
+
+
 def _game_factors(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
-    g = _per_game(team_games).with_columns(
+    g = _per_game(team_games)
+    g = g.with_columns(
+        pl.Series("streak", _streak(g["franchise_id"].to_numpy(), g["outcome"].cast(pl.Float64).to_numpy()))
+    )
+    g = g.with_columns(
         (_win("m_cap", MOV_N) / _cnt(MOV_N)).alias("mov"),
         (_win("sow_g", SOW_N) / _cnt(SOW_N)).alias("sow"),
     )
