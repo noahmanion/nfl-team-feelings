@@ -7,7 +7,9 @@
 # How these numbers were produced:
 #   command: uv run fgs backtest --propose-weights   (2026-11-11)
 #   fit:     ridge on the per-snapshot z-scores, unpenalized intercept, alpha chosen by
-#            leave-one-season-out CV (picked alpha = 0.001 * n), n = 12331 snapshots
+#            leave-one-season-out CV (picked alpha = 0.01 * n; it was 0.001 * n before vs_exp
+#            joined: the correlated season_record/vs_exp pair moved CV to more shrinkage, so
+#            every weight shifted once, e.g. elo 3.50 -> 2.59), n = 12331 snapshots
 #   seasons: 1999-2021 only; the 2022-2025 holdout was never read
 #   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
 #   then rounded to 2 decimals by hand. Code proposes; this file decides.
@@ -22,6 +24,7 @@
 #   luck    - close-game wins and losses are mostly coin flips, so they even out
 #   epa_traj - given the rest, an efficiency upswing slightly fades; trajectory has ≈0 backtest
 #              gain; kept per CONTEXT; the data sets its weight
+#   vs_exp  - ≈ season_record minus preseason expectation; read the pair together (corr 0.92)
 #
 # last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
 # record tends to run ahead of real strength, so it predicts slightly worse future margins.
@@ -45,13 +48,20 @@
 #
 # qb_trend: current starting QB's recent EPA/dropback; positive (+0.63). Given everything else,
 # a QB playing well predicts better future margins (0 for a QB with under 2 starts / week 0).
+#
+# vs_exp (win % so far minus the preseason expectation's pace) is negative (-1.24) while
+# season_record rises 0.59 -> 1.83: the two correlate 0.92, so a team ahead of its record's
+# expectations gets a big + season_record bar and a moderate - vs_exp bar. Beating
+# expectations tends to fade (expectations usually catch up).
+# vs_exp's signal is Vegas-driven (2003–2020); 2021+ rows are model-sourced; Phase 6 holdout measures the cost
 weights:
-  elo: 3.50
-  season_record: 0.59
-  last16: -0.41
-  mov: 1.19
-  sow: -0.94
-  streak: -0.15
-  luck: -0.28
-  epa_traj: -0.23
+  elo: 2.59
+  season_record: 1.83
+  last16: -0.19
+  mov: 1.24
+  sow: -0.56
+  streak: -0.05
+  luck: -0.35
+  epa_traj: -0.33
   qb_trend: 0.63
+  vs_exp: -1.24
