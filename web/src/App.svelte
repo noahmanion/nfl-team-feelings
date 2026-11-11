@@ -79,16 +79,23 @@
 
   // Bad or reserved links fall back to #/; bad ones also get a dismissible notice.
   // An unknown team goes to the board (with a notice); a bad season/week goes to the team's latest page.
+  // The notice belongs to that one redirect: any other successful route clears it, so it can't
+  // reappear on a later visit to the latest board.
   $effect(() => {
     if (!meta) return
     const r = route.current
     if (r.kind === 'reserved') {
       replace('#/')
+    } else if (r.kind === 'history') {
+      notice = null
     } else if (r.kind === 'team') {
       if (!validTeam(meta, r.team)) {
         replace('#/')
         notice = TEAM_NOTICE
-      } else if (r.season !== undefined && r.week !== undefined && !validTeamWeek(meta, r.season, r.week)) {
+        return
+      }
+      notice = null
+      if (r.season !== undefined && r.week !== undefined && !validTeamWeek(meta, r.season, r.week)) {
         replace(teamHash(r.team))
       }
     } else if (r.kind === 'invalid' || (r.kind === 'board' && !validBoard(meta, r))) {
