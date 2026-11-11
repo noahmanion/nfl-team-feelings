@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  connectors,
   contrastRatio,
   currentPoint,
   lowPoint,
@@ -110,5 +111,42 @@ describe('lowPoint / currentPoint', () => {
   it('unknown team is null', () => {
     expect(lowPoint(h, 'ZZZ')).toBeNull()
     expect(currentPoint(h, 'ZZZ')).toBeNull()
+  })
+})
+
+describe('connectors', () => {
+  const { xs } = toRows(h)
+  it('bridges each season boundary from the last snapshot of S to week 0 of S+1', () => {
+    expect(connectors(h, xs)).toEqual([
+      { team: 'AAA', x1: 2, y1: 60, x2: 4, y2: 40 },
+      { team: 'BBB', x1: 2, y1: 35, x2: 4, y2: 90 },
+    ])
+  })
+  it('filters to one team', () => {
+    expect(connectors(h, xs, 'AAA')).toEqual([{ team: 'AAA', x1: 2, y1: 60, x2: 4, y2: 40 }])
+  })
+  it('handles missing ends', () => {
+    const g: HistoryFile = {
+      keys: ['2000-0', '2000-1', '2000-2', '2001-0', '2001-1'],
+      teams: {
+        NOW0: [10, 20, 30, null, 5], // week 0 of S+1 missing -> none
+        LAST: [10, 20, null, 40, 5], // last key of S missing -> starts at 2000-1
+        GONE: [null, null, null, 40, 5], // all of S missing -> none
+      },
+    }
+    const gx = toRows(g).xs
+    expect(connectors(g, gx)).toEqual([{ team: 'LAST', x1: 1, y1: 20, x2: 4, y2: 40 }])
+  })
+  it('gives one segment per boundary across three seasons', () => {
+    const g: HistoryFile = {
+      keys: ['2000-0', '2000-1', '2001-0', '2001-1', '2002-0'],
+      teams: { AAA: [1, 2, 3, 4, 5], BBB: [6, 7, 8, 9, 10] },
+    }
+    const out = connectors(g, toRows(g).xs)
+    expect(out.filter((c) => c.team === 'AAA')).toEqual([
+      { team: 'AAA', x1: 1, y1: 2, x2: 3, y2: 3 },
+      { team: 'AAA', x1: 4, y1: 4, x2: 6, y2: 5 },
+    ])
+    expect(out.filter((c) => c.team === 'BBB')).toHaveLength(2)
   })
 })

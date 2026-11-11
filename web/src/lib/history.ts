@@ -35,6 +35,32 @@ export function toRows(h: HistoryFile): { rows: ChartRow[]; xs: number[]; xMax: 
   return { rows, xs, xMax: xs.length ? xs[xs.length - 1] : 0 }
 }
 
+export interface Connector { team: string; x1: number; y1: number; x2: number; y2: number }
+
+/**
+ * One segment per team per season boundary: from the team's last non-null score of season S
+ * (searched within S only) to week 0 of S+1. No segment when either end is missing.
+ * toRows keeps its NaN gap; these are drawn on top as the dashed offseason move.
+ */
+export function connectors(h: HistoryFile, xs: number[], team?: string): Connector[] {
+  const out: Connector[] = []
+  for (const [t, scores] of Object.entries(h.teams)) {
+    if (team && t !== team) continue
+    for (let i = 1; i < h.keys.length; i++) {
+      const prevSeason = seasonOf(h.keys[i - 1])
+      if (seasonOf(h.keys[i]) === prevSeason) continue
+      let a = i - 1
+      while (a >= 0 && seasonOf(h.keys[a]) === prevSeason && scores[a] == null) a--
+      if (a < 0 || seasonOf(h.keys[a]) !== prevSeason) continue
+      const y1 = scores[a]
+      const y2 = scores[i]
+      if (y1 == null || y2 == null) continue
+      out.push({ team: t, x1: xs[a], y1, x2: xs[i], y2 })
+    }
+  }
+  return out
+}
+
 /** x of each season's first key, in key order. */
 export function seasonStarts(h: HistoryFile, xs: number[]): SeasonStart[] {
   const out: SeasonStart[] = []

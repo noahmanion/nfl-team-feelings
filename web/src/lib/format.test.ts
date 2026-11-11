@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   bandIndex,
   carryWeek,
+  changeText,
   formatDate,
   formatDateOnly,
   formatDelta,
@@ -111,5 +112,21 @@ describe('tickLabel', () => {
     expect(tickLabel(18, s)).toBe('Wk 18')
     expect(tickLabel(19, s)).toBe('WC')
     expect(tickLabel(22, s)).toBe('SB')
+  })
+})
+
+describe('changeText', () => {
+  it('frames week 0 vs the end of last season', () => {
+    expect(changeText({ score_delta: 5, rank_delta: 2 }, 0)).toBe('Up 5 points, up 2 spots vs end of last season.')
+    expect(changeText({ score_delta: -1, rank_delta: 0 }, 0)).toBe('Down 1 point, same spot vs end of last season.')
+    expect(changeText({ score_delta: 0, rank_delta: 0 }, 0)).toBe('No change from the end of last season.')
+  })
+  it('null week-0 delta (first season, expansion, older data) reads as preseason', () => {
+    expect(changeText({ score_delta: null, rank_delta: null }, 0)).toBe('No change, preseason.')
+  })
+  it('keeps in-season wording', () => {
+    expect(changeText({ score_delta: -1, rank_delta: -1 }, 3)).toBe('Down 1 point, down 1 spot from last week.')
+    expect(changeText({ score_delta: 0, rank_delta: 0 }, 3)).toBe('No change from last week.')
+    expect(changeText({ score_delta: 0, rank_delta: 3 }, 3)).toBe('Same score, up 3 spots from last week.')
   })
 })

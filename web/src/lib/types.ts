@@ -6,13 +6,32 @@ export interface SeasonMeta { season: number; max_week: number; reg_weeks: numbe
 export interface FactorMeta { key: string; label: string; weight: number; description: string }
 export interface Meta { version: number; score_kind: string; generated_at: string; data_through: string;
   latest: { season: number; week: number }; partial_week: boolean; seasons: SeasonMeta[];
-  bands: Band[]; hysteresis: number; teams: Record<string, TeamMeta>; factors?: FactorMeta[]; baseline?: number }
+  bands: Band[]; hysteresis: number; teams: Record<string, TeamMeta>; factors?: FactorMeta[]; baseline?: number
+  /** Offseason (draft) settings (07-04). */
+  offseason?: { draft: { weight: number; display_only: boolean; chart: string; decay: number[] } } }
+/** Draft capital vs original slots, week-0 rows only (07-04). */
+export interface DraftInfo {
+  /** Stuart chart points vs original slots, 1 dp (signed). */
+  surplus: number
+  /** Capped, per-draft z, 2 dp. */
+  z: number
+  /** 1..262 */
+  equiv_pick: number
+  /** 1 = most capital over slot in that draft. */
+  rank: number
+  /** Full display sentence, generated in the pipeline. */
+  text: string
+  /** True only when offseason.draft.weight != 0. */
+  moves_score: boolean
+}
 export interface Row { franchise: string; rank: number; score: number; elo: number | null; band: number; label: string; emoji: string;
   wins: number; losses: number; ties: number; score_delta: number | null; rank_delta: number | null; contribs?: Record<string, number>;
   /** Integer points per factor; baseline + Σpoints === score (04-01). */
   points?: Record<string, number>; blurb?: string;
   /** Simulated playoff odds, integer 0–100 (actual result 100/0 once the regular season is over); null without sims (05-05). */
-  playoff_prob?: number | null; expectation_source?: 'vegas' | 'model' | null; qb?: string | null }
+  playoff_prob?: number | null; expectation_source?: 'vegas' | 'model' | null; qb?: string | null
+  /** Week-0 rows only; null when not derivable (e.g. 1999) (07-04). */
+  draft?: DraftInfo | null }
 export interface WeekFile { season: number; week: number; rows: Row[] }
 export interface SeasonFile { season: number; weeks: Record<string, Row[]> }
 export interface HistoryFile { keys: string[]; teams: Record<string, (number | null)[]> }

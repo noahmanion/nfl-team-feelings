@@ -1,4 +1,4 @@
-import type { Band, SeasonMeta } from './types'
+import type { Band, Row, SeasonMeta } from './types'
 
 // Fallback only: the pipeline emits week_labels per season (labels come from game_type there).
 const POSTSEASON = ['Wild Card', 'Divisional', 'Conference Championships', 'Super Bowl']
@@ -32,6 +32,25 @@ export type DeltaDir = 'up' | 'down' | 'none'
 export function formatDelta(value: number | null | undefined): { text: string; dir: DeltaDir } {
   if (value == null || !Number.isFinite(value) || value === 0) return { text: '–', dir: 'none' }
   return value > 0 ? { text: `▲ ${value}`, dir: 'up' } : { text: `▼ ${Math.abs(value)}`, dir: 'down' }
+}
+
+const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
+
+/**
+ * Board change sentence (screen-reader text). In season: vs last week. At week 0 the deltas
+ * are vs the franchise's last snapshot of the prior season (07-04); null there (first season,
+ * expansion team, or older data) reads as "No change, preseason."
+ */
+export function changeText(r: Pick<Row, 'score_delta' | 'rank_delta'>, week: number): string {
+  if (!isNum(r.score_delta)) return 'No change, preseason.'
+  const pre = week === 0
+  const sd = r.score_delta
+  const rd = isNum(r.rank_delta) ? r.rank_delta : 0
+  if (sd === 0 && rd === 0) return pre ? 'No change from the end of last season.' : 'No change from last week.'
+  const score = sd > 0 ? `Up ${plural(sd, 'point')}` : sd < 0 ? `Down ${plural(-sd, 'point')}` : 'Same score'
+  const rank = rd > 0 ? `up ${plural(rd, 'spot')}` : rd < 0 ? `down ${plural(-rd, 'spot')}` : 'same spot'
+  return `${score}, ${rank}${pre ? ' vs end of last season.' : ' from last week.'}`
 }
 
 const dateTime = new Intl.DateTimeFormat('en-US', {
