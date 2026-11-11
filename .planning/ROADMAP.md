@@ -199,7 +199,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 06-01-PLAN.md — Commit PREREGISTRATION.md first (model, pass rule, CIs, verdict wording, vs_exp diagnostic) + pure paired bootstrap module
+- [x] 06-01-PLAN.md — Commit PREREGISTRATION.md first (model, pass rule, CIs, verdict wording, vs_exp diagnostic) + pure paired bootstrap module
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -258,6 +258,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
-| 6. Weight Freeze & Methodology | 0/TBD | Not started | - |
+| 6. Weight Freeze & Methodology | 1/5 | In Progress|  |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
 | 8. Callouts, Records & My Team | 0/TBD | Not started | - |
