@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 import time
 from datetime import datetime, timezone
@@ -378,6 +379,32 @@ POST_HOLDOUT_MSG = ("refitting after the holdout breaks the pre-registration (pi
 SEALED_MSG = "the 2022–2025 holdout is sealed until the one-time `fgs holdout` result exists"
 
 
+def _holdout_artifacts(include_derived: bool = True) -> list:
+    """Existing one-time holdout result files. Either committed file (HOLDOUT_RESULT.md or .json)
+    counts as "already evaluated", so a lost or failed .md write can't re-open the holdout (WR-01)."""
+    cands = [paths.HOLDOUT_MD_PATH, paths.HOLDOUT_JSON_PATH]
+    if include_derived:
+        cands.append(DERIVED_DIR / "holdout.json")  # module global read at call time (tests monkeypatch it)
+    return [p for p in cands if p.exists()]
+
+
+def _write_atomic(pairs: list) -> None:
+    """Write every (path, text) to a temp file first, then os.replace them all, so a failed render or
+    write can't leave one result file without the other."""
+    tmps = []
+    try:
+        for path, text in pairs:
+            tmp = path.with_name(path.name + ".tmp")
+            tmp.write_text(text)
+            tmps.append((tmp, path))
+    except BaseException:
+        for tmp, _ in tmps:
+            tmp.unlink(missing_ok=True)
+        raise
+    for tmp, path in tmps:
+        os.replace(tmp, path)
+
+
 def _weights_frozen() -> bool:
     """score.is_frozen() on paths.WEIGHTS_PATH; a missing/unreadable file is not frozen."""
     try:
@@ -392,7 +419,7 @@ def _cmd_backtest(args) -> int:
     if args.propose_weights and _weights_frozen():
         print(f"error: {FROZEN_MSG}", file=sys.stderr)
         return 1
-    if args.include_holdout and not paths.HOLDOUT_MD_PATH.exists():
+    if args.include_holdout and not _holdout_artifacts(include_derived=False):
         print(f"error: {SEALED_MSG}", file=sys.stderr)
         return 1
     incomplete = _incomplete_refresh_msg()
@@ -423,7 +450,7 @@ def _fmt_ci(ci) -> str:
 def _cmd_freeze(args) -> int:
     """Fit the final weights on 1999-2021 once and freeze weights.yaml + FREEZE_RESULT.json."""
     # Guards first, before any data load.
-    if paths.HOLDOUT_MD_PATH.exists():
+    if _holdout_artifacts():
         print(f"error: {POST_HOLDOUT_MSG}", file=sys.stderr)
         return 1
     if _weights_frozen() and not args.unfreeze:
@@ -461,15 +488,16 @@ def _cmd_freeze(args) -> int:
     return 0
 
 
-ALREADY_HOLDOUT_MSG = ("the holdout was already evaluated once (pipeline/HOLDOUT_RESULT.md); re-running it breaks "
+ALREADY_HOLDOUT_MSG = ("the holdout was already evaluated once (pipeline/HOLDOUT_RESULT.md/.json); re-running it breaks "
                        "the pre-registration. --force exists but don't.")
 
 
 def _cmd_holdout(args) -> int:
     """ONE-TIME: evaluate the frozen weights on the sealed 2022-2025 holdout (PREREGISTRATION.md).
     Every guard runs before any data load."""
-    if paths.HOLDOUT_MD_PATH.exists() and not args.force:
-        print(f"error: {ALREADY_HOLDOUT_MSG}", file=sys.stderr)
+    existing = _holdout_artifacts()
+    if existing and not args.force:
+        print(f"error: {ALREADY_HOLDOUT_MSG} ({', '.join(map(str, existing))})", file=sys.stderr)
         return 1
     if not _weights_frozen():
         print("error: weights.yaml is not frozen; run `fgs freeze` first", file=sys.stderr)
@@ -503,9 +531,14 @@ def _cmd_holdout(args) -> int:
     result = holdout.evaluate_frozen(derived, weights, HOLDOUT_SEASONS, TRAIN_LAST_SEASON,
                                      weights_doc=doc, allow_holdout=True)
 
+    # Any previous result is recorded in reruns (only reachable with --force, given the guard above).
     prev = None
-    if args.force and paths.HOLDOUT_JSON_PATH.exists():
-        prev = json.loads(paths.HOLDOUT_JSON_PATH.read_text())
+    for p in (paths.HOLDOUT_JSON_PATH, DERIVED_DIR / "holdout.json"):
+        if p.exists():
+            prev = json.loads(p.read_text())
+            break
+    if prev is None and paths.HOLDOUT_MD_PATH.exists():
+        prev = {"evaluated_at": None, "verdict": None}  # only the .md survived; still a rerun
     result["evaluated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     result["provenance"] = {
         "weights_sha256": holdout.file_sha256(paths.WEIGHTS_PATH),
@@ -521,12 +554,11 @@ def _cmd_holdout(args) -> int:
                         if prev is not None else [])
 
     body = json.dumps(result, allow_nan=False, indent=1) + "\n"
-    paths.HOLDOUT_JSON_PATH.write_text(body)
-    paths.HOLDOUT_MD_PATH.write_text(holdout.render_markdown(result))
+    md = holdout.render_markdown(result)  # render before writing anything
     out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it
     out_dir.mkdir(parents=True, exist_ok=True)
     derived_path = out_dir / "holdout.json"
-    derived_path.write_text(body)
+    _write_atomic([(paths.HOLDOUT_JSON_PATH, body), (paths.HOLDOUT_MD_PATH, md), (derived_path, body)])
 
     d = result["diff"]["spearman_n8"]
     sp = result["spearman_n8"]

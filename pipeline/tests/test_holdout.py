@@ -399,6 +399,21 @@ def test_holdout_guard_already_evaluated(holdout_paths, capsys):
     assert "already evaluated" in capsys.readouterr().err
 
 
+def test_holdout_guard_json_only(holdout_paths, capsys):
+    # WR-01: a surviving HOLDOUT_RESULT.json (e.g. the .md write failed or was deleted) still refuses
+    (holdout_paths / "HOLDOUT_RESULT.json").write_text("{}\n")
+    assert cli.main(["holdout"]) == 1
+    err = capsys.readouterr().err
+    assert "already evaluated" in err and "HOLDOUT_RESULT.json" in err
+
+
+def test_holdout_guard_derived_only(holdout_paths, capsys):
+    (holdout_paths / "derived").mkdir()
+    (holdout_paths / "derived" / "holdout.json").write_text("{}\n")
+    assert cli.main(["holdout"]) == 1
+    assert "already evaluated" in capsys.readouterr().err
+
+
 def test_holdout_guard_not_frozen(holdout_paths, capsys):
     (holdout_paths / "weights.yaml").write_text(FROZEN_YAML.replace("frozen: true", "frozen: false"))
     assert cli.main(["holdout"]) == 1
@@ -504,6 +519,31 @@ def test_holdout_force_records_rerun(happy, capsys):
     assert second["rerun"] is True
     assert second["reruns"] == [{"evaluated_at": first["evaluated_at"], "verdict": first["verdict"]}]
     assert "## Reruns" in (root / "HOLDOUT_RESULT.md").read_text()
+
+
+def test_holdout_force_records_rerun_when_md_missing(happy):
+    # WR-01: the previous result is recorded from the JSON even if the .md is gone
+    root, _ = happy
+    assert cli.main(["holdout"]) == 0
+    first = json.loads((root / "HOLDOUT_RESULT.json").read_text())
+    (root / "HOLDOUT_RESULT.md").unlink()
+    assert cli.main(["holdout"]) == 1
+    assert cli.main(["holdout", "--force"]) == 0
+    second = json.loads((root / "HOLDOUT_RESULT.json").read_text())
+    assert second["rerun"] is True and second["reruns"][-1]["evaluated_at"] == first["evaluated_at"]
+
+
+def test_holdout_render_failure_writes_nothing(happy, monkeypatch):
+    root, _ = happy
+
+    def bad_render(result):
+        raise RuntimeError("render failed")
+
+    monkeypatch.setattr(holdout, "render_markdown", bad_render)
+    with pytest.raises(RuntimeError, match="render failed"):
+        cli.main(["holdout"])
+    assert not (root / "HOLDOUT_RESULT.json").exists() and not (root / "HOLDOUT_RESULT.md").exists()
+    assert not list(root.glob("*.tmp"))
 
 
 def test_holdout_opt_in_only_in_cli():

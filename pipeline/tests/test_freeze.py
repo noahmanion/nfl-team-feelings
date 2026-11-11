@@ -219,6 +219,7 @@ def guard_paths(tmp_path, monkeypatch):
     holdout = tmp_path / "HOLDOUT_RESULT.md"
     monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", weights)
     monkeypatch.setattr(fgs.paths, "HOLDOUT_MD_PATH", holdout)
+    monkeypatch.setattr(fgs.paths, "HOLDOUT_JSON_PATH", tmp_path / "HOLDOUT_RESULT.json")
     monkeypatch.setattr(fgs.paths, "FREEZE_RESULT_PATH", tmp_path / "FREEZE_RESULT.json")
     monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path / "derived")
 
@@ -243,6 +244,13 @@ def test_guard_freeze_refused_when_frozen(guard_paths, capsys):
 
 def test_guard_unfreeze_refused_after_holdout(guard_paths, capsys):
     (guard_paths / "HOLDOUT_RESULT.md").write_text("# done\n")
+    assert cli.main(["freeze", "--unfreeze"]) == 1
+    assert "pre-registration" in capsys.readouterr().err
+
+
+def test_guard_unfreeze_refused_after_holdout_json_only(guard_paths, capsys):
+    # WR-01: either result file closes the freeze, not just the .md
+    (guard_paths / "HOLDOUT_RESULT.json").write_text("{}\n")
     assert cli.main(["freeze", "--unfreeze"]) == 1
     assert "pre-registration" in capsys.readouterr().err
 
