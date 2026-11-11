@@ -159,4 +159,6 @@ export function currentPoint(h: HistoryFile, team: string): Point | null {
   return null
 }
 
-export const defaultTeam = (latestRows: Row[]): string | undefined => latestRows[0]?.franchise
+/** My team when it is on the latest board, else the top team. */
+export const defaultTeam = (latestRows: Row[], myTeam?: string | null): string | undefined =>
+  (myTeam && latestRows.some((r) => r.franchise === myTeam) ? myTeam : undefined) ?? latestRows[0]?.franchise
