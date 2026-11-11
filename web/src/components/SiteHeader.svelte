@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Sep from './Sep.svelte'
+
   // 'team': neither nav link is the current page.
   let { current = 'board' }: { current?: 'board' | 'history' | 'team' } = $props()
 </script>
@@ -9,7 +11,7 @@
   <p class="subhead">Every NFL team, ranked by how good their fans should feel right now.</p>
   <nav aria-label="Views">
     <a href="#/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
-    <span class="sep" aria-hidden="true">·</span>
+    <Sep />
     <a href="#/history" aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a>
   </nav>
 </header>
@@ -35,7 +37,7 @@
   nav {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     margin-top: var(--space-sm);
   }
   nav a {
@@ -59,9 +61,6 @@
   nav a:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
-  }
-  .sep {
-    color: var(--text-muted);
   }
   @media (min-width: 1024px) {
     h1 {
