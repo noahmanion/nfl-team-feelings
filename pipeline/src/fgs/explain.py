@@ -129,6 +129,9 @@ FADE = {"hi": " (that tends to fade)", "lo": " (that tends to even out)"}
 STRONG = {"elo": 20}  # Elo dominates |points|, so its strong tier needs more
 STRONG_DEFAULT = 10
 PRESEASON = "Preseason, carrying last season's form: "
+# Week-0 kinds: "carry" (has a prior season in the data), "fresh" (first season in the data: no
+# history for anyone), "expansion" (first season of a seeded expansion/re-entry franchise).
+PRESEASON_KINDS = ("carry", "fresh", "expansion")
 
 
 def _record(row: dict) -> str:
@@ -156,8 +159,14 @@ def _phrase(row: dict, f: str, pts: int, week: int) -> str | None:
     return text
 
 
-def blurb(row: dict, factor_keys: list[str], nick: str, week: int) -> str:
-    """One deterministic plain-English sentence naming the row's top-2 drivers."""
+def blurb(row: dict, factor_keys: list[str], nick: str, week: int, preseason: str = "carry") -> str:
+    """One deterministic plain-English sentence naming the row's top-2 drivers.
+
+    At week 0, `preseason` says whether there is last-season form to talk about (see PRESEASON_KINDS)."""
+    if week == 0 and preseason == "expansion":
+        return f"Preseason: the {nick} are an expansion team starting below average."
+    if week == 0 and preseason == "fresh":
+        return f"Preseason: no history yet, so the {nick} start even with everyone else."
     order = sorted(range(len(factor_keys)), key=lambda i: (-abs(int(row[f"pts_{factor_keys[i]}"])), i))
     picks: list[tuple[str, int]] = []
     for i in order:

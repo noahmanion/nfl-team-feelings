@@ -15,6 +15,7 @@ import polars as pl
 from fgs import asof, explain, mood, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
+from fgs.season_config import SEEDS
 
 POSTSEASON = [("WC", "Wild Card"), ("DIV", "Divisional"), ("CON", "Conference Championships"), ("SB", "Super Bowl")]
 _HEX = re.compile(r"^#[0-9A-F]{6}$")
@@ -53,7 +54,14 @@ def _season_meta(season: int, snaps: pl.DataFrame, games: pl.DataFrame) -> dict:
     }
 
 
-def _row(r: dict, factor_keys: list[str], nicks: dict[str, str]) -> dict:
+def _preseason(r: dict, first_season: int) -> str:
+    """Week-0 blurb kind: seeded expansion/re-entry team, first season in the data, or carry-over."""
+    if (r["franchise_id"], int(r["season"])) in SEEDS:
+        return "expansion"
+    return "fresh" if int(r["season"]) == first_season else "carry"
+
+
+def _row(r: dict, factor_keys: list[str], nicks: dict[str, str], first_season: int) -> dict:
     return {
         "franchise": r["franchise_id"], "rank": int(r["rank"]), "score": int(r["score"]),
         "elo": int(round(r["elo"])), "band": int(r["band"]), "label": r["label"], "emoji": r["emoji"],
@@ -63,7 +71,10 @@ def _row(r: dict, factor_keys: list[str], nicks: dict[str, str]) -> dict:
         # + 0.0 turns -0.0 (negative weight * 0, or a tiny negative rounded) into 0.0
         "contribs": {k: round(float(r[f"contrib_{k}"]), 2) + 0.0 for k in factor_keys},
         "points": {k: int(r[f"pts_{k}"]) for k in factor_keys},
-        "blurb": explain.blurb(r, factor_keys, nicks.get(r["franchise_id"], r["franchise_id"]), int(r["week"])),
+        "blurb": explain.blurb(
+            r, factor_keys, nicks.get(r["franchise_id"], r["franchise_id"]), int(r["week"]),
+            _preseason(r, first_season),
+        ),
     }
 
 
@@ -127,12 +138,13 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
 
     files: dict[str, object] = {}
     seasons_meta = []
+    first_season = int(scored["season"].min())
     for season in sorted(scored["season"].unique().to_list()):
         snaps = scored.filter(pl.col("season") == season)
         seasons_meta.append(_season_meta(int(season), snaps, games))
         weeks: dict[str, list] = {}
         for r in snaps.iter_rows(named=True):
-            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks))
+            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks, first_season))
         files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks}
         files[f"games/{season}.json"] = _games_file(games, int(season))
 

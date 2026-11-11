@@ -135,6 +135,17 @@ def test_blurb_week0_lead_and_record_skipped():
     assert out == "Preseason, carrying last season's form: the Seahawks are a good team on paper."
 
 
+def test_blurb_week0_without_history():
+    r = _row(z_elo=1.0, pts_elo=15)
+    assert blurb(r, FACTORS7, "Cardinals", 0, "fresh") == \
+        "Preseason: no history yet, so the Cardinals start even with everyone else."
+    r = _row(z_elo=-3.0, pts_elo=-40)
+    assert blurb(r, FACTORS7, "Texans", 0, "expansion") == \
+        "Preseason: the Texans are an expansion team starting below average."
+    # only week 0 is special
+    assert blurb(r, FACTORS7, "Texans", 1, "expansion").startswith("The Texans are one of the worst")
+
+
 def test_blurb_record_phrase():
     r = _row(z_season_record=1.0, pts_season_record=12)
     assert blurb(r, FACTORS7, "Lions", 9) == "The Lions are 7-1."

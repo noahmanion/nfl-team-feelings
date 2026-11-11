@@ -18,7 +18,7 @@ from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
 from fgs.score import load_weights
-from fgs.season_config import n_teams
+from fgs.season_config import SEEDS, n_teams
 
 ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
             "wins", "losses", "ties", "score_delta", "rank_delta", "contribs", "points", "blurb"}
@@ -317,10 +317,15 @@ def test_points_sum_to_score(real_files):
 def test_blurbs(real_files):
     _, files = real_files
     lead0 = "Preseason, carrying last season's form: the "
+    first = min(int(s["season"]) for s in files["meta.json"]["seasons"])
     for season, week, r in _all_rows(files):
         b = r["blurb"]
         assert isinstance(b, str) and b and b.endswith("."), (season, week, r["franchise"], b)
-        if week == 0:
+        if week == 0 and (r["franchise"], season) in SEEDS:
+            assert b.endswith("are an expansion team starting below average."), b
+        elif week == 0 and season == first:
+            assert b.startswith("Preseason: no history yet, so the "), b
+        elif week == 0:
             assert b.startswith(lead0), b
         else:
             assert b.startswith("The ") and not b.startswith(lead0), b
