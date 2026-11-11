@@ -201,3 +201,12 @@ def test_vegas_coverage():
     fails = checks.check_vegas_coverage(games, None)
     assert len(fails) == 1 and "2003-2004" in fails[0]
     assert checks.check_vegas_coverage(pl.DataFrame({"season": [2023, 2024]}), None) == []
+
+
+def test_sim_coverage():
+    """WR-08: sim keys must equal snapshot keys."""
+    snaps = pl.DataFrame({"season": [2010, 2010, 2010], "week": [0, 0, 1], "franchise_id": ["A", "B", "A"]})
+    assert checks.check_sim_coverage(snaps, snaps) == []
+    fails = checks.check_sim_coverage(snaps.head(2), snaps)
+    assert fails == ["1 snapshot rows without a sim row, e.g. 2010 week 1 A"]
+    assert checks.check_sim_coverage(snaps, snaps.head(2)) == ["1 sim rows without a snapshot, e.g. 2010 week 1 A"]

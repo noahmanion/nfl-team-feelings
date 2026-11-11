@@ -223,14 +223,20 @@ def _sim_columns(snap: pl.DataFrame, sim: pl.DataFrame | None, vegas: pl.DataFra
     lag = s.select(
         "season", "franchise_id", pl.col("week").alias("lag_week"), pl.col("playoff_prob").alias("_p_lag"),
     )
+    j = snap.join(s, on=["season", "week", "franchise_id"], how="left")
+    # WR-08: a snapshot without a sim row is a bug (skipped week, digest/cache bug, franchise
+    # mismatch), not "0% odds": fail instead of silently scoring it as 0. The 0-fill below is
+    # only for the lagged value.
+    miss = j.filter(pl.col("playoff_prob").is_null() | pl.col("exp_wins").is_null())
+    if miss.height:
+        ex = miss.select("season", "week", "franchise_id").row(0)
+        raise ValueError(f"sim missing {miss.height} snapshot rows, e.g. {ex}")
     return (
-        snap.join(s, on=["season", "week", "franchise_id"], how="left")
-        .with_columns((pl.col("week") - PO_LAG).clip(lower_bound=0).cast(pl.Int32).alias("lag_week"))
+        j.with_columns((pl.col("week") - PO_LAG).clip(lower_bound=0).cast(pl.Int32).alias("lag_week"))
         .join(lag, on=["season", "franchise_id", "lag_week"], how="left")
-        # raw sim values; a missing current or lagged value -> 0.0 (CONTEXT MODEL-12)
+        # raw sim values; a missing lagged value -> 0.0 (CONTEXT MODEL-12)
         .with_columns((pl.col("playoff_prob") - pl.col("_p_lag")).fill_null(0.0).alias("po_trend"))
         .drop("lag_week", "_p_lag")
-        .with_columns(pl.col("playoff_prob").fill_null(0.0), pl.col("exp_wins").fill_null(0.0))
         .join(expectation.expectations(sim, vegas), on=["season", "franchise_id"], how="left")
         .with_columns(_vs_exp())
     )

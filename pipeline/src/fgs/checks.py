@@ -294,6 +294,21 @@ def check_sim(sim: pl.DataFrame, games: pl.DataFrame) -> list[str]:
     return out
 
 
+def check_sim_coverage(sim: pl.DataFrame, snapshots: pl.DataFrame) -> list[str]:
+    """WR-08: sim (season, week, franchise) keys == snapshot keys (check_sim only checks sums of
+    the rows that are present)."""
+    keys = ["season", "week", "franchise_id"]
+    k_sim = sim.select(pl.col("season").cast(pl.Int64), pl.col("week").cast(pl.Int64), "franchise_id").unique()
+    k_snap = snapshots.select(pl.col("season").cast(pl.Int64), pl.col("week").cast(pl.Int64), "franchise_id").unique()
+    out = []
+    for label, a, b in (("snapshot rows without a sim row", k_snap, k_sim), ("sim rows without a snapshot", k_sim, k_snap)):
+        d = a.join(b, on=keys, how="anti").sort(keys)
+        if d.height:
+            s, w, t = d.row(0)
+            out.append(f"{d.height} {label}, e.g. {s} week {w} {t}")
+    return out
+
+
 VEGAS_SEASONS = (2003, 2020)  # nflverse win_totals.csv coverage (expectation.py)
 
 
@@ -329,6 +344,7 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("pbp_coverage", lambda raw, d, p: [] if d.get("team_game_epa") is None
      else pbp.check_pbp(d["team_game_epa"], d["team_games"])),
     ("sim_sums", lambda raw, d, p: [] if d.get("sim") is None else check_sim(d["sim"], d["games"])),
+    ("sim_coverage", lambda raw, d, p: [] if d.get("sim") is None else check_sim_coverage(d["sim"], d["snapshots"])),
     ("vegas_coverage", lambda raw, d, p: check_vegas_coverage(d["games"], d.get("vegas"))),
 ]
 

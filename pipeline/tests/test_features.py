@@ -309,3 +309,10 @@ def test_po_trend_zero_without_sim():
     snaps, tg, _ = _po_inputs()
     f = build_features(snaps, tg)
     assert (f["po_trend"] == 0.0).all()
+
+
+def test_missing_sim_row_raises_not_zero():
+    """WR-08: a snapshot with no sim row must fail loudly, not score as 0% odds / 0 expected wins."""
+    snaps, tg, sim = _po_inputs()
+    with pytest.raises(ValueError, match=r"sim missing 1 snapshot rows, e\.g\. \(2003, 2, 'BUF'\)"):
+        build_features(snaps, tg, sim=sim.filter(~((pl.col("season") == 2003) & (pl.col("week") == 2))))
