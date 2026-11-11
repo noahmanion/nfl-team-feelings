@@ -1,0 +1,23 @@
+# Feel-good score weights: the single source of truth (read by fgs.score.load_weights).
+#
+# composite = sum over factors of weight * z, where z is the factor's z-score across the
+# teams in the same (season, week) snapshot. Units: points of opponent/venue-adjusted
+# margin per game (next 8 games) per standard deviation of the factor.
+#
+# How these numbers were produced:
+#   command: uv run fgs backtest --propose-weights   (2026-11-11)
+#   fit:     ridge on the per-snapshot z-scores, unpenalized intercept, alpha chosen by
+#            leave-one-season-out CV (picked alpha = 0.001 * n), n = 12331 snapshots
+#   seasons: 1999-2021 only; the 2022-2025 holdout was never read
+#   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
+#   then rounded to 2 decimals by hand. Code proposes; this file decides.
+#
+# The weekly refresh never refits these (BACK-04). Phase 6 refits once all factors exist.
+#
+# last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
+# record tends to run ahead of real strength, so it predicts slightly worse future margins.
+# No positivity constraint is applied. See pipeline/BACKTEST_LOG.md for each factor's delta.
+weights:
+  elo: 4.58
+  season_record: 0.63
+  last16: -1.25

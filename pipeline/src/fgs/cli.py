@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 import polars as pl
 
 from fgs import checks, export
-from fgs.backtest import format_report, run_backtest
+from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
@@ -191,6 +191,11 @@ def _cmd_backtest(args) -> int:
     path = out_dir / "backtest.json"
     path.write_text(json.dumps(report, allow_nan=False, indent=1) + "\n")
     print(f"\nwrote {path}")
+    if args.propose_weights:
+        prop = propose_weights(derived)  # always 1999-2021 only, even with --include-holdout
+        today = datetime.now(timezone.utc).date().isoformat()
+        print("\nproposed weights (paste into pipeline/weights.yaml; points of N=8 adjusted margin per SD):\n")
+        print(format_proposal(prop, today))
     return 0
 
 
@@ -233,6 +238,8 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("backtest", help="walk-forward backtest vs baselines; writes data/derived/backtest.json")
     p.add_argument("--include-holdout", action="store_true", help="Phase 6 only: also test 2022–2025")
+    p.add_argument("--propose-weights", action="store_true",
+                   help="also print ridge weights fit on 1999–2021 (N=8) as a weights.yaml block")
     p.set_defaults(func=_cmd_backtest)
 
     args = parser.parse_args(argv)

@@ -13,7 +13,10 @@ import numpy as np
 import polars as pl
 
 from fgs.features import build_features
-from fgs.season_config import FIRST_TEST_SEASON, HOLDOUT_SEASONS, MEAN_ELO, TRAIN_LAST_SEASON, hfa_for
+from fgs.score import zscore
+from fgs.season_config import (
+    FIRST_TEST_SEASON, HOLDOUT_SEASONS, MEAN_ELO, REF_SEASONS, TRAIN_LAST_SEASON, hfa_for,
+)
 
 KEYS = ["season", "week", "franchise_id"]
 
@@ -225,6 +228,137 @@ def _round(v):
 
 
 # ---------------------------------------------------------------------------
+# Ridge (closed form, standardized inputs, unpenalized intercept)
+# ---------------------------------------------------------------------------
+
+ALPHA_GRID = (0.0, 1e-3, 1e-2, 1e-1, 1.0)  # multiplied by n_train inside ridge_fit
+# candidate name -> factor set; inputs are the same per-snapshot z columns the score uses
+RIDGE_SETS = {
+    "ridge:elo": ["elo"],
+    "ridge:+season_record": ["elo", "season_record"],
+    "ridge:+last16": ["elo", "season_record", "last16"],
+}
+PROPOSAL_FACTORS = RIDGE_SETS["ridge:+last16"]
+FIT_TARGET = "y8"
+
+
+def ridge_fit(X, y, alpha: float) -> tuple[np.ndarray, float]:
+    """Solve (Xc'Xc + alpha*n*I) w = Xc'yc on centered data; intercept = ybar - xbar.w."""
+    X = np.asarray(X, dtype=float).reshape(len(y), -1)
+    y = np.asarray(y, dtype=float)
+    xm, ym = X.mean(0), y.mean()
+    Xc, yc = X - xm, y - ym
+    w = np.linalg.solve(Xc.T @ Xc + alpha * len(y) * np.eye(X.shape[1]), Xc.T @ yc)
+    return w, float(ym - xm @ w)
+
+
+def ridge_predict(w: np.ndarray, b: float, X) -> np.ndarray:
+    X = np.asarray(X, dtype=float)
+    return X.reshape(X.shape[0], -1) @ w + b
+
+
+def choose_alpha(X, y, seasons, grid=ALPHA_GRID) -> float:
+    """Leave-one-season-out CV inside the given training rows; minimizes pooled squared error."""
+    X = np.asarray(X, dtype=float).reshape(len(y), -1)
+    y = np.asarray(y, dtype=float)
+    seasons = np.asarray(seasons)
+    uniq = np.unique(seasons)
+    if len(uniq) < 2:
+        return float(grid[0])
+    best, best_sse = float(grid[0]), np.inf
+    for a in grid:
+        sse = 0.0
+        for s in uniq:
+            te = seasons == s
+            w, b = ridge_fit(X[~te], y[~te], a)
+            sse += float(np.sum((y[te] - ridge_predict(w, b, X[te])) ** 2))
+        if sse < best_sse - 1e-12:
+            best, best_sse = float(a), sse
+    return best
+
+
+def _z_frame(snaps: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
+    feats = build_features(snaps, team_games)
+    return zscore(feats, PROPOSAL_FACTORS)
+
+
+def propose_weights(derived: dict) -> dict:
+    """Ridge weights for weights.yaml, fit on seasons <= TRAIN_LAST_SEASON only (N=8 target).
+    Everything later is dropped before features, targets or fits are computed."""
+    lo, hi = REF_SEASONS[0], TRAIN_LAST_SEASON
+    snaps = derived["snapshots"].filter(pl.col("season") <= hi)
+    team_games = derived["team_games"].filter(pl.col("season") <= hi)
+    d = (
+        _z_frame(snaps, team_games)
+        .join(targets(team_games, snaps, (8,)), on=KEYS, how="left")
+        .filter(pl.col("season").is_between(lo, hi) & pl.col(FIT_TARGET).is_not_null())
+    )
+    X = d.select([f"z_{f}" for f in PROPOSAL_FACTORS]).to_numpy()
+    y = d[FIT_TARGET].to_numpy()
+    alpha = choose_alpha(X, y, d["season"].to_numpy())
+    w, b = ridge_fit(X, y, alpha)
+    return {
+        "weights": {f: float(v) for f, v in zip(PROPOSAL_FACTORS, w)},
+        "intercept": b,
+        "alpha": alpha,
+        "n": int(len(y)),
+        "seasons": [lo, hi],
+        "target": FIT_TARGET,
+    }
+
+
+def format_proposal(prop: dict, date: str) -> str:
+    """Ready-to-paste weights.yaml block (2-decimal weights)."""
+    lo, hi = prop["seasons"]
+    lines = [
+        f"# proposed {date} by `uv run fgs backtest --propose-weights`: ridge on z-scores, "
+        f"seasons {lo}-{hi}, target N=8 adjusted margin, alpha={prop['alpha']:g}*n, n={prop['n']}",
+        "weights:",
+    ]
+    lines += [f"  {f}: {round(v, 2):.2f}" for f, v in prop["weights"].items()]
+    return "\n".join(lines)
+
+
+def _ridge_walk_forward(df: pl.DataFrame, ng: pl.DataFrame, seasons: list[int], factors: list[str]):
+    """Per test season S: alpha by LOSO CV and ridge fit on rows with season < S and y8 present,
+    predict season S. Brier: logistic on (pred_h - pred_a, home_ind) fit on next-game rows < S
+    scored with the same fold's ridge. Returns (pred per df row, brier, brier_n, last fold info)."""
+    zc = [f"z_{f}" for f in factors]
+    X = df.select(zc).to_numpy()
+    y = df[FIT_TARGET].to_numpy().astype(float)
+    sea = df["season"].to_numpy()
+    has_y = ~np.isnan(y)
+    Xh = ng.select([f"h_{c}" for c in zc]).to_numpy()
+    Xa = ng.select([f"a_{c}" for c in zc]).to_numpy()
+    ng_sea = ng["season"].to_numpy()
+    home = ng["home_ind"].to_numpy()
+    ng_y = ng["y"].to_numpy()
+
+    pred = np.full(len(df), np.nan)
+    ps, ys, last = [], [], None
+    for S in seasons:
+        tr = has_y & (sea < S)
+        te = sea == S
+        if not tr.any() or not te.any():
+            continue
+        alpha = choose_alpha(X[tr], y[tr], sea[tr])
+        w, b = ridge_fit(X[tr], y[tr], alpha)
+        pred[te] = ridge_predict(w, b, X[te])
+        last = {"season": S, "alpha": alpha, "intercept": b, "weights": dict(zip(factors, w.tolist()))}
+
+        diff = ridge_predict(w, b, Xh) - ridge_predict(w, b, Xa)
+        gtr, gte = ng_sea < S, ng_sea == S
+        if gtr.any() and gte.any():
+            lb = logit_fit(np.column_stack([diff[gtr], home[gtr]]), ng_y[gtr])
+            ps.append(logit_predict(lb, np.column_stack([diff[gte], home[gte]])))
+            ys.append(ng_y[gte])
+    if ps:
+        p, yy = np.concatenate(ps), np.concatenate(ys)
+        return pred, brier(p, yy), int(len(yy)), last
+    return pred, None, 0, last
+
+
+# ---------------------------------------------------------------------------
 # Walk-forward backtest
 # ---------------------------------------------------------------------------
 
@@ -237,16 +371,27 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     team_games = derived["team_games"].filter(pl.col("season") <= last)
     games = derived["games"].filter(pl.col("season") <= last)
 
-    feats = build_features(snaps, team_games)
-    df = (
-        feats.join(targets(team_games, snaps, NS), on=KEYS, how="left")
-        .filter(pl.col("season").is_in(seasons))
-        .with_columns(bucket_expr().alias("bucket"))
-    )
+    feats = _z_frame(snaps, team_games)
+    full = feats.join(targets(team_games, snaps, NS), on=KEYS, how="left").sort(KEYS)
     ng = next_game_frame(games, feats, list(CANDIDATES.values()))
 
+    # Ridge composites: trained on every earlier season, scored on the test season only.
+    zcols = [f"z_{f}" for f in PROPOSAL_FACTORS]
+    ngz = next_game_frame(games, feats, zcols)
+    ridge_meta: dict[str, dict] = {}
+    pred_cols = []
+    for name, factors in RIDGE_SETS.items():
+        pred, bs, bn, last = _ridge_walk_forward(full, ngz, seasons, factors)
+        col = f"pred_{name}"
+        pred_cols.append(pl.Series(col, pred, dtype=pl.Float64).fill_nan(None))
+        ridge_meta[name] = {"col": col, "brier": bs, "brier_n": bn, "factors": factors, "last_fold": last}
+    full = full.with_columns(pred_cols)
+
+    df = full.filter(pl.col("season").is_in(seasons)).with_columns(bucket_expr().alias("bucket"))
+
     cands: dict[str, dict] = {}
-    for name, col in CANDIDATES.items():
+    columns = dict(CANDIDATES) | {name: m["col"] for name, m in ridge_meta.items()}
+    for name, col in columns.items():
         entry: dict = {"per_season": {}}
         for n in NS:
             y = f"y{n}"
@@ -261,11 +406,17 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
                 for s in seasons
                 if not (ds := d.filter(pl.col("season") == s)).is_empty()
             }
-        bs, bn = _walk_forward_brier(
-            ng, seasons,
-            lambda t, c=col: np.column_stack([(t[f"h_{c}"] - t[f"a_{c}"]).to_numpy(), t["home_ind"].to_numpy()]),
-        )
-        entry["brier"], entry["brier_n"] = bs, bn
+        if name in ridge_meta:
+            m = ridge_meta[name]
+            entry["brier"], entry["brier_n"] = m["brier"], m["brier_n"]
+            entry["factors"] = m["factors"]
+            entry["last_fold_weights"] = m["last_fold"]
+        else:
+            bs, bn = _walk_forward_brier(
+                ng, seasons,
+                lambda t, c=col: np.column_stack([(t[f"h_{c}"] - t[f"a_{c}"]).to_numpy(), t["home_ind"].to_numpy()]),
+            )
+            entry["brier"], entry["brier_n"] = bs, bn
         cands[name] = entry
 
     sp = ng.filter(pl.col("spread_line").is_not_null())
@@ -315,7 +466,7 @@ def format_report(report: dict) -> str:
     for n in sorted(report["ns"], reverse=True):
         lines.append("")
         lines.append(f"N={n}  (target: mean adjusted margin over next {n} games; bucket columns are Spearman)")
-        lines.append(f"{'candidate':<12}" + "".join(f"{c:>10}" for c in cols) + f"{'n':>9}")
+        lines.append(f"{'candidate':<22}" + "".join(f"{c:>10}" for c in cols) + f"{'n':>9}")
         for name, c in report["candidates"].items():
             blk = c.get(f"N{n}")
             if blk is None:
@@ -326,5 +477,5 @@ def format_report(report: dict) -> str:
                 vals += [_fmt(blk[b]["spearman"], 3) for b in BUCKETS]
                 nrows = blk["all"]["n"]
             vals.append(_fmt(c["brier"], 4))
-            lines.append(f"{name:<12}" + "".join(f"{v:>10}" for v in vals) + f"{nrows:>9}")
+            lines.append(f"{name:<22}" + "".join(f"{v:>10}" for v in vals) + f"{nrows:>9}")
     return "\n".join(lines)

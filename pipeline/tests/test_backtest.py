@@ -1,11 +1,18 @@
 import json
+import math
+
+import numpy as np
 
 import polars as pl
 import pytest
 
 from fgs import cli
-from fgs.backtest import adjusted_margins, run_backtest, targets, test_seasons
+from fgs.backtest import (
+    adjusted_margins, choose_alpha, propose_weights, ridge_fit, run_backtest, targets, test_seasons,
+)
 from fgs.ingest import load_schedules
+from fgs.paths import WEIGHTS_PATH
+from fgs.score import load_weights
 
 TG_SCHEMA = {
     "game_id": pl.String, "season": pl.Int32, "week": pl.Int32, "asof_week": pl.Int32,
@@ -159,3 +166,55 @@ def test_cli_backtest_writes_json(real_cache, tmp_path, monkeypatch, capsys):
     assert "Spearman" in out and "spread" in out
     data = json.loads((tmp_path / "backtest.json").read_text())
     assert data["test_seasons"][-1] == 2021
+
+
+# ---------------------------------------------------------------------------
+# Ridge composites and the weights proposal (plan 03-02)
+# ---------------------------------------------------------------------------
+
+def test_ridge_fit_recovers_coefficients_and_shrinks():
+    rng = np.random.default_rng(0)
+    X = rng.normal(size=(2000, 2))
+    y = 2 * X[:, 0] - 1 * X[:, 1] + 3 + rng.normal(0, 0.05, 2000)
+    w, b = ridge_fit(X, y, 0.0)
+    assert np.allclose(w, [2, -1], atol=0.05) and abs(b - 3) < 0.05
+    w1, _ = ridge_fit(X, y, 1.0)
+    assert np.linalg.norm(w1) < np.linalg.norm(w)
+
+
+def test_choose_alpha_returns_grid_value():
+    rng = np.random.default_rng(1)
+    X = rng.normal(size=(400, 2))
+    y = X[:, 0] + rng.normal(0, 1, 400)
+    a = choose_alpha(X, y, np.repeat([1, 2, 3, 4], 100))
+    assert a in (0.0, 1e-3, 1e-2, 1e-1, 1.0)
+
+
+def test_propose_weights_holdout_sealed(real_report):
+    raw, _ = real_report
+    prop = propose_weights(cli.derive(raw))
+    assert prop["seasons"] == [1999, 2021] and prop["target"] == "y8"
+    late = pl.col("season") >= 2022
+    swapped = raw.with_columns(
+        pl.when(late).then(pl.col("away_score")).otherwise(pl.col("home_score")).alias("home_score"),
+        pl.when(late).then(pl.col("home_score")).otherwise(pl.col("away_score")).alias("away_score"),
+        pl.when(late).then(-pl.col("result")).otherwise(pl.col("result")).alias("result"),
+    )
+    assert propose_weights(cli.derive(swapped)) == prop
+
+
+def test_ridge_composites_in_report(real_report):
+    raw, report = real_report
+    c = report["candidates"]
+    for name in ("ridge:elo", "ridge:+season_record", "ridge:+last16"):
+        assert name in c and c[name]["N8"]["all"]["spearman"] is not None
+        assert c[name]["last_fold_weights"]["season"] == 2021
+    assert c["ridge:+last16"]["N8"]["all"]["spearman"] >= c["ridge:elo"]["N8"]["all"]["spearman"] - 0.005
+    prop = propose_weights(cli.derive(raw))
+    assert set(prop["weights"]) == {"elo", "season_record", "last16"}
+    assert all(math.isfinite(v) for v in prop["weights"].values())
+
+
+def test_weights_yaml_loads():
+    w = load_weights(WEIGHTS_PATH)
+    assert list(w) == ["elo", "season_record", "last16"]
