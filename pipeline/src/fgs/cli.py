@@ -110,6 +110,9 @@ def sim_cache_dir():
 
 
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
+    """Unchecked build (WR-03): downloads/caches inputs and writes derived parquet WITHOUT running
+    the data-trust checks (`build --refresh` writes the re-downloaded current-season pbp straight
+    to the cache). Use `fgs refresh` for the checked, check-then-write path."""
     raw = load_schedules(refresh=refresh)
     seasons = pbp_seasons(raw)
     current = seasons[-1]
@@ -240,8 +243,28 @@ def _checked_derive(
 
 def _cmd_check(args) -> int:
     raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
+    incomplete = _incomplete_refresh_msg()
     ok, _, _ = _checked_derive(raw, **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    if incomplete:
+        _report("refresh_complete", [incomplete])
+        return 1
     return 0 if ok else 1
+
+
+REFRESH_MARKER = "refresh.incomplete"
+
+
+def _refresh_marker(cache_dir=None):
+    """Present while (or after a crash during) refresh's write sequence (WR-03)."""
+    return (CACHE_DIR if cache_dir is None else cache_dir) / REFRESH_MARKER
+
+
+def _incomplete_refresh_msg() -> str | None:
+    m = _refresh_marker()
+    if not m.exists():
+        return None
+    return (f"a previous `fgs refresh` was interrupted mid-write ({m} exists); caches may mix old and new "
+            "inputs. Run `uv run fgs refresh` again to restore a consistent set.")
 
 
 def _download_pbp(season: int, cache_dir) -> pl.DataFrame | None:
@@ -295,6 +318,12 @@ def _cmd_refresh(args) -> int:
         return 1
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     files = export.build_export(derived, teams, generated_at=generated_at)  # pure; may still raise before writes
+    # WR-03: the writes below are atomic per file, not as a set. The marker brackets them so a
+    # crash/Ctrl-C mid-sequence is detected: `fgs export` refuses and `fgs check` fails until a
+    # refresh completes, instead of publishing a mix of new and old inputs.
+    marker = _refresh_marker(cache_dir)
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.write_text(f"refresh started {generated_at}\n")
     save_cache(raw, "schedules.parquet", cache_dir)
     save_cache(teams, "teams.parquet", cache_dir)
     for s, df in sorted(fetched.items()):
@@ -302,6 +331,7 @@ def _cmd_refresh(args) -> int:
     _write_derived(derived)
     sim.save_sim_cache(derived["sim"], sims)
     export.write_export(files, WEB_DATA_DIR)
+    marker.unlink()  # every output written: the set is consistent again
     meta = files["meta.json"]
     print(
         f"refreshed in {time.perf_counter() - t0:.1f}s: exported {len(files)} files; latest {meta['latest']['season']} week "
@@ -311,6 +341,10 @@ def _cmd_refresh(args) -> int:
 
 
 def _cmd_export(args) -> int:
+    incomplete = _incomplete_refresh_msg()
+    if incomplete:
+        print(f"error: {incomplete}", file=sys.stderr)
+        return 1
     derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())  # cache only (schedules download once if missing)
     teams = load_teams()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
@@ -326,6 +360,9 @@ def _cmd_export(args) -> int:
 
 
 def _cmd_backtest(args) -> int:
+    incomplete = _incomplete_refresh_msg()
+    if incomplete:
+        print(f"warning: {incomplete}", file=sys.stderr)
     # cache only (downloads once if missing). Unscored: the backtest builds its own features,
     # so a missing/invalid weights.yaml must not block proposing new weights.
     derived = derive(load_schedules(), scored=False, **cached_inputs(), sim_cache_dir=sim_cache_dir())
@@ -373,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=_cmd_ingest)
 
     p = sub.add_parser("build", help="ingest (cached) schedules + pbp, derive games, team_games, elo_snapshots, "
-                                     "team_game_epa")
+                                     "team_game_epa (unchecked; use `refresh` for the checked path)")
     p.add_argument("--refresh", action="store_true",
                    help="re-download schedules and the current season's pbp first")
     p.set_defaults(func=_cmd_build)

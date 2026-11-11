@@ -212,6 +212,21 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
     assert "all checks passed" in out and re.search(r"refreshed in \d+\.\ds: exported", out)
+    assert not (cache_dir / cli.REFRESH_MARKER).exists()  # write sequence completed
+
+
+def test_interrupted_refresh_blocks_export_and_fails_check(refresh_dirs, monkeypatch, capsys):
+    """WR-03: a crash mid-write leaves the marker; export refuses and check fails until a refresh completes."""
+    raw, _ = _cached_inputs()
+    derived_dir, web_dir, cache_dir = refresh_dirs
+    (cache_dir / cli.REFRESH_MARKER).write_text("refresh started\n")
+    assert cli.main(["export"]) == 1
+    assert "interrupted mid-write" in capsys.readouterr().err
+    assert [p.name for p in web_dir.iterdir()] == ["SENTINEL"]
+    monkeypatch.setattr(cli, "load_schedules", lambda **kw: raw)
+    monkeypatch.setattr(cli, "cached_inputs", lambda: {"pbp_games": None, "vegas": None})
+    assert cli.main(["check"]) == 1
+    assert "FAIL  refresh_complete" in capsys.readouterr().out
 
 
 def test_refresh_tolerates_missing_current_season_pbp(refresh_dirs, monkeypatch, capsys):
