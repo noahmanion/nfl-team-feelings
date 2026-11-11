@@ -65,7 +65,7 @@ def _row(r: dict) -> dict:
 
 def build_export(derived: dict[str, pl.DataFrame], teams_df: pl.DataFrame, generated_at: str) -> dict[str, object]:
     games = derived["games"]
-    scored = score_frame(derived["snapshots"]).sort(["season", "week", "rank"])
+    scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
 
     latest = asof.latest_played(games)

@@ -233,7 +233,10 @@ def test_partial_next_week_one_game_played():
         if r["franchise"] in playing:
             continue
         assert r["elo"] == prev[r["franchise"]]["elo"], r["franchise"]
-        assert r["score_delta"] == 0, r["franchise"]
+        p = prev[r["franchise"]]
+        assert (r["wins"], r["losses"], r["ties"]) == (p["wins"], p["losses"], p["ties"]), r["franchise"]
+        # score_delta need not be 0: the composite is z-scored across all teams in the week,
+        # so other teams' results move everyone's z a little.
 
 
 def test_partial_flag_matches_week_progress_on_real_data(real_files):

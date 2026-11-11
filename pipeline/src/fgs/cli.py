@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, export
+from fgs import checks, export, features, score
 from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
@@ -17,11 +17,24 @@ from fgs.paths import CACHE_DIR, DERIVED_DIR, WEB_DATA_DIR
 from fgs.snapshots import build_grid
 
 
-def derive(raw: pl.DataFrame, params: EloParams | None = None) -> dict[str, pl.DataFrame]:
-    """Pure: raw schedules -> games (with Elo), team_games, snapshots. No file I/O."""
-    games, sparse = replay(build_games(raw), params)
+def derive_games(
+    games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
+) -> dict[str, pl.DataFrame]:
+    """Pure (apart from reading weights.yaml when weights is None): normalized games ->
+    games (with Elo), team_games, snapshots (the Elo grid) and features (factors + composite)."""
+    games, sparse = replay(games, params)
     team_games = build_team_games(games)
-    return {"games": games, "team_games": team_games, "snapshots": build_grid(games, team_games, sparse)}
+    snapshots = build_grid(games, team_games, sparse)
+    feats = features.build_features(snapshots, team_games)
+    feats = score.composite(feats, score.load_weights() if weights is None else weights)
+    return {"games": games, "team_games": team_games, "snapshots": snapshots, "features": feats}
+
+
+def derive(
+    raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
+) -> dict[str, pl.DataFrame]:
+    """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file."""
+    return derive_games(build_games(raw), params, weights)
 
 
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
@@ -43,6 +56,7 @@ def _write_derived(out: dict[str, pl.DataFrame]) -> None:
     out["games"].write_parquet(DERIVED_DIR / "games.parquet")
     out["team_games"].write_parquet(DERIVED_DIR / "team_games.parquet")
     out["snapshots"].write_parquet(DERIVED_DIR / "elo_snapshots.parquet")
+    out["features"].write_parquet(DERIVED_DIR / "features.parquet")
 
 
 # Kept under the old names so existing callers/tests keep working.

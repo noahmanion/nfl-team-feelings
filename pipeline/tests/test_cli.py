@@ -5,9 +5,6 @@ import re
 import pytest
 
 import fgs.cli as cli
-from fgs.elo import replay
-from fgs.games import build_team_games
-from fgs.snapshots import build_grid
 
 ROW = re.compile(r"^\s*(\d+)\s+([A-Z]{2,3})\s+(\d+)\s+(\d+-\d+-\d+)\s*$")
 
@@ -18,9 +15,7 @@ def _rows(out: str) -> list[str]:
 
 @pytest.fixture
 def derived(synthetic_games, tmp_path, monkeypatch):
-    games, sparse = replay(synthetic_games)
-    tg = build_team_games(games)
-    out = {"games": games, "team_games": tg, "snapshots": build_grid(games, tg, sparse)}
+    out = cli.derive_games(synthetic_games)
     out["games"].write_parquet(tmp_path / "games.parquet")
     out["snapshots"].write_parquet(tmp_path / "elo_snapshots.parquet")
     monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path)
@@ -149,7 +144,7 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
     import polars as pl
     assert pl.read_parquet(cache_dir / "schedules.parquet").equals(raw)  # cache saved only after checks
     assert pl.read_parquet(cache_dir / "teams.parquet").equals(teams)
-    for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet"):
+    for f in ("games.parquet", "team_games.parquet", "elo_snapshots.parquet", "features.parquet"):
         assert (derived_dir / f).exists()
     for f in ("meta.json", "latest.json", "callouts.json", "history.json"):
         assert (web_dir / f).exists()

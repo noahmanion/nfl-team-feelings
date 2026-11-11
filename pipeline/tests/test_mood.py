@@ -91,6 +91,8 @@ def test_hysteresis_first_element_is_raw_band():
 
 # --- score_frame (synthetic) -----------------------------------------------------------------
 
+REF = (2023, 2024)  # synthetic rows live in these seasons
+
 def _snap(rows):
     return pl.DataFrame(
         [dict(season=s, week=w, franchise_id=f, elo=e, wins=0, losses=0, ties=0, win_pct=0.0) for s, w, f, e in rows],
@@ -105,7 +107,7 @@ def _filler(season, week, n=100, lo=1300.0, hi=1700.0):
 
 
 def test_score_frame_columns_and_types():
-    out = score_frame(_snap(_filler(2023, 0, n=10)))
+    out = score_frame(_snap(_filler(2023, 0, n=10)), value="elo", ref_seasons=REF)
     for c in ("score", "rank", "score_delta", "rank_delta", "band", "label", "emoji"):
         assert c in out.columns
     assert out["score"].dtype.is_integer() and out["rank"].dtype.is_integer()
@@ -115,7 +117,7 @@ def test_week0_hysteresis_is_fresh():
     """Prior season ends in band 3 ('fine'); a week-0 score of 60-61 next season is band 4, no carry."""
     base = _filler(2023, 0) + _filler(2024, 0)
     # Find Elo values that score ~58 and ~61 against the reference.
-    probe = score_frame(_snap(base))
+    probe = score_frame(_snap(base), value="elo", ref_seasons=REF)
     ref = np.sort(probe["elo"].to_numpy())
 
     def elo_for(target):
@@ -125,7 +127,7 @@ def test_week0_hysteresis_is_fresh():
         raise AssertionError(target)
 
     rows = base + [(2023, 0, "ZZZ", elo_for(58)), (2024, 0, "ZZZ", elo_for(60))]
-    out = score_frame(_snap(rows)).filter(pl.col("franchise_id") == "ZZZ").sort("season")
+    out = score_frame(_snap(rows), value="elo", ref_seasons=REF).filter(pl.col("franchise_id") == "ZZZ").sort("season")
     assert out["score"].to_list()[0] in (57, 58, 59)
     s24 = out["score"].to_list()[1]
     assert s24 == 60  # in the dead zone above T=60: a carried-over band 3 would stick
@@ -135,9 +137,9 @@ def test_week0_hysteresis_is_fresh():
 
 def test_reference_excludes_playoff_weeks():
     rows = _filler(2023, 0, n=20) + _filler(2023, 17, n=20)
-    a = score_frame(_snap(rows))
-    b = score_frame(_snap(rows + [(2023, 18, "T000", 9999.0)]))  # reg_weeks(2023) == 18: a REG row
-    c = score_frame(_snap(rows + [(2023, 19, "T000", 9999.0)]))  # week 19 = Wild Card: not in the reference
+    a = score_frame(_snap(rows), value="elo", ref_seasons=REF)
+    b = score_frame(_snap(rows + [(2023, 18, "T000", 9999.0)]), value="elo", ref_seasons=REF)  # reg_weeks(2023) == 18: a REG row
+    c = score_frame(_snap(rows + [(2023, 19, "T000", 9999.0)]), value="elo", ref_seasons=REF)  # week 19 = Wild Card: not in the reference
     key = ["season", "week", "franchise_id"]
     assert not a.join(b, on=key).filter(pl.col("score") != pl.col("score_right")).is_empty()  # REG row counts
     same = a.join(c, on=key)
@@ -147,8 +149,8 @@ def test_reference_excludes_playoff_weeks():
 
 def test_score_frame_independent_of_input_order():
     rows = [(2023, w, f"T{i:03d}", 1300.0 + 40 * i + (w * 37 * (i + 1)) % 300) for w in range(4) for i in range(10)]
-    a = score_frame(_snap(rows))
-    b = score_frame(_snap(list(reversed(rows))))
+    a = score_frame(_snap(rows), value="elo", ref_seasons=REF)
+    b = score_frame(_snap(list(reversed(rows))), value="elo", ref_seasons=REF)
     assert a.equals(b)
 
 
@@ -157,7 +159,7 @@ def test_rank_ties_broken_by_franchise_and_deltas():
         (2023, 0, "BBB", 1500.0), (2023, 0, "AAA", 1500.0), (2023, 0, "CCC", 1400.0),
         (2023, 1, "BBB", 1450.0), (2023, 1, "AAA", 1550.0), (2023, 1, "CCC", 1500.0),
     ]
-    out = score_frame(_snap(rows)).sort(["week", "rank"])
+    out = score_frame(_snap(rows), value="elo", ref_seasons=REF).sort(["week", "rank"])
     w0 = out.filter(pl.col("week") == 0)
     assert w0["franchise_id"].to_list() == ["AAA", "BBB", "CCC"]
     assert w0["rank"].to_list() == [1, 2, 3]
@@ -172,6 +174,28 @@ def test_rank_ties_broken_by_franchise_and_deltas():
     assert all(sd[f] == s1[f] - s0[f] for f in s0)
 
 
+def test_frozen_reference_ignores_later_seasons():
+    rows = _filler(2023, 0, n=20) + _filler(2023, 1, n=20)
+    a = score_frame(_snap(rows), value="elo", ref_seasons=(2023, 2023))
+    b = score_frame(_snap(rows + [(2025, 0, "T000", 99999.0)]), value="elo", ref_seasons=(2023, 2023))
+    key = ["season", "week", "franchise_id"]
+    j = a.join(b, on=key)
+    assert j.height == a.height
+    assert j.filter(pl.col("score") != pl.col("score_right")).is_empty()
+    assert b.filter(pl.col("season") == 2025)["score"].item() == 100
+
+
+def test_empty_reference_raises():
+    with pytest.raises(ValueError, match="2030-2031"):
+        score_frame(_snap(_filler(2023, 0, n=5)), value="elo", ref_seasons=(2030, 2031))
+
+
+def test_default_value_is_composite():
+    df = _snap(_filler(2023, 0, n=10)).with_columns((-pl.col("elo")).alias("composite"))
+    out = score_frame(df, ref_seasons=(2023, 2023))
+    assert out.sort("rank")["franchise_id"][0] == "T000"  # lowest elo = highest composite
+
+
 # --- real data sanity ------------------------------------------------------------------------
 
 @pytest.fixture
@@ -183,7 +207,7 @@ def real_snapshots():
 
 
 def test_real_hysteresis_reduces_label_changes(real_snapshots):
-    out = score_frame(real_snapshots).sort(["franchise_id", "season", "week"])
+    out = score_frame(real_snapshots, value="elo").sort(["franchise_id", "season", "week"])
     raw = out.with_columns(pl.col("score").map_elements(band_of, return_dtype=pl.Int64).alias("raw_band"))
     grp = ["franchise_id", "season"]
     changes = raw.select(

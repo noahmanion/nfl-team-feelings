@@ -1,12 +1,15 @@
 """Feel-good score (D-01) and mood labels (D-03) with hysteresis (D-04); ranks and deltas (D-05).
 
-score = mid-rank percentile of a team's Elo among ALL week-0 + regular-season team-weeks 1999->now.
+score = mid-rank percentile of a team's composite (sum of weight * z, see fgs.score) among the
+week-0 + regular-season team-weeks of the frozen reference seasons (season_config.REF_SEASONS,
+1999-2021). The reference never includes newer games, so a refresh can never move a past score.
 Labels/emoji live here only and are emitted in meta.json; the site never hardcodes them.
 """
 
 import numpy as np
 import polars as pl
 
+from fgs import season_config
 from fgs.season_config import reg_weeks
 
 BANDS: list[dict] = [  # low -> high; emitted as meta.bands (with an inclusive max added)
@@ -75,18 +78,29 @@ def hysteresis(scores: list[int], buf: int = HYSTERESIS) -> list[int]:
     return out
 
 
-def score_frame(snapshots: pl.DataFrame) -> pl.DataFrame:
-    """Snapshots + score, rank, score_delta, rank_delta, band, label, emoji."""
-    df = snapshots.with_columns(
+def score_frame(
+    df: pl.DataFrame, value: str = "composite", ref_seasons: tuple[int, int] | None = None
+) -> pl.DataFrame:
+    """df + score, rank, score_delta, rank_delta, band, label, emoji, scored and ranked by `value`.
+
+    Reference = `value` over rows with season in ref_seasons (inclusive) and week <= reg_weeks
+    (week 0 + REG). ref_seasons None -> season_config.REF_SEASONS, read at call time.
+    """
+    lo, hi = season_config.REF_SEASONS if ref_seasons is None else ref_seasons
+    df = df.with_columns(
         pl.col("season").map_elements(reg_weeks, return_dtype=pl.Int32).alias("_reg_weeks")
     )
-    ref = df.filter(pl.col("week") <= pl.col("_reg_weeks"))["elo"].to_numpy()  # week 0 + REG only
+    ref = df.filter(
+        pl.col("season").is_between(lo, hi) & (pl.col("week") <= pl.col("_reg_weeks"))
+    )[value].to_numpy()
+    if ref.size == 0:
+        raise ValueError(f"empty percentile reference: no week-0/REG rows for seasons {lo}-{hi}")
     df = df.drop("_reg_weeks").with_columns(
-        pl.Series("score", percentile_scores(df["elo"].to_numpy(), ref), dtype=pl.Int32)
+        pl.Series("score", percentile_scores(df[value].to_numpy(), ref), dtype=pl.Int32)
     )
 
-    # Rank by Elo (never by the integer score); ties by franchise id.
-    df = df.sort(["season", "week", "elo", "franchise_id"], descending=[False, False, True, False])
+    # Rank by the underlying value (never by the integer score); ties by franchise id.
+    df = df.sort(["season", "week", value, "franchise_id"], descending=[False, False, True, False])
     df = df.with_columns(pl.int_range(1, pl.len() + 1, dtype=pl.Int32).over(["season", "week"]).alias("rank"))
 
     grp = ["franchise_id", "season"]
