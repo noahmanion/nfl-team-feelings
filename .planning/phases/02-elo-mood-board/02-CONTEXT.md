@@ -19,11 +19,11 @@ A local static site shows a league-wide mood board — all 32 teams ranked by fe
 - Never show decimals in the UI (out-of-scope: false precision). Elo itself may appear only as a secondary detail.
 - Seven mood bands by score: ≥95 "Planning the parade" · 80–94 "Buying the jersey" · 60–79 "Cautiously smug" · 40–59 "It's fine. Everything's fine." · 20–39 "Checking the draft order" · 5–19 "Refreshing mock drafts" · <5 "Witness protection". Bands, labels and emoji live in pipeline config and are emitted in `meta.json` (frontend never hardcodes them).
 - Hysteresis: a team's label only changes when its score moves past the band boundary by ≥2 points; otherwise it keeps its previous week's label. Computed in the pipeline chronologically per team-season; week 0 starts fresh (no carry from prior season).
-- Weekly change = score delta vs the team's previous snapshot week (week 0 for week 1; for week 0 show "—"), plus rank change.
+- Weekly change = score delta vs the team's previous snapshot week (week 0 for week 1; for week 0 show "–" for both score and rank change); rank_delta = previous rank − current rank (positive = moved up), plus rank change.
 
 ### JSON contract (PIPE-02 — the only pipeline↔site interface)
 - Pipeline writes into `web/public/data/` via a new `fgs export` step:
-  - `meta.json` — generated_at (ISO), data_through (last played gameday), latest {season, week}, partial_week flag, seasons available with max week each, mood bands, score_kind ("elo" for now), version.
+  - `meta.json` — generated_at (ISO), data_through (last played gameday), latest {season, week}, partial_week flag, seasons available with max week and `reg_weeks` (regular-season week count) each plus a week-label map (Preseason/Wk N/Wild Card/Divisional/Conf/Super Bowl), mood bands, score_kind ("elo" for now), version.
   - `latest.json` — the current board snapshot (same shape as one week inside a season file).
   - `snapshots/{season}.json` — every week of that season: `{season, weeks: {"0": [rows], "1": [...]}}`, row = franchise, rank, score, elo (int), label, emoji, wins, losses, ties, score_delta, rank_delta.
   - `teams/{ABBR}.json` — franchise name, colors, and columnar history arrays (season, week, score, elo, label) — reserved for Phase 4 deep-dive but populated now.
@@ -40,7 +40,7 @@ A local static site shows a league-wide mood board — all 32 teams ranked by fe
 - `web/` = Vite 8 + Svelte 5 + TypeScript ~6.0 (svelte-ts template), Node 22 pinned via `web/.nvmrc`. No router lib: tiny hash router (`#/` latest board, `#/board/{season}/{week}`). Observable Plot not needed until Phase 3.
 - Start locally: `cd web && npm install && npm run dev` (documented; `npm run dev` is the one command once installed).
 - Board layout: single ranked list (cards/rows) — rank, team color chip + abbreviation + name, record W-L(-T), big score number, mood label + emoji, delta arrow (▲/▼/–) with value. Phone-first: rows stack cleanly at 375px with no horizontal scroll; desktop gets a wider table-like row.
-- Scrubber: season `<select>` + week range slider (0..max week of season incl. playoffs, labelled "Preseason", "Wk N", "Wild Card"/"Divisional"/"Conf"/"Super Bowl"), plus "Latest" button. Changing either updates the hash.
+- Scrubber: season `<select>` + week range slider (0..max week of season incl. playoffs, labelled "Preseason", "Wk N", "Wild Card"/"Divisional"/"Conf"/"Super Bowl"), plus a "Latest week" button. Changing either updates the hash.
 - Visual tone: clean data-viz base (neutral background, one accent), playful copy only in labels/emoji/headline. Light + dark via prefers-color-scheme.
 
 ### README (PIPE-03)

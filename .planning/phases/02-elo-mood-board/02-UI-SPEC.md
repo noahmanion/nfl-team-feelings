@@ -1,7 +1,8 @@
 ---
 phase: 2
 slug: elo-mood-board
-status: draft
+status: approved
+reviewed_at: 2026-11-11
 shadcn_initialized: false
 preset: none
 created: 2026-11-11
@@ -159,7 +160,7 @@ Rows are **not clickable** in Phase 2: no hover lift and no pointer cursor. The 
 │                                       │
 │ How should you feel                   │  Display 28/600
 │ about your team?                      │
-│ All 32 NFL teams, ranked by how good  │  Body 16/400 muted
+│ Every NFL team, ranked by how good  │  Body 16/400 muted
 │ their fans should feel right now.     │
 │                                       │  24px
 │ ┌───────────────────────────────────┐ │  Scrubber (surface, radius 8, pad 16)
@@ -207,7 +208,7 @@ Mobile row grid: `grid-template-columns: 28px 1fr auto; grid-template-rows: auto
 │  Feel-Good Score                                                                   │
 │                                                                                    │  48px top
 │  How should you feel about your team?                               Display 28/600 │
-│  All 32 NFL teams, ranked by how good their fans should feel right now.            │
+│  Every NFL team, ranked by how good their fans should feel right now.            │
 │                                                                                    │
 │ ┌────────────────────────────────────────────────────────────────────────────────┐ │ sticky top:0
 │ │ Season [ 2026 ▾ ]   Week 10 [In progress]  ●━━━━━━━━━━━━━○──────  [ Latest ]   │ │ one row, 44px controls
@@ -316,7 +317,7 @@ Delta formatting:
 |---------|------|
 | Wordmark | Feel-Good Score |
 | H1 headline **[CONTEXT]** | How should you feel about your team? |
-| Subhead | All 32 NFL teams, ranked by how good their fans should feel right now. |
+| Subhead | Every NFL team, ranked by how good their fans should feel right now. |
 | Primary CTA | Latest (button; aria-label "Jump to the latest week") |
 | Season control label | Season |
 | Week control label | Week (visible label; the output shows the value, e.g. "Week 10") |
@@ -388,6 +389,8 @@ Copy rules:
 ---
 
 ## Design System for Later Phases
+
+> **Informational — NOT Phase 2 scope.** Binding guidance for Phases 3–8; the Phase 2 planner must not build these.
 
 These rules are binding on Phases 3, 4, 6 and 8 so the site stays one coherent system. Later UI-SPECs may add tokens but must not redefine the ones above.
 
