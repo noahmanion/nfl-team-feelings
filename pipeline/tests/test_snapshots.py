@@ -171,3 +171,26 @@ def test_check_snapshot_grid(real):
 
     duped = pl.concat([snap, snap.head(1)])
     assert check_snapshot_grid(duped, games) != []
+
+
+def test_unplayed_season_keeps_preseason_week0(synthetic_games, monkeypatch):
+    """A scheduled season with no results yet still emits regressed week-0 rows (WR-03)."""
+    from conftest import make_games
+    from fgs.checks import check_snapshot_grid
+
+    future = make_games([
+        ("2025_01_BUF_MIA", 2025, 1, "REG", "2025-09-07", "MIA", "BUF", None, None, False),
+        ("2025_01_NE_NYJ", 2025, 1, "REG", "2025-09-07", "NYJ", "NE", None, None, False),
+    ])
+    games, sparse = replay(pl.concat([synthetic_games, future]))
+    tg = build_team_games(games)
+    snap = build_grid(games, tg, sparse)
+    s25 = snap.filter(pl.col("season") == 2025)
+    assert s25.height == 4 and s25["week"].to_list() == [0] * 4
+    for team in ("BUF", "MIA", "NE", "NYJ"):
+        prev = _at(snap, 2024, 2, team)["elo"]
+        assert _at(snap, 2025, 0, team)["elo"] == pytest.approx(MEAN_ELO / 3 + 2 / 3 * prev, abs=1e-9)
+    from fgs import season_config
+
+    monkeypatch.setattr(season_config, "n_teams", lambda season: 4)  # synthetic 4-team league
+    assert check_snapshot_grid(snap, games) == []

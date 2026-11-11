@@ -223,7 +223,10 @@ def check_league_mean(snapshots: pl.DataFrame) -> list[str]:
 
 
 def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[str]:
-    """Dense (season, week, franchise) grid: n_teams x (last played week + 1) rows per season."""
+    """Dense (season, week, franchise) grid: n_teams x (last played week + 1) rows per season.
+
+    A scheduled season with no played games yet expects week 0 only (n_teams rows).
+    """
     out = []
     keys = ["season", "week", "franchise_id"]
     nulls = snapshots.filter(pl.col("elo").is_null())
@@ -239,18 +242,20 @@ def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[st
         games.filter(pl.col("played")).group_by("season").agg(pl.col(wk).max()).iter_rows()
     )
     rows = dict(snapshots.group_by("season").len().iter_rows())
-    for s in sorted(set(wmax) | set(rows)):
-        if s not in wmax:
-            out.append(f"{s}: snapshots present but no played games")
+    scheduled = set(games["season"].to_list())
+    for s in sorted(scheduled | set(rows)):
+        if s not in scheduled:
+            out.append(f"{s}: snapshots present but season not in games")
             continue
-        expected = season_config.n_teams(s) * (wmax[s] + 1)
+        w = wmax.get(s, 0)
+        expected = season_config.n_teams(s) * (w + 1)
         if rows.get(s, 0) != expected:
             out.append(
                 f"{s}: {rows.get(s, 0)} snapshot rows, expected {expected} "
-                f"({season_config.n_teams(s)} teams x weeks 0-{wmax[s]})"
+                f"({season_config.n_teams(s)} teams x weeks 0-{w})"
             )
     week0 = {(s, t) for s, t in snapshots.filter(pl.col("week") == 0).select("season", "franchise_id").iter_rows()}
-    for s, team in _season_teams(games).filter(pl.col("season").is_in(list(wmax))).sort("season", "franchise_id").iter_rows():
+    for s, team in _season_teams(games).sort("season", "franchise_id").iter_rows():
         if (s, team) not in week0:
             out.append(f"{s} {team}: no week-0 snapshot")
     return out

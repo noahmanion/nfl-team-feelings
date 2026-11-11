@@ -16,7 +16,9 @@ def build_grid(games_with_elo: pl.DataFrame, team_games: pl.DataFrame, sparse: p
     )
     teams = team_games.select("season", "franchise_id").unique()
     grid = (
-        teams.join(wmax, on="season")
+        # Left join: a season with a schedule but no results yet still gets its week-0 (preseason) rows.
+        teams.join(wmax, on="season", how="left")
+        .with_columns(pl.col("wmax").fill_null(0))
         .with_columns(pl.int_ranges(0, pl.col("wmax") + 1).alias("week"))
         .explode("week")
         .drop("wmax")
