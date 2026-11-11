@@ -3,6 +3,8 @@
 `fgs check` prints them and exits 1 on any failure; pytest asserts `== []`.
 """
 
+from collections.abc import Callable
+
 import polars as pl
 
 from fgs import season_config
@@ -266,7 +268,8 @@ def check_snapshot_grid(snapshots: pl.DataFrame, games: pl.DataFrame) -> list[st
 
 
 # (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
-CHECKS: list[tuple[str, callable]] = [
+CheckFn = Callable[[pl.DataFrame, dict[str, pl.DataFrame], EloParams], list[str]]
+CHECKS: list[tuple[str, CheckFn]] = [
     ("columns", lambda raw, d, p: check_columns(raw)),
     ("config_coverage", lambda raw, d, p: check_config_coverage(d["games"])),
     ("team_counts", lambda raw, d, p: check_team_counts(d["games"])),
