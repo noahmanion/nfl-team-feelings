@@ -17,7 +17,11 @@
 # last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
 # record tends to run ahead of real strength, so it predicts slightly worse future margins.
 # No positivity constraint is applied. See pipeline/BACKTEST_LOG.md for each factor's delta.
+#
+# mov (margin of victory, last 8 games, capped at 24 per game) is positive: given Elo and the
+# records, bigger recent margins predict better future margins.
 weights:
-  elo: 4.58
-  season_record: 0.63
-  last16: -1.25
+  elo: 3.76
+  season_record: 0.42
+  last16: -1.16
+  mov: 1.04
