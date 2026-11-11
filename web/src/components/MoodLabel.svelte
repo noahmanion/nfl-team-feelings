@@ -18,8 +18,11 @@
     line-height: var(--lh-heading);
     font-weight: var(--weight-semibold);
   }
+  /* Explicit em-based gap: emoji advance widths vary (variation selectors), and the flex gap
+     alone left the glyph touching the label. Scales with the heading size. */
   .emoji {
     flex: none;
+    margin-inline-end: 0.35em;
   }
   .text {
     min-width: 0;
