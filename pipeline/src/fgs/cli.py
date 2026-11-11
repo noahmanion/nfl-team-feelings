@@ -302,15 +302,17 @@ def _cmd_draft(args) -> int:
         why = f"no {season - 1} standings" if season < lo_y else "no picks or prior-season standings"
         print(f"draft {season} not derivable ({why}); available drafts: {lo_y}-{hi_y}", file=sys.stderr)
         return 1
-    bounds = draft.winsor_bounds(tbl)
+    bounds = draft_winsor(tbl)  # the frozen caps, so z matches the exported draft_z
     rows = (draft.draft_z(tbl, bounds).filter(pl.col("season") == season)
             .sort(["surplus", "franchise_id"], descending=[True, False]))
     print(f"{season} draft: capital over original slots (chart {draft.CHART}); "
-          f"winsor bounds 2000-2021 [{bounds[0]:+.2f}, {bounds[1]:+.2f}]")
+          f"winsor caps [{bounds[0]:+.2f}, {bounds[1]:+.2f}]")
     print(f"{'#':>3}  {'Team':<4}  {'Slot':>4}  {'Surplus':>7}  {'Pick-equivalent':<24}  {'z':>5}")
     for rank, r in enumerate(rows.iter_rows(named=True), start=1):
         s = r["surplus"]
-        eq = "—" if abs(s) < 1e-9 else draft.pick_noun(draft.equiv_pick(s, values))
+        # same thresholds as the site text (explain.draft_text)
+        eq = ("—" if draft.is_even(s) else "more than #1 overall" if draft.beyond_top_pick(s, values)
+              else draft.pick_noun(draft.equiv_pick(s, values)))
         stxt = "0.0" if abs(s) < 0.05 else f"{s:+.1f}"
         print(f"{rank:>3}  {r['franchise_id']:<4}  {r['slot']:>4}  {stxt:>7}  {eq:<24}  {r['draft_z']:>+5.2f}")
     return 0
