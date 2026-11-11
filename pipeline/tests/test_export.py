@@ -18,7 +18,7 @@ from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
 from fgs.score import load_offseason, load_weights
-from fgs import season_config
+from fgs import insights, paths, season_config
 from fgs.season_config import SEEDS, n_teams, playoff_teams
 from conftest import derive_inputs
 
@@ -29,6 +29,13 @@ DRAFT_KEYS = {"surplus", "z", "equiv_pick", "rank", "text", "moves_score"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
              "seasons", "bands", "hysteresis", "teams", "factors", "baseline", "offseason"}
 GEN = "2026-11-11T18:40:00+00:00"
+CALLOUT_KEYS = {"type", "season", "week", "franchise", "headline", "detail", "evidence", "stat", "start", "band"}
+
+
+def _matching_evidence(weights: dict, cfg: dict) -> dict:
+    """The committed callout_evidence.json, re-fingerprinted for synthetic weights (tests only)."""
+    ev = json.loads(paths.CALLOUT_EVIDENCE_PATH.read_text())
+    return {**ev, "weights_fingerprint": insights.weights_fingerprint(insights.fingerprint_weights(weights, cfg))}
 
 
 def _fake_teams() -> pl.DataFrame:
@@ -73,7 +80,7 @@ def test_contract_files(real_files):
     assert {"meta.json", "latest.json", "history.json", "callouts.json", "methodology.json"} <= set(files)
     assert sorted(int(p[10:-5]) for p in files if p.startswith("snapshots/")) == seasons
     assert sorted(p[6:-5] for p in files if p.startswith("teams/")) == sorted(CANONICAL)
-    assert files["callouts.json"] == []
+    assert isinstance(files["callouts.json"], list)
     assert sorted(int(p[6:-5]) for p in files if p.startswith("games/")) == seasons
 
 
@@ -554,7 +561,7 @@ def _draft_export(monkeypatch, cfg):
     feats = score.apply_offseason(feats, dz, cfg)
     values = np.concatenate([[np.nan], np.linspace(60.0, 0.5, 262)])
     files = build_export({**derived, "features": feats, "offseason": cfg, "draft_values": values},
-                         _fake_teams(), generated_at=GEN)
+                         _fake_teams(), generated_at=GEN, evidence=_matching_evidence(weights, cfg))
     return files, dict(zip(dz["franchise_id"], dz["draft_z"]))
 
 
@@ -622,3 +629,61 @@ def test_export_without_draft_values_has_null_draft(synthetic_games):
     for r in derived["features"].iter_rows(named=True):
         assert export._draft_info(r, ctx) is None
     assert load_offseason()["weight"] == derived["offseason"]["weight"]
+
+
+# --- Phase 8: callouts (INSIGHT-02 perception gap, INSIGHT-06 movers) -----------------------
+
+def test_callouts_contract(real_files):
+    _, files = real_files
+    latest = files["meta.json"]["latest"]
+    c = files["callouts.json"]
+    assert isinstance(c, list)
+    assert all(set(x) == CALLOUT_KEYS and (x["season"], x["week"]) == (latest["season"], latest["week"]) for x in c)
+    snap = files[f"snapshots/{latest['season']}.json"]
+    assert c == snap["callouts"].get(str(latest["week"]), [])
+    total_gap = 0
+    for path, obj in files.items():
+        if not path.startswith("snapshots/"):
+            continue
+        season = obj["season"]
+        rw = season_config.reg_weeks(season)
+        assert isinstance(obj["callouts"], dict) and set(obj["callouts"]) <= set(obj["weeks"])
+        for wk, items in obj["callouts"].items():
+            assert items, (season, wk)
+            week = int(wk)
+            franchises = {r["franchise"] for r in obj["weeks"][wk]}
+            by_type: dict[str, int] = {}
+            for x in items:
+                assert set(x) == CALLOUT_KEYS and x["season"] == season and x["week"] == week
+                assert x["franchise"] in franchises and x["start"] is None and isinstance(x["stat"], int)
+                assert x["type"] in {"worried", "hopeful", "mover_up", "mover_down"}
+                by_type[x["type"]] = by_type.get(x["type"], 0) + 1
+                if x["type"] in ("worried", "hopeful"):
+                    total_gap += 1
+                    assert season_config.GAP_FIRST_WEEK <= week <= rw - 1
+                    assert x["evidence"] and "1999–2021" in x["evidence"]
+                    assert (x["stat"] >= 8) if x["type"] == "hopeful" else (x["stat"] <= -8)
+                else:
+                    assert week >= 1 and x["evidence"] is None
+                    assert (x["stat"] > 0) if x["type"] == "mover_up" else (x["stat"] < 0)
+            assert all(n <= 3 for n in by_type.values()), (season, wk, by_type)
+    assert total_gap > 500
+    json.dumps(files["callouts.json"], allow_nan=False)
+    json.dumps(files[f"snapshots/{latest['season']}.json"]["callouts"], allow_nan=False)
+
+
+def test_export_refuses_stale_evidence(real_files):
+    derived, _ = real_files
+    ev = json.loads(paths.CALLOUT_EVIDENCE_PATH.read_text())
+    for bad in ({"weights_fingerprint": "000000000000"}, {"threshold": 9}, {"first_week": 3},
+                {"train_seasons": [1999, 2022]}):
+        with pytest.raises(ValueError, match="stale") as e:
+            build_export(derived, load_teams(), generated_at=GEN, evidence={**ev, **bad})
+        assert "fgs evidence" in str(e.value)
+
+
+def test_export_requires_evidence_file(real_files, tmp_path, monkeypatch):
+    derived, _ = real_files
+    monkeypatch.setattr(paths, "CALLOUT_EVIDENCE_PATH", tmp_path / "missing.json")
+    with pytest.raises(ValueError, match="uv run fgs evidence"):
+        build_export(derived, load_teams(), generated_at=GEN)
