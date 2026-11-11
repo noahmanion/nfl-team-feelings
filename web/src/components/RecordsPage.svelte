@@ -220,9 +220,12 @@
   .row:hover {
     background: var(--bg);
   }
-  /* My team (UI-SPEC rule 7): same tint as the board row, stripe unchanged. */
+  /* My team (UI-SPEC rule 7): same tint and accent outline as the board row, stripe unchanged
+     (IN-05); before .row:focus-visible so the focus ring still wins. */
   .mine .row {
     background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .mine-badge {
     flex: none;

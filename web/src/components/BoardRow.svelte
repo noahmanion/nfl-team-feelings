@@ -91,8 +91,12 @@
     inset-inline-end: var(--space-xs);
     transform: translateY(-50%);
   }
+  /* My team: accent outline (08-CONTEXT) over the tint; declared before .row:focus-visible so the
+     keyboard focus ring still wins on the pinned row (IN-05) */
   .mine .row {
     background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
   }
   .mine-badge {
     flex: none;
