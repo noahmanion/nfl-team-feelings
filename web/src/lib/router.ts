@@ -5,13 +5,15 @@ export type Route =
   | { kind: 'board'; season: number; week: number }
   | { kind: 'history'; team?: string }
   | { kind: 'team'; team: string; season?: number; week?: number }
+  | { kind: 'methodology' }
   | { kind: 'reserved' } // later-phase routes: fall back to #/ silently
   | { kind: 'invalid' }
 
 const BOARD = /^\/board\/(\d{4})\/(\d{1,2})\/?$/
 const HISTORY = /^\/history(?:\/([A-Za-z]{2,3}))?\/?$/
 const TEAM = /^\/team\/([A-Za-z]{2,3})(?:\/(\d{4})(?:\/(\d{1,2}))?)?\/?$/
-const RESERVED = [/^\/(records|methodology)\/?$/]
+const METHODOLOGY = /^\/methodology\/?$/
+const RESERVED = [/^\/records\/?$/]
 
 export function parseHash(hash: string): Route {
   const h = hash.replace(/^#/, '')
@@ -27,6 +29,7 @@ export function parseHash(hash: string): Route {
     // '/team/ABBR/season' (no week) parses with season only; App sends it to the team's latest page
     return tm[3] ? { kind: 'team', team, season: Number(tm[2]), week: Number(tm[3]) } : { kind: 'team', team, season: Number(tm[2]) }
   }
+  if (METHODOLOGY.test(h)) return { kind: 'methodology' }
   if (RESERVED.some((re) => re.test(h))) return { kind: 'reserved' }
   return { kind: 'invalid' }
 }
@@ -41,3 +44,5 @@ export const teamHash = (team: string, season?: number, week?: number): string =
   season === undefined || week === undefined
     ? `#/team/${team.toUpperCase()}`
     : `#/team/${team.toUpperCase()}/${season}/${week}`
+
+export const methodologyHash = '#/methodology'

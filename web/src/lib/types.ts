@@ -19,3 +19,37 @@ export interface HistoryFile { keys: string[]; teams: Record<string, (number | n
 /** games/{season}.json, columnar (04-01). asof_week = first snapshot week that includes the result. */
 export interface GamesFile { season: number; week: number[]; asof_week: number[]; home: string[]; away: string[];
   home_score: (number | null)[]; away_score: (number | null)[]; game_type: string[]; gameday: string[]; neutral: boolean[] }
+
+// methodology.json (06-04; pipeline/src/fgs/methodology.py)
+export type Effect = 'helps' | 'hurts' | 'none'
+export interface FoldSign { k: number; of: number }
+export interface MethodologyFactor { key: string; label: string; description: string; weight: number;
+  sign: '+' | '-' | '0'; effect: Effect; fold_sign: FoldSign | null;
+  delta_spearman_n8: number | null; baseline_spearman_n8: number | null }
+export interface Candidate { key: string; label: string; brier_only?: boolean }
+export type CI = [number, number]
+export interface MetricCI { value: number | null; ci: CI | null; ci_season?: CI | null }
+export type PeriodMetrics = Record<string, MetricCI>
+export interface DiffMetric { value: number; ci_season?: CI; ci_cluster?: CI; seasons_won?: number; of?: number;
+  per_season?: unknown }
+export type DiffBlock = Record<string, DiffMetric>
+export interface WalkForwardBlock { seasons: [number, number]; label: string; spearman_n8: PeriodMetrics;
+  spearman_n4: PeriodMetrics; brier: PeriodMetrics; diff: DiffBlock | null }
+export interface HoldoutBlock { seasons: [number, number]; label: string; evaluated_at: string | null;
+  verdict: 'yes' | 'slight' | 'no' | null; headline: string | null; pass: boolean | null;
+  spearman_n8: PeriodMetrics; spearman_n4: PeriodMetrics; brier: PeriodMetrics; diff: DiffBlock | null;
+  diagnostic: { vs_exp_zeroed: { spearman_n8: number; diff_vs_elo: { value: number; ci_cluster?: CI } } | null } | null;
+  rerun: boolean }
+export interface Note { key: string; text: string; values: Record<string, number> }
+export interface Methodology {
+  version: number
+  frozen: { fitted_at: string; fit_seasons: [number, number]; alpha: number; n: number } | null
+  target: { n: number; text: string }
+  split: { train: [number, number]; walk_forward: [number, number]; holdout: [number, number]; live: number;
+    reference: [number, number] }
+  factors: MethodologyFactor[]
+  candidates: Candidate[]
+  walk_forward: WalkForwardBlock | null
+  holdout: HoldoutBlock | null
+  notes: Note[]
+}

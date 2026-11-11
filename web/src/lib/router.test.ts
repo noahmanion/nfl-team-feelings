@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardHash, historyHash, parseHash, teamHash } from './router'
+import { boardHash, historyHash, methodologyHash, parseHash, teamHash } from './router'
 
 describe('parseHash', () => {
   it('empty and root hashes are the latest board', () => {
@@ -31,7 +31,7 @@ describe('parseHash', () => {
     expect(parseHash('#/history/B1')).toEqual({ kind: 'invalid' })
   })
   it('recognises routes reserved for later phases', () => {
-    for (const h of ['#/records', '#/methodology', '#/records/']) {
+    for (const h of ['#/records', '#/records/']) {
       expect(parseHash(h)).toEqual({ kind: 'reserved' })
     }
   })
@@ -82,5 +82,17 @@ describe('historyHash', () => {
   it('round-trips through parseHash', () => {
     expect(parseHash(historyHash())).toEqual({ kind: 'history' })
     expect(parseHash(historyHash('KC'))).toEqual({ kind: 'history', team: 'KC' })
+  })
+})
+
+describe('methodology route', () => {
+  it('parses #/methodology with and without a trailing slash', () => {
+    expect(parseHash('#/methodology')).toEqual({ kind: 'methodology' })
+    expect(parseHash('#/methodology/')).toEqual({ kind: 'methodology' })
+    expect(parseHash('#/records')).toEqual({ kind: 'reserved' })
+  })
+  it('round-trips methodologyHash', () => {
+    expect(methodologyHash).toBe('#/methodology')
+    expect(parseHash(methodologyHash)).toEqual({ kind: 'methodology' })
   })
 })
