@@ -3,6 +3,7 @@
   import Delta from './Delta.svelte'
   import FactorBars from './FactorBars.svelte'
   import MoodLabel from './MoodLabel.svelte'
+  import PinButton from './PinButton.svelte'
   import RecentGames from './RecentGames.svelte'
   import Sep from './Sep.svelte'
   import Sparkline from './Sparkline.svelte'
@@ -150,6 +151,7 @@
         <div class="name-line">
           <TeamChip primary={teamMeta?.primary} secondary={teamMeta?.secondary} size={24} />
           <h2 id="team-heading">{name}</h2>
+          {#if teamMeta}<PinButton abbr={team} {name} />{/if}
         </div>
         <p class="sub">
           {when}{#if !latest}<Sep /><a href={teamHash(team)}>Now</a>{/if}

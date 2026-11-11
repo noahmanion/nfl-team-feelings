@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
 
-  let { variant = 'default', children }: { variant?: 'default' | 'accent'; children: Snippet } = $props()
+  let { variant = 'default', children }: { variant?: 'default' | 'accent' | 'neutral'; children: Snippet } = $props()
 </script>
 
-<span class="badge" class:accent={variant === 'accent'}>{@render children()}</span>
+<span class="badge" class:accent={variant === 'accent'} class:neutral={variant === 'neutral'}>{@render children()}</span>
 
 <style>
   .badge {
@@ -21,5 +21,9 @@
   .accent {
     border-color: var(--accent);
     color: var(--accent);
+  }
+  .neutral {
+    border-color: var(--border);
+    color: var(--text);
   }
 </style>

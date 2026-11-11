@@ -1,5 +1,7 @@
 <script lang="ts">
+  import Badge from './Badge.svelte'
   import Delta from './Delta.svelte'
+  import PinButton from './PinButton.svelte'
   import MoodLabel from './MoodLabel.svelte'
   import TeamChip from './TeamChip.svelte'
   import { bandIndex, changeText, formatRecord, moodToken } from '../lib/format'
@@ -13,7 +15,19 @@
     season,
     week,
     latest = true,
-  }: { row: Row; team: TeamMeta | undefined; bands: Band[]; season: number; week: number; latest?: boolean } = $props()
+    pinned = null,
+  }: {
+    row: Row
+    team: TeamMeta | undefined
+    bands: Band[]
+    season: number
+    week: number
+    latest?: boolean
+    /** Validated pinned team (validMyTeam), or null. */
+    pinned?: string | null
+  } = $props()
+
+  const mine = $derived(pinned !== null && pinned === row.franchise)
 
   const href = $derived(latest ? teamHash(row.franchise) : teamHash(row.franchise, season, week))
 
@@ -37,11 +51,11 @@
       : 'record unavailable',
   )
   const srText = $derived(
-    `${num(row.rank)}. ${name}, ${recordText}. Score ${ok(row.score) ? row.score : 'unavailable'}, ${row.label ?? ''}. ${changeText(row, week)}`,
+    `${num(row.rank)}. ${name}, ${recordText}. Score ${ok(row.score) ? row.score : 'unavailable'}, ${row.label ?? ''}. ${changeText(row, week)}${mine ? ' My team.' : ''}`,
   )
 </script>
 
-<li>
+<li id="row-{row.franchise}" class:mine>
   <a class="row" {href} style:--stripe-color={stripe}>
     <span class="visually-hidden">{srText}</span>
     <span class="rank" aria-hidden="true">{num(row.rank)}</span>
@@ -49,6 +63,7 @@
       <TeamChip primary={team?.primary} secondary={team?.secondary} />
       <span class="abbr">{row.franchise}</span>
       <span class="name">{name}</span>
+      {#if mine}<span class="mine-badge"><Badge variant="neutral">My team</Badge></span>{/if}
     </span>
     <span class="line2" aria-hidden="true">
       <span class="record">{record}</span>
@@ -63,9 +78,26 @@
       <span class="rank-delta"><Delta value={row.rank_delta} kind="rank" /></span>
     </span>
   </a>
+  <span class="pin-slot"><PinButton abbr={row.franchise} {name} /></span>
 </li>
 
 <style>
+  li {
+    position: relative;
+  }
+  .pin-slot {
+    position: absolute;
+    inset-block-start: 50%;
+    inset-inline-end: var(--space-xs);
+    transform: translateY(-50%);
+  }
+  .mine .row {
+    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  }
+  .mine-badge {
+    flex: none;
+    display: inline-flex;
+  }
   .row {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -74,6 +106,8 @@
     row-gap: var(--space-xs);
     align-items: center;
     padding: var(--space-md);
+    /* room for the absolutely positioned pin button so it never covers score/delta */
+    padding-inline-end: calc(var(--tap-min) + var(--space-sm));
     background: var(--surface);
     border: 1px solid var(--border);
     border-left: var(--stripe-width) solid var(--stripe-color);
@@ -173,6 +207,7 @@
       grid-template-rows: auto;
       column-gap: var(--space-md);
       padding: var(--space-sm) var(--space-md);
+      padding-inline-end: calc(var(--tap-min) + var(--space-sm));
     }
     .rank,
     .team,

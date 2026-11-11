@@ -2,6 +2,8 @@
   import BoardRow from './BoardRow.svelte'
   import StatusPanel from './StatusPanel.svelte'
   import { go } from '../lib/route.svelte'
+  import { validMyTeam } from '../lib/myteam'
+  import { myTeam } from '../lib/myteam.svelte'
   import type { Meta, Row } from '../lib/types'
 
   let {
@@ -26,6 +28,17 @@
   } = $props()
 
   const SKELETON_ROWS = 8
+
+  const pinned = $derived(validMyTeam(myTeam.abbr, meta?.teams))
+  const pinnedOnBoard = $derived(pinned !== null && rows.some((r) => r.franchise === pinned))
+
+  // No row fragment link: the app uses hash routing, so scroll and focus by hand.
+  function jumpToMine(): void {
+    if (!pinned) return
+    const li = document.getElementById('row-' + pinned)
+    li?.scrollIntoView({ block: 'center' })
+    li?.querySelector<HTMLAnchorElement>('a.row')?.focus({ preventScroll: true })
+  }
 </script>
 
 {#snippet columns()}
@@ -55,10 +68,13 @@
   />
 {:else}
   <div class="board" class:busy>
+    {#if pinnedOnBoard}
+      <div class="jump"><button type="button" onclick={jumpToMine}>Jump to my team</button></div>
+    {/if}
     {@render columns()}
     <ol aria-labelledby="board-heading" aria-busy={busy}>
       {#each rows as row (row.franchise)}
-        <BoardRow {row} team={meta.teams[row.franchise]} bands={meta.bands} {season} {week} {latest} />
+        <BoardRow {row} team={meta.teams[row.franchise]} bands={meta.bands} {season} {week} {latest} {pinned} />
       {/each}
     </ol>
   </div>
@@ -72,6 +88,30 @@
   }
   .busy {
     opacity: 0.6;
+  }
+  .jump {
+    display: flex;
+    justify-content: flex-end;
+    margin-block-end: var(--space-sm);
+  }
+  .jump button {
+    min-block-size: var(--tap-min);
+    padding: 0 var(--space-md);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    color: var(--text);
+    font: inherit;
+    font-size: var(--text-label);
+    font-weight: var(--weight-semibold);
+    cursor: pointer;
+  }
+  .jump button:hover {
+    background: var(--bg);
+  }
+  .jump button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
   }
   .skeleton-row {
     display: flex;
@@ -99,7 +139,8 @@
       grid-template-columns: 48px minmax(0, 1fr) 80px 72px minmax(0, 280px) 72px;
       column-gap: var(--space-md);
       /* align with row content: 1px border + stripe on the left, 1px border on the right */
-      padding: 0 calc(var(--space-md) + 1px) var(--space-sm) calc(var(--space-md) + var(--stripe-width));
+      /* right side also reserves the pin button slot (BoardRow padding-inline-end) */
+      padding: 0 calc(var(--tap-min) + var(--space-sm) + 1px) var(--space-sm) calc(var(--space-md) + var(--stripe-width));
       font-size: var(--text-label);
       line-height: var(--lh-label);
       font-weight: var(--weight-semibold);
