@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardHash, historyHash, methodologyHash, parseHash, teamHash } from './router'
+import { boardHash, historyHash, methodologyHash, parseHash, recordsHash, teamHash } from './router'
 
 describe('parseHash', () => {
   it('empty and root hashes are the latest board', () => {
@@ -30,9 +30,9 @@ describe('parseHash', () => {
     expect(parseHash('#/history/TOOLONG')).toEqual({ kind: 'invalid' })
     expect(parseHash('#/history/B1')).toEqual({ kind: 'invalid' })
   })
-  it('recognises routes reserved for later phases', () => {
+  it('no longer reserves #/records', () => {
     for (const h of ['#/records', '#/records/']) {
-      expect(parseHash(h)).toEqual({ kind: 'reserved' })
+      expect(parseHash(h)).not.toEqual({ kind: 'reserved' })
     }
   })
 })
@@ -89,10 +89,21 @@ describe('methodology route', () => {
   it('parses #/methodology with and without a trailing slash', () => {
     expect(parseHash('#/methodology')).toEqual({ kind: 'methodology' })
     expect(parseHash('#/methodology/')).toEqual({ kind: 'methodology' })
-    expect(parseHash('#/records')).toEqual({ kind: 'reserved' })
   })
   it('round-trips methodologyHash', () => {
     expect(methodologyHash).toBe('#/methodology')
     expect(parseHash(methodologyHash)).toEqual({ kind: 'methodology' })
+  })
+})
+
+describe('records route', () => {
+  it('parses #/records with and without a trailing slash', () => {
+    expect(parseHash('#/records')).toEqual({ kind: 'records' })
+    expect(parseHash('#/records/')).toEqual({ kind: 'records' })
+    expect(parseHash('#/records/x')).toEqual({ kind: 'invalid' })
+  })
+  it('round-trips recordsHash', () => {
+    expect(recordsHash).toBe('#/records')
+    expect(parseHash(recordsHash)).toEqual({ kind: 'records' })
   })
 })
