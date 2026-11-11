@@ -220,3 +220,16 @@ def test_sim_coverage():
     fails = checks.check_sim_coverage(snaps.head(2), snaps)
     assert fails == ["1 snapshot rows without a sim row, e.g. 2010 week 1 A"]
     assert checks.check_sim_coverage(snaps, snaps.head(2)) == ["1 sim rows without a snapshot, e.g. 2010 week 1 A"]
+
+
+def test_draft_dates_fail_for_past_season_warn_for_current(synthetic_games, monkeypatch):
+    # synthetic_games covers 2023 and 2024 (current)
+    assert checks.check_draft_dates(synthetic_games) == []
+    assert checks.warn_draft_date_current(synthetic_games) == []
+    monkeypatch.setattr(season_config, "DRAFT_END", {2023: "04-29"})
+    assert checks.check_draft_dates(synthetic_games) == []
+    assert len(checks.warn_draft_date_current(synthetic_games)) == 1
+    monkeypatch.setattr(season_config, "DRAFT_END", {2024: "04-27"})
+    fails = checks.check_draft_dates(synthetic_games)
+    assert len(fails) == 1 and "2023" in fails[0]
+    assert "draft_dates" in [n for n, _ in checks.CHECKS] and "draft_dates" in [n for n, _ in checks.WARNINGS]

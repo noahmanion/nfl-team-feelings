@@ -281,3 +281,166 @@ def test_gap_callouts_rate_on_real_data(real_inputs):
     mean = len(out) / eligible
     assert 1.5 <= mean <= 6, mean
     assert per["len"].max() <= 2 * season_config.GAP_CAP
+
+
+
+# --- snapshot dates and streaks (INSIGHT-03) ------------------------------------------------------
+
+from datetime import date  # noqa: E402
+
+from conftest import make_games  # noqa: E402
+
+D = date.fromisoformat
+
+
+def test_draft_date_table_fallback_and_clamp(monkeypatch):
+    assert season_config.draft_date(2014, D("2026-11-11")) == D("2014-05-10")
+    monkeypatch.setattr(season_config, "DRAFT_END", {})
+    assert season_config.draft_date(2027, D("2027-11-01")) == D("2027-09-01")
+    assert season_config.draft_date(2027, D("2027-05-20")) == D("2027-05-20")  # clamped: never in the future
+
+
+def test_snapshot_dates_last_played_gameday_per_asof_week_and_draft_week0():
+    g = make_games([
+        ("a", 2023, 1, "REG", "2023-09-07", "BUF", "MIA", 1, 0, False),
+        ("b", 2023, 1, "REG", "2023-09-11", "NE", "NYJ", 1, 0, False),   # MNF: week 1 date
+        ("c", 2023, 2, "REG", "2023-09-17", "MIA", "NE", 1, 0, False),
+        ("d", 2023, 2, "REG", "2023-09-18", "NYJ", "BUF", None, None, False),  # unplayed: ignored
+    ])
+    out = insights.snapshot_dates(g, D("2026-11-11"))
+    got = {(s, w): d for s, w, d in out.iter_rows()}
+    assert got == {(2023, 0): D("2023-04-29"), (2023, 1): D("2023-09-11"), (2023, 2): D("2023-09-17")}
+
+
+def test_snapshot_dates_use_asof_week_when_present():
+    g = make_games([
+        ("a", 2023, 1, "REG", "2023-09-10", "BUF", "MIA", 1, 0, False),
+        ("b", 2023, 1, "REG", "2023-09-20", "NE", "NYJ", 1, 0, False),  # postponed: known in week 2
+    ]).with_columns(pl.Series("asof_week", [1, 2], dtype=pl.Int32))
+    got = {(s, w): d for s, w, d in insights.snapshot_dates(g, D("2026-11-11")).iter_rows()}
+    assert got[(2023, 1)] == D("2023-09-10") and got[(2023, 2)] == D("2023-09-20")
+
+
+AS_OF = D("2021-01-01")
+
+
+def test_streak_runs_ended_active_and_days():
+    ds = [D("2020-01-01"), D("2020-01-11"), D("2020-01-21"), D("2020-02-01"), D("2020-02-11")]
+    out = insights.runs(ds, [10, 5, 50, 3, 1], lambda x: x <= 19, AS_OF)
+    assert [(r["start"], r["end"], r["days"], r["active"]) for r in out] == [
+        (D("2020-01-01"), D("2020-01-21"), 20, False),
+        (D("2020-02-01"), None, (AS_OF - D("2020-02-01")).days, True),
+    ]
+    assert insights.runs(ds, [50] * 5, lambda x: x <= 19, AS_OF) == []
+
+
+def _tl(rows):
+    """scored-like rows (franchise, season, week, score) for timelines()."""
+    return _scored([{"franchise_id": f, "season": s, "week": w, "score": sc} for f, s, w, sc in rows])
+
+
+def _dates(rows):
+    return pl.DataFrame(rows, orient="row", schema={"season": pl.Int32, "week": pl.Int32, "date": pl.Date})
+
+
+def test_streak_crosses_season_boundary_as_one_run():
+    dates = _dates([(2020, 0, D("2020-04-25")), (2020, 1, D("2020-09-14")), (2020, 2, D("2020-09-21")),
+                    (2021, 0, D("2021-05-01")), (2021, 1, D("2021-09-13"))])
+    s = _tl([("AAA", 2020, 0, 50), ("AAA", 2020, 1, 15), ("AAA", 2020, 2, 10), ("AAA", 2021, 0, 12),
+             ("AAA", 2021, 1, 40)])
+    r = insights.all_runs(insights.timelines(s, dates), D("2021-12-01")).filter(pl.col("kind") == "misery")
+    assert r.height == 1
+    row = r.row(0, named=True)
+    assert row["start"] == D("2020-09-14") and row["end"] == D("2021-09-13") and not row["active"]
+    assert row["days"] == (D("2021-09-13") - D("2020-09-14")).days
+    assert (row["start_season"], row["start_week"], row["end_season"], row["end_week"]) == (2020, 1, 2021, 0)
+
+
+def test_streak_timelines_drop_seeded_week0_rows():
+    dates = _dates([(1999, 0, D("1999-04-18")), (1999, 1, D("1999-09-13"))])
+    s = _tl([("CLE", 1999, 0, 2), ("CLE", 1999, 1, 5), ("BUF", 1999, 0, 5), ("BUF", 1999, 1, 5)])
+    tl = insights.timelines(s, dates)
+    assert tl.filter(pl.col("franchise_id") == "CLE")["week"].to_list() == [1]
+    assert tl.filter(pl.col("franchise_id") == "BUF")["week"].to_list() == [0, 1]
+    r = insights.all_runs(tl, D("1999-12-01")).filter(pl.col("franchise_id") == "CLE").row(0, named=True)
+    assert r["start"] == D("1999-09-13") and r["active"]  # week-1+ misery still counts
+
+
+def test_streak_timelines_raise_on_undated_snapshot():
+    with pytest.raises(ValueError, match="no date"):
+        insights.timelines(_tl([("AAA", 2020, 3, 50)]), _dates([(2020, 0, D("2020-04-25"))]))
+
+
+def test_streak_joy_threshold_inclusive_and_misery_is_under_20():
+    assert insights.streak_cond("joy")(80) and not insights.streak_cond("joy")(79)
+    assert insights.streak_cond("misery")(19) and not insights.streak_cond("misery")(20)
+
+
+def _weekly(n_weeks: int, start: date, step: int = 7) -> pl.DataFrame:
+    from datetime import timedelta
+    return _dates([(2020, w, start + timedelta(days=step * w)) for w in range(n_weeks)])
+
+
+def test_streak_callouts_floor_and_one_per_kind_longest_wins():
+    dates = _weekly(20, D("2020-01-01"))  # weeks 0..19, 7 days apart
+    s = _tl([*[("AAA", 2020, w, 5) for w in range(20)],             # misery from day 0
+             *[("BBB", 2020, w, 5 if w >= 3 else 50) for w in range(20)],  # shorter misery
+             *[("CCC", 2020, w, 90) for w in range(20)]])             # joy from day 0
+    tl = insights.timelines(s, dates)
+    bands = {(2020, w, f): 1 for w in range(20) for f in ("AAA", "BBB", "CCC")}
+    out = insights.streak_callouts(insights.all_runs(tl, D("2020-06-01")), dates, NICKS, bands)
+    weeks = sorted({c["week"] for c in out})
+    assert weeks == list(range(15, 20))  # 15 * 7 = 105 >= 100; 14 * 7 = 98 < 100
+    for w in weeks:
+        cs = [c for c in out if c["week"] == w]
+        assert sorted(c["type"] for c in cs) == ["joy", "misery"]
+        m = next(c for c in cs if c["type"] == "misery")
+        assert m["franchise"] == "AAA" and m["stat"] == 7 * w and m["start"] == "2020-01-01"
+    c = out[0]
+    assert set(c) == CALLOUT_KEYS and c["evidence"] is None and c["band"] == 1
+    assert c["headline"] == "AAAnick fans have been miserable for 105 straight days"
+    assert c["detail"] == "Score under 20 since Jan 1, 2020."
+    j = next(x for x in out if x["type"] == "joy")
+    assert j["headline"] == "CCCnick fans have been buying the jersey for 105 straight days"
+    assert j["detail"] == "Score 80 or higher since Jan 1, 2020."
+
+
+def test_streak_callouts_skip_ended_runs():
+    dates = _weekly(20, D("2020-01-01"))
+    s = _tl([("AAA", 2020, w, 5 if w < 16 else 50) for w in range(20)])  # ends at week 16
+    out = insights.streak_callouts(insights.all_runs(insights.timelines(s, dates), D("2020-06-01")), dates, NICKS,
+                                   {(2020, w, "AAA"): 1 for w in range(20)})
+    assert [c["week"] for c in out] == [15]
+
+
+def test_streak_date_text_and_thousands():
+    assert insights.date_text(D("2005-09-11")) == "Sep 11, 2005"
+
+
+def test_callouts_by_week_streaks_between_gaps_and_movers():
+    from datetime import timedelta
+    dates_games = make_games([(f"g{w}", 2020, w, "REG", (D("2020-09-01") + timedelta(days=7 * w)).isoformat(),
+                               "AAA", "BBB", 1, 0, False) for w in range(1, 18)])
+    rows = [{"franchise_id": "AAA", "week": w, "score": 5, "score_delta": 1 if w == 17 else 0, "rank_delta": 0}
+            for w in range(0, 18)]
+    by = insights.callouts_by_week(_scored(rows), _tg([]), NICKS, None, games=dates_games, as_of=D("2021-01-01"))
+    types = [c["type"] for c in by[(2020, 17)]]
+    assert types == ["misery", "mover_up"]
+    assert insights.callouts_by_week(_scored(rows), _tg([]), NICKS, None).get((2020, 17)) is not None
+    assert all(c["type"] != "misery" for cs in insights.callouts_by_week(_scored(rows), _tg([]), NICKS, None).values()
+               for c in cs)
+
+
+def test_snapshot_dates_increase_per_franchise_on_real_data(real_inputs):
+    if not (CACHE_DIR / "schedules.parquet").exists():
+        pytest.skip("no cached schedules")
+    from fgs.cli import derive
+    from fgs.ingest import load_schedules
+    from fgs.mood import score_frame
+
+    derived = derive(load_schedules(), **real_inputs)
+    dates = insights.snapshot_dates(derived["games"], D("2026-11-11"))
+    tl = insights.timelines(score_frame(derived["features"]), dates)  # raises if any snapshot is undated
+    bad = tl.with_columns(pl.col("date").diff().over("franchise_id").alias("_d")).filter(
+        pl.col("_d").is_not_null() & (pl.col("_d") <= pl.duration(days=0)))
+    assert bad.height == 0, bad.head()

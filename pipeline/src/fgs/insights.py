@@ -1,20 +1,24 @@
-"""Phase 8 callouts: perception gaps (INSIGHT-02) and week-over-week movers (INSIGHT-06).
+"""Phase 8 callouts: perception gaps (INSIGHT-02), misery/joy streaks (INSIGHT-03) and week-over-week
+movers (INSIGHT-06). Also dates every snapshot (streaks are measured in calendar days).
 
 Pure (polars + stdlib). Upstream of the backtest firewall: never imports fgs.backtest or
 fgs.evidence. The base-rate evidence line comes in as a dict (the committed
 pipeline/callout_evidence.json, loaded and validated by fgs.export).
 
 Callout (every type has exactly these keys):
-  type      worried | hopeful | mover_up | mover_down   (plan 08-03 adds misery | joy)
+  type      worried | hopeful | misery | joy | mover_up | mover_down
   season, week, franchise
   headline, detail, evidence (str | None)
-  stat      worried/hopeful: signed gap (record_rank - score rank); movers: score_delta
-  start     ISO date for streak types only; None here
+  stat      worried/hopeful: signed gap (record_rank - score rank); movers: score_delta;
+            misery/joy: streak length in days as of that week's date
+  start     ISO date the streak started (misery/joy only); None otherwise
   band      the team's hysteresis band that week
 """
 
 import hashlib
 import json
+from collections.abc import Callable
+from datetime import date
 
 import polars as pl
 
@@ -180,16 +184,171 @@ def movers(scored: pl.DataFrame, nicks: dict[str, str]) -> list[dict]:
     return out
 
 
+# --- snapshot dates and streaks (INSIGHT-03) -------------------------------------------------------
+
+_MONTHS = ("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+STREAK_KINDS = ("misery", "joy")
+
+
+def date_text(d: date) -> str:
+    """'Sep 11, 2005' without any locale dependency."""
+    return f"{_MONTHS[d.month - 1]} {d.day}, {d.year}"
+
+
+def snapshot_dates(games: pl.DataFrame, as_of: date) -> pl.DataFrame:
+    """(season, week, date) for every snapshot: week >= 1 = the last gameday of the played games
+    with that asof_week; week 0 = season_config.draft_date(season, as_of) (post-draft)."""
+    wk = pl.col("asof_week") if "asof_week" in games.columns else pl.col("week")
+    played = (
+        games.filter(pl.col("played"))
+        .group_by(pl.col("season").cast(pl.Int32), wk.cast(pl.Int32).alias("week"))
+        .agg(pl.col("gameday").max().str.to_date().alias("date"))
+    )
+    seasons = sorted(int(x) for x in games["season"].unique().to_list())
+    w0 = pl.DataFrame(
+        {"season": seasons, "week": [0] * len(seasons),
+         "date": [season_config.draft_date(x, as_of) for x in seasons]},
+        schema={"season": pl.Int32, "week": pl.Int32, "date": pl.Date},
+    )
+    return pl.concat([w0, played.select("season", "week", "date")]).sort("season", "week")
+
+
+def timelines(scored: pl.DataFrame, dates: pl.DataFrame) -> pl.DataFrame:
+    """Per-franchise dated score rows (franchise_id, season, week, date, score), sorted by date.
+    The week-0 rows of seeded expansion team-seasons (season_config.SEEDS) are dropped: they
+    reflect an assumed 1300 seed, not a result. Raises ValueError if a snapshot has no date."""
+    seeds = list(season_config.SEEDS)
+    is_seed_w0 = pl.lit(False)
+    for f, se in seeds:
+        is_seed_w0 = is_seed_w0 | ((pl.col("franchise_id") == f) & (pl.col("season") == se) & (pl.col("week") == 0))
+    t = (
+        scored.select(pl.col("franchise_id"), pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32),
+                      pl.col("score").cast(pl.Int64))
+        .join(dates, on=["season", "week"], how="left")
+    )
+    missing = t.filter(pl.col("date").is_null())
+    if missing.height:
+        raise ValueError(f"{missing.height} snapshots have no date, e.g. {missing.row(0, named=True)}")
+    return (
+        t.filter(~is_seed_w0)
+        .sort("franchise_id", "date", "season", "week")
+        .select("franchise_id", "season", "week", "date", "score")
+    )
+
+
+def runs(dates: list[date], scores: list[int], cond: Callable[[int], bool], as_of: date) -> list[dict]:
+    """Maximal runs of consecutive rows meeting cond. start = first row's date; end = the date of the
+    first row that breaks it (None if the run reaches the last row: active); days = (end or as_of)
+    - start. i/j are the first/last row indexes inside the run."""
+    ok = [bool(cond(x)) for x in scores]
+    out, i, n = [], 0, len(dates)
+    while i < n:
+        if not ok[i]:
+            i += 1
+            continue
+        j = i
+        while j + 1 < n and ok[j + 1]:
+            j += 1
+        end = dates[j + 1] if j + 1 < n else None
+        out.append({"start": dates[i], "end": end, "active": end is None,
+                    "days": ((end or as_of) - dates[i]).days, "i": i, "j": j})
+        i = j + 1
+    return out
+
+
+def streak_cond(kind: str) -> Callable[[int], bool]:
+    if kind == "misery":
+        return lambda x: x <= season_config.MISERY_MAX
+    if kind == "joy":
+        return lambda x: x >= season_config.JOY_MIN
+    raise ValueError(kind)
+
+
+_RUN_SCHEMA = {
+    "franchise_id": pl.String, "kind": pl.String, "start": pl.Date, "end": pl.Date, "days": pl.Int64,
+    "active": pl.Boolean, "start_season": pl.Int32, "start_week": pl.Int32, "end_season": pl.Int32,
+    "end_week": pl.Int32,
+}
+
+
+def all_runs(tl: pl.DataFrame, as_of: date) -> pl.DataFrame:
+    """Every misery and joy run of every franchise (seasons are not boundaries). end_season/end_week
+    are the last snapshot inside the run."""
+    rows = []
+    for (fid,), part in tl.sort("franchise_id", "date").group_by(["franchise_id"], maintain_order=True):
+        d, sc = part["date"].to_list(), part["score"].to_list()
+        se, wk = part["season"].to_list(), part["week"].to_list()
+        for kind in STREAK_KINDS:
+            for r in runs(d, sc, streak_cond(kind), as_of):
+                i, j = r["i"], r["j"]
+                rows.append({"franchise_id": fid, "kind": kind, "start": r["start"], "end": r["end"],
+                             "days": r["days"], "active": r["active"], "start_season": se[i], "start_week": wk[i],
+                             "end_season": se[j], "end_week": wk[j]})
+    return pl.DataFrame(rows, schema=_RUN_SCHEMA)
+
+
+def streak_callouts(
+    run_df: pl.DataFrame, dates: pl.DataFrame, nicks: dict[str, str], bands: dict[tuple[int, int, str], int],
+) -> list[dict]:
+    """Per (season, week) with date d: the longest misery run and the longest joy run that are
+    ongoing at d (start <= d and (end is None or end > d)) and at least STREAK_CALLOUT_MIN_DAYS
+    old at d. At most one per kind per week; ties: earlier start, then franchise. bands maps
+    (season, week, franchise) -> the team's band that week. Copy never names the mood label
+    (hysteresis can disagree with the raw threshold, RESEARCH Pitfall 7)."""
+    floor = season_config.STREAK_CALLOUT_MIN_DAYS
+    by_kind = {k: run_df.filter(pl.col("kind") == k).sort("start", "franchise_id").to_dicts() for k in STREAK_KINDS}
+    out = []
+    for season, week, d in dates.sort("season", "week").iter_rows():
+        for kind in STREAK_KINDS:
+            best = None
+            for r in by_kind[kind]:
+                if r["start"] > d:
+                    break
+                if r["end"] is not None and r["end"] <= d:
+                    continue
+                days = (d - r["start"]).days
+                if days >= floor and (best is None or days > best[0]):
+                    best = (days, r)
+            if best is None:
+                continue
+            days, r = best
+            fid = r["franchise_id"]
+            band = bands.get((int(season), int(week), fid))
+            if band is None:
+                continue  # no snapshot row for this team that week (cannot happen on the full grid)
+            nick = nicks.get(fid, fid)
+            if kind == "misery":
+                headline = f"{nick} fans have been miserable for {days:,} straight days"
+                detail = f"Score under {season_config.MISERY_MAX + 1} since {date_text(r['start'])}."
+            else:
+                headline = f"{nick} fans have been buying the jersey for {days:,} straight days"
+                detail = f"Score {season_config.JOY_MIN} or higher since {date_text(r['start'])}."
+            out.append({
+                "type": kind, "season": int(season), "week": int(week), "franchise": fid,
+                "headline": headline, "detail": detail, "evidence": None, "stat": int(days),
+                "start": r["start"].isoformat(), "band": int(band),
+            })
+    return out
+
+
 # --- assembly -------------------------------------------------------------------------------------
 
 def callouts_by_week(
     scored: pl.DataFrame, team_games: pl.DataFrame, nicks: dict[str, str], evidence: dict | None,
+    *, games: pl.DataFrame | None = None, as_of: date | None = None,
 ) -> dict[tuple[int, int], list[dict]]:
-    """(season, week) -> gap callouts (by |gap|), then mover_up, then mover_down. The single assembly
-    point for every callout type (plan 08-03 adds streaks here)."""
+    """(season, week) -> gap callouts (by |gap|), then misery, joy, then mover_up, then mover_down.
+    The single assembly point for every callout type. Streaks need games and as_of (to date the
+    snapshots); without them only gaps and movers are produced."""
     by: dict[tuple[int, int], list[dict]] = {}
     gaps = gap_callouts(record_ranks(scored, team_games), nicks, evidence)
+    streaks: list[dict] = []
+    if games is not None and as_of is not None:
+        dates = snapshot_dates(games, as_of)
+        bands = {(int(a), int(b), c): int(d) for a, b, c, d in
+                 scored.select("season", "week", "franchise_id", "band").iter_rows()}
+        streaks = streak_callouts(all_runs(timelines(scored, dates), as_of), dates, nicks, bands)
     mv = movers(scored, nicks)
-    for c in gaps + [m for m in mv if m["type"] == "mover_up"] + [m for m in mv if m["type"] == "mover_down"]:
+    for c in gaps + streaks + [m for m in mv if m["type"] == "mover_up"] + [m for m in mv if m["type"] == "mover_down"]:
         by.setdefault((c["season"], c["week"]), []).append(c)
     return by

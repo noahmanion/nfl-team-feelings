@@ -1,5 +1,7 @@
 """Per-season constants and era rules: seeds, HFA, team counts, games, playoffs, divisions."""
 
+from datetime import date
+
 MEAN_ELO = 1505.0
 
 # Expansion / re-entry franchises start below the mean (538 convention). Everyone else: 1505 in 1999.
@@ -135,3 +137,34 @@ GAP_THRESHOLD = 8
 GAP_CAP = 3
 GAP_FIRST_WEEK = 4
 MOVERS_N = 3
+
+
+# ---------------------------------------------------------------------------
+# Phase 8 streaks and records (INSIGHT-03, INSIGHT-04).
+#
+# DRAFT_END dates the week-0 (post-draft, Phase 7) snapshot: the LAST day of each NFL draft, from
+# Wikipedia "List of NFL drafts". Hard-coded because nflverse draft_picks has no date column.
+# fgs.checks.check_draft_dates fails `fgs check` when a past season is missing (and warns for the
+# current one). Unknown seasons fall back to Sept 1, clamped to the export date (never negative days).
+#
+#   MISERY_MAX               score <= this is misery (score < 20)
+#   JOY_MIN                  score >= this is joy
+#   STREAK_CALLOUT_MIN_DAYS  a week's longest active streak becomes a callout only from this length
+# ---------------------------------------------------------------------------
+DRAFT_END: dict[int, str] = {  # season: "MM-DD" (last day of the draft)
+    1999:"04-18", 2000:"04-16", 2001:"04-22", 2002:"04-21", 2003:"04-27", 2004:"04-25", 2005:"04-24",
+    2006:"04-30", 2007:"04-29", 2008:"04-27", 2009:"04-26", 2010:"04-24", 2011:"04-30", 2012:"04-28",
+    2013:"04-27", 2014:"05-10", 2015:"05-02", 2016:"04-30", 2017:"04-29", 2018:"04-28", 2019:"04-27",
+    2020:"04-25", 2021:"05-01", 2022:"04-30", 2023:"04-29", 2024:"04-27", 2025:"04-26", 2026:"04-25",
+}  # fmt: skip
+MISERY_MAX = 19
+JOY_MIN = 80
+STREAK_CALLOUT_MIN_DAYS = 100
+
+
+def draft_date(season: int, as_of: date) -> date:
+    """Date of the week-0 snapshot: the draft's last day; unknown season -> Sept 1, clamped to as_of."""
+    md = DRAFT_END.get(season)  # module attribute at call time (tests monkeypatch DRAFT_END)
+    if md is not None:
+        return date.fromisoformat(f"{season}-{md}")
+    return min(date(season, 9, 1), as_of)

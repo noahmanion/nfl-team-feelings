@@ -355,6 +355,29 @@ def check_draft_sum(surplus: pl.DataFrame) -> list[str]:
             for y, v in sums.iter_rows() if v > DRAFT_SUM_TOL]
 
 
+def _draft_date_gaps(games: pl.DataFrame) -> tuple[list[int], int | None]:
+    seasons = sorted(int(x) for x in games["season"].unique().to_list())
+    if not seasons:
+        return [], None
+    missing = [y for y in seasons if y not in season_config.DRAFT_END]
+    return missing, seasons[-1]
+
+
+def check_draft_dates(games: pl.DataFrame) -> list[str]:
+    """INSIGHT-03: every past season (before the latest in the data) has a draft date in
+    season_config.DRAFT_END, so week-0 snapshots get real dates (streak lengths are calendar days)."""
+    missing, current = _draft_date_gaps(games)
+    return [f"season {y}: no draft date in season_config.DRAFT_END (week-0 snapshot undated)"
+            for y in missing if y != current]
+
+
+def warn_draft_date_current(games: pl.DataFrame) -> list[str]:
+    """Soft: the current season has no draft date yet (week 0 falls back to Sept 1, clamped to today)."""
+    missing, current = _draft_date_gaps(games)
+    return [f"season {current}: no draft date in season_config.DRAFT_END yet; add the last day of the draft"
+            ] if current in missing else []
+
+
 # (name, callable(raw, derived, params) -> list[str]); params are the EloParams derive() used.
 CheckFn = Callable[[pl.DataFrame, dict[str, pl.DataFrame], EloParams], list[str]]
 CHECKS: list[tuple[str, CheckFn]] = [
@@ -376,6 +399,7 @@ CHECKS: list[tuple[str, CheckFn]] = [
     ("vegas_coverage", lambda raw, d, p: check_vegas_coverage(d["games"], d.get("vegas"))),
     ("draft_coverage", lambda raw, d, p: [] if d.get("draft") is None else check_draft_coverage(d["draft"])),
     ("draft_sum", lambda raw, d, p: [] if d.get("draft") is None else check_draft_sum(d["draft"])),
+    ("draft_dates", lambda raw, d, p: check_draft_dates(d["games"])),
 ]
 
 
@@ -395,6 +419,7 @@ def run_checks(
 WARNINGS: list[tuple[str, CheckFn]] = [
     ("pbp_lag", lambda raw, d, p: [] if d.get("team_game_epa") is None
      else pbp.pbp_lag(d["team_game_epa"], d["team_games"])),
+    ("draft_dates", lambda raw, d, p: warn_draft_date_current(d["games"])),
 ]
 
 
