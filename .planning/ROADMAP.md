@@ -159,8 +159,26 @@ Plans:
   3. A Monte Carlo simulator using era rules gives weekly playoff odds and preseason expected wins for any (season, week), cached by model version. Model-derived expected wins correlate reasonably with the 2003–2020 Vegas win totals (target r of about 0.7–0.8).
   4. The vs-expectation factor tags each row's expectation source (model or Vegas), and the playoff-odds-trend factor is in the score with its fitted weight reported, even if it lands near 0.
 
-**Plans**: TBD
-**Research**: Needed. Factor definitions (EWMA window, opponent adjustment, QB-change handling), playoff simulator era rules and simplified tiebreakers, and model-vs-Vegas expectation validation.
+**Plans**: 5 plans
+**Research**: Done (05-RESEARCH.md). Factor definitions (EWMA window, opponent adjustment, QB-change handling), playoff simulator era rules and simplified tiebreakers, and model-vs-Vegas expectation validation.
+
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — pbp ingest: slim per-season cache, team_game_epa aggregates, coverage check, build/refresh wiring (DATA-05)
+- [ ] 05-02-PLAN.md — Vectorized season simulator (era rules, tiebreaks, sigma=100, model_version cache) + win totals and source-tagged expectations (MODEL-13, MODEL-08)
+
+**Wave 2**
+
+- [ ] 05-03-PLAN.md — epa_traj then qb_trend, one at a time: backtest delta, sign, weights, log, phrases, site data (MODEL-05, MODEL-11)
+
+**Wave 3**
+
+- [ ] 05-04-PLAN.md — Simulator wired into derive/refresh/checks/leakage; vs_exp factor with three logged deltas (MODEL-13, MODEL-08)
+
+**Wave 4**
+
+- [ ] 05-05-PLAN.md — po_trend factor + final interim 11 weights; playoff odds stat on team page; README + phase gate (MODEL-12)
 
 ### Phase 6: Weight Freeze & Methodology
 
