@@ -84,6 +84,32 @@ export function chartRows(m: Methodology, metric: ChartMetric): ChartRow[] {
   return rows
 }
 
+type CIMethod = { spearman?: string; brier?: string }
+// `ci_method` is emitted by the pipeline per period (WR-04); read structurally so types.ts stays untouched.
+const methodOf = (block: unknown, metric: ChartMetric): string | null => {
+  const cm = (block as { ci_method?: CIMethod } | null)?.ci_method
+  return (metric === 'brier' ? cm?.brier : cm?.spearman) ?? null
+}
+
+/** "season-block" / "team-season" / "season-week" interval method for a period's plotted `ci`. */
+export function ciMethodText(block: unknown, metric: ChartMetric): string | null {
+  return methodOf(block, metric)
+}
+
+/** Figure caption naming the interval method per period, and warning when they differ. */
+export function intervalCaption(m: Methodology, metric: ChartMetric): string {
+  const ps: { label: string; block: unknown }[] = []
+  if (m.walk_forward) ps.push({ label: m.walk_forward.label, block: m.walk_forward })
+  if (m.holdout) ps.push({ label: m.holdout.label, block: m.holdout })
+  const parts = ps
+    .map((p) => ({ label: p.label, method: methodOf(p.block, metric) }))
+    .filter((p): p is { label: string; method: string } => p.method != null)
+  if (parts.length === 0) return 'Whiskers are 95% bootstrap intervals.'
+  const list = parts.map((p) => `${p.method} for ${p.label}`).join('; ')
+  const differ = new Set(parts.map((p) => p.method)).size > 1
+  return `Whiskers are 95% bootstrap intervals (${list}).${differ ? ' The resampling methods differ, so compare whisker widths across periods with care.' : ''}`
+}
+
 export function periodLabels(m: Methodology): string[] {
   return periods(m).map((p) => p.label)
 }

@@ -7,6 +7,8 @@
   import {
     chartCandidates,
     chartRows,
+    ciMethodText,
+    intervalCaption,
     deltaText,
     effectText,
     foldText,
@@ -47,9 +49,15 @@
 
   const periods = $derived.by(() => {
     if (!m) return []
-    const out: { label: string; spearman: PeriodMetrics; brier: PeriodMetrics }[] = []
-    if (m.walk_forward) out.push({ label: m.walk_forward.label, spearman: m.walk_forward.spearman_n8, brier: m.walk_forward.brier })
-    if (m.holdout) out.push({ label: m.holdout.label, spearman: m.holdout.spearman_n8, brier: m.holdout.brier })
+    type P = { label: string; spearman: PeriodMetrics; brier: PeriodMetrics; spMethod: string | null; brMethod: string | null }
+    const out: P[] = []
+    for (const b of [m.walk_forward, m.holdout]) {
+      if (!b) continue
+      out.push({
+        label: b.label, spearman: b.spearman_n8, brier: b.brier,
+        spMethod: ciMethodText(b, 'spearman_n8'), brMethod: ciMethodText(b, 'brier'),
+      })
+    }
     return out
   })
   const wfDiff = $derived(m?.walk_forward?.diff?.spearman_n8 ?? null)
@@ -165,8 +173,18 @@
       </p>
 
       {#if periods.length > 0}
-        <MethodologyChart rows={chartRows(m, 'spearman_n8')} metric="spearman_n8" label="Rank correlation by method" />
-        <MethodologyChart rows={chartRows(m, 'brier')} metric="brier" label="Brier score by method" />
+        <MethodologyChart
+          rows={chartRows(m, 'spearman_n8')}
+          metric="spearman_n8"
+          label="Rank correlation by method"
+          intervalNote={intervalCaption(m, 'spearman_n8')}
+        />
+        <MethodologyChart
+          rows={chartRows(m, 'brier')}
+          metric="brier"
+          label="Brier score by method"
+          intervalNote={intervalCaption(m, 'brier')}
+        />
 
         <h3>The numbers</h3>
         <ol class="rows">
@@ -177,9 +195,9 @@
                 <p class="meta">
                   <span class="muted">{p.label}</span><Sep />{#if !c.brier_only}<span
                       >Rank corr. <span class="num">{formatMetric(p.spearman[c.key]?.value)}</span>
-                      <span class="muted num">({formatCI(p.spearman[c.key]?.ci)})</span></span
+                      <span class="muted num">({formatCI(p.spearman[c.key]?.ci)}{p.spMethod ? `, ${p.spMethod}` : ''})</span></span
                     ><Sep />{/if}<span>Brier <span class="num">{formatMetric(p.brier[c.key]?.value)}</span>
-                    <span class="muted num">({formatCI(p.brier[c.key]?.ci)})</span></span>
+                    <span class="muted num">({formatCI(p.brier[c.key]?.ci)}{p.brMethod ? `, ${p.brMethod}` : ''})</span></span>
                 </p>
               {/each}
             </li>

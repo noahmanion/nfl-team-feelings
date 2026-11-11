@@ -362,6 +362,8 @@ def build_methodology(weights: dict[str, float], doc: dict | None, freeze: dict 
             "spearman_n4": _period(wf.get("spearman_n4") or {}, "ci_season", False),
             "brier": _period(wf["brier"], "ci_season", False),
             "diff": wf.get("diff"),
+            # WR-04: which resampling scheme each period's plotted `ci` comes from
+            "ci_method": {"spearman": "season-block", "brier": "season-block"},
         }
 
     hold = None
@@ -377,6 +379,7 @@ def build_methodology(weights: dict[str, float], doc: dict | None, freeze: dict 
             "brier": _period(holdout["brier"], "ci_cluster", True),
             "diff": holdout.get("diff"),
             "diagnostic": holdout.get("diagnostic"),
+            "ci_method": {"spearman": "team-season", "brier": "season-week"},
             "rerun": bool(holdout.get("rerun", False)),
         }
 

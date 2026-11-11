@@ -6,12 +6,15 @@
     rows,
     metric,
     label,
+    intervalNote = 'Whiskers are 95% bootstrap intervals.',
     eloRef = 'elo',
   }: {
     rows: ChartRow[]
     metric: ChartMetric
     /** Accessible name prefix, e.g. "Rank correlation". */
     label: string
+    /** Sentence naming the interval method(s) behind the whiskers (WR-04). */
+    intervalNote?: string
     /** Candidate key drawn as the dashed reference line in each period. */
     eloRef?: string
   } = $props()
@@ -91,7 +94,7 @@
 
 <figure class="figure">
   <div class="chart" bind:clientWidth={width} bind:this={container}></div>
-  <figcaption>{axisLabel}. Dots are the value, whiskers the 95% interval; the dashed line marks Elo alone.</figcaption>
+  <figcaption>{axisLabel}. Dots are the value; the dashed line marks Elo alone. {intervalNote}</figcaption>
 </figure>
 
 <style>

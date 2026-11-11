@@ -84,6 +84,8 @@ def test_synthetic_holdout():
     for c, v in HOLDOUT["spearman_n8"].items():
         assert h["spearman_n8"][c] == {"value": v["value"], "ci": v["ci_cluster"], "ci_season": v["ci_season"]}
     assert not any(n["key"] == "holdout_pending" for n in m["notes"])
+    assert h["ci_method"] == {"spearman": "team-season", "brier": "season-week"}
+    assert m["walk_forward"]["ci_method"] == {"spearman": "season-block", "brier": "season-block"}
     note = next(n for n in m["notes"] if n["key"] == "vs_exp")
     assert note["values"]["zeroed_spearman_n8"] == 0.2876
     assert fmt_metric(0.2876) in note["text"] and fmt_delta(-0.0123) in note["text"]

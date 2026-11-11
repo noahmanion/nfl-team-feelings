@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  chartRows, deltaText, effectText, foldText, formatCI, formatDelta, formatDeltaCI, formatMetric, formatWeight, HOLDOUT_PENDING, verdictLead, xDomain,
+  chartRows, ciMethodText, deltaText, effectText, foldText, formatCI, formatDelta, formatDeltaCI, formatMetric, formatWeight, HOLDOUT_PENDING, intervalCaption, verdictLead, xDomain,
 } from './methodology'
 import type { Methodology, PeriodMetrics } from './types'
 
@@ -98,5 +98,29 @@ describe('chartRows', () => {
   it('verdict lead is the pending sentence while the holdout is null', () => {
     expect(verdictLead(base)).toBe(HOLDOUT_PENDING)
     expect(HOLDOUT_PENDING).toBe('The 2022–25 holdout is evaluated once, after the weights were frozen. It hasn’t run yet.')
+  })
+})
+
+describe('interval labels (WR-04)', () => {
+  const wf = { ...base.walk_forward!, ci_method: { spearman: 'season-block', brier: 'season-block' } }
+  const ho = {
+    seasons: [2022, 2025] as [number, number], label: 'Holdout 2022–25 (frozen weights)', evaluated_at: 'x',
+    verdict: 'slight' as const, headline: 'h', pass: true, spearman_n8: {}, spearman_n4: {}, brier: {}, diff: null,
+    diagnostic: null, rerun: false, ci_method: { spearman: 'team-season', brier: 'season-week' },
+  }
+  it('names each period\'s method and warns when they differ', () => {
+    const m = { ...base, walk_forward: wf, holdout: ho } as Methodology
+    expect(intervalCaption(m, 'spearman_n8')).toBe(
+      'Whiskers are 95% bootstrap intervals (season-block for Walk-forward 2003–21 (refit each season); team-season for Holdout 2022–25 (frozen weights)). The resampling methods differ, so compare whisker widths across periods with care.',
+    )
+    expect(intervalCaption(m, 'brier')).toContain('season-week for Holdout')
+    expect(ciMethodText(ho, 'brier')).toBe('season-week')
+  })
+  it('no warning with one method; generic text without ci_method', () => {
+    expect(intervalCaption({ ...base, walk_forward: wf } as Methodology, 'brier')).toBe(
+      'Whiskers are 95% bootstrap intervals (season-block for Walk-forward 2003–21 (refit each season)).',
+    )
+    expect(intervalCaption(base, 'brier')).toBe('Whiskers are 95% bootstrap intervals.')
+    expect(ciMethodText(null, 'brier')).toBeNull()
   })
 })
