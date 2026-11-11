@@ -20,9 +20,9 @@ from fgs.score import load_weights
 from fgs.season_config import n_teams
 
 ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
-            "wins", "losses", "ties", "score_delta", "rank_delta", "contribs"}
+            "wins", "losses", "ties", "score_delta", "rank_delta", "contribs", "points", "blurb"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
-             "seasons", "bands", "hysteresis", "teams", "factors"}
+             "seasons", "bands", "hysteresis", "teams", "factors", "baseline"}
 GEN = "2026-11-11T18:40:00+00:00"
 
 
@@ -69,6 +69,7 @@ def test_contract_files(real_files):
     assert sorted(int(p[10:-5]) for p in files if p.startswith("snapshots/")) == seasons
     assert sorted(p[6:-5] for p in files if p.startswith("teams/")) == sorted(CANONICAL)
     assert files["callouts.json"] == []
+    assert sorted(int(p[6:-5]) for p in files if p.startswith("games/")) == seasons
 
 
 def test_contract_meta(real_files):
@@ -107,7 +108,7 @@ def test_contract_rows(real_files):
         assert list(r["contribs"]) == factor_keys
         for v in r["contribs"].values():
             assert type(v) in (int, float) and math.isfinite(v) and round(v, 2) == v
-        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs"}:
+        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs", "points", "blurb"}:
             assert r[k] is None or type(r[k]) is int, (season, week, k, r[k])
         assert 0 <= r["score"] <= 100
         assert r["label"] == meta["bands"][r["band"]]["label"]
@@ -296,3 +297,43 @@ def test_contribs_have_no_negative_zero(real_files):
         for v in r["contribs"].values():
             assert not (v == 0 and math.copysign(1.0, v) < 0), r
     assert not re.search(r"-0\.0[,}\]]", json.dumps(files["latest.json"], separators=(",", ":")))
+
+
+# --- SITE-02 / INSIGHT-05: points, blurbs, games ----------------------------------------------
+
+def test_points_sum_to_score(real_files):
+    _, files = real_files
+    meta = files["meta.json"]
+    base = meta["baseline"]
+    assert type(base) is int and 0 <= base <= 100
+    keys = [f["key"] for f in meta["factors"]]
+    for season, week, r in _all_rows(files):
+        assert list(r["points"]) == keys
+        assert all(type(v) is int for v in r["points"].values()), (season, week, r["points"])
+        assert sum(r["points"].values()) == r["score"] - base, (season, week, r["franchise"])
+
+
+def test_blurbs(real_files):
+    _, files = real_files
+    lead0 = "Preseason, carrying last season's form: the "
+    for season, week, r in _all_rows(files):
+        b = r["blurb"]
+        assert isinstance(b, str) and b and b.endswith("."), (season, week, r["franchise"], b)
+        if week == 0:
+            assert b.startswith(lead0), b
+        else:
+            assert b.startswith("The ") and not b.startswith(lead0), b
+        assert "0 straight" not in b and "1 straight" not in b, b
+
+
+def test_games_files(real_files):
+    _, files = real_files
+    for path, g in files.items():
+        if not path.startswith("games/"):
+            continue
+        n = len(g["week"])
+        for k in ("asof_week", "home", "away", "home_score", "away_score", "game_type", "gameday", "neutral"):
+            assert len(g[k]) == n, (path, k)
+        assert all((h is None) == (a is None) for h, a in zip(g["home_score"], g["away_score"])), path
+        assert any(h is not None for h in g["home_score"]), f"{path}: no played games"
+        assert set(g["home"]) | set(g["away"]) <= CANONICAL, path

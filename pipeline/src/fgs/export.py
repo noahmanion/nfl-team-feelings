@@ -12,7 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, score, season_config
+from fgs import asof, explain, mood, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 
@@ -53,7 +53,7 @@ def _season_meta(season: int, snaps: pl.DataFrame, games: pl.DataFrame) -> dict:
     }
 
 
-def _row(r: dict, factor_keys: list[str]) -> dict:
+def _row(r: dict, factor_keys: list[str], nicks: dict[str, str]) -> dict:
     return {
         "franchise": r["franchise_id"], "rank": int(r["rank"]), "score": int(r["score"]),
         "elo": int(round(r["elo"])), "band": int(r["band"]), "label": r["label"], "emoji": r["emoji"],
@@ -62,6 +62,26 @@ def _row(r: dict, factor_keys: list[str]) -> dict:
         "rank_delta": None if r["rank_delta"] is None else int(r["rank_delta"]),
         # + 0.0 turns -0.0 (negative weight * 0, or a tiny negative rounded) into 0.0
         "contribs": {k: round(float(r[f"contrib_{k}"]), 2) + 0.0 for k in factor_keys},
+        "points": {k: int(r[f"pts_{k}"]) for k in factor_keys},
+        "blurb": explain.blurb(r, factor_keys, nicks.get(r["franchise_id"], r["franchise_id"]), int(r["week"])),
+    }
+
+
+def _games_file(games: pl.DataFrame, season: int) -> dict:
+    """Columnar game list for one season (whole schedule; unplayed games keep null scores)."""
+    g = games.filter(pl.col("season") == season).sort(["gameday", "gametime", "game_id"], nulls_last=True)
+    played = pl.col("played")
+    g = g.with_columns(
+        pl.when(played).then(pl.col("home_score")).otherwise(None).alias("home_score"),
+        pl.when(played).then(pl.col("away_score")).otherwise(None).alias("away_score"),
+    )
+    return {
+        "season": int(season),
+        "week": g["week"].to_list(), "asof_week": g["asof_week"].to_list(),
+        "home": g["home_id"].to_list(), "away": g["away_id"].to_list(),
+        "home_score": g["home_score"].to_list(), "away_score": g["away_score"].to_list(),
+        "game_type": g["game_type"].to_list(), "gameday": g["gameday"].to_list(),
+        "neutral": [bool(x) for x in g["neutral"].fill_null(False).to_list()],
     }
 
 
@@ -92,6 +112,10 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
     teams = team_meta(teams_df)
     weights = _export_weights(derived, scored)
     factor_keys = list(weights)
+    ref = mood.reference_values(derived["features"])  # the same frozen reference score_frame used
+    baseline = explain.baseline(ref)
+    scored = explain.add_points(scored, factor_keys, ref)
+    nicks = {abbr: t["nick"] for abbr, t in teams.items()}
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
@@ -108,14 +132,15 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         seasons_meta.append(_season_meta(int(season), snaps, games))
         weeks: dict[str, list] = {}
         for r in snaps.iter_rows(named=True):
-            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys))
+            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks))
         files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks}
+        files[f"games/{season}.json"] = _games_file(games, int(season))
 
     s, w = latest
     files["latest.json"] = {"season": s, "week": w, "rows": files[f"snapshots/{s}.json"]["weeks"][str(w)]}
 
     files["meta.json"] = {
-        "version": 1, "score_kind": "composite", "factors": factors, "generated_at": generated_at,
+        "version": 1, "score_kind": "composite", "factors": factors, "baseline": baseline, "generated_at": generated_at,
         "data_through": asof.data_through(games, s, w),
         "latest": {"season": s, "week": w}, "partial_week": played < total,
         "seasons": seasons_meta, "bands": bands_meta(), "hysteresis": HYSTERESIS, "teams": teams,
