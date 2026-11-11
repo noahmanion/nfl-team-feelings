@@ -271,7 +271,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 08-04-PLAN.md — Web: #/records page + "Records" nav, team-page active streak line
+- [x] 08-04-PLAN.md — Web: #/records page + "Records" nav, team-page active streak line
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -294,4 +294,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 5/5 | Complete    | 2026-11-11 |
 | 7. Draft-Aware Offseason | 4/4 | Complete    | 2026-11-11 |
-| 8. Callouts, Records & My Team | 3/5 | In Progress|  |
+| 8. Callouts, Records & My Team | 4/5 | In Progress|  |
