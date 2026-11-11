@@ -519,6 +519,11 @@ def _cmd_holdout(args) -> int:
                   "(its adding commit must be an ancestor of the latest weights.yaml commit; otherwise the pre-registration "
                   "does not precede the freeze)", file=sys.stderr)
             return 1
+        if not gs.get("prereg_unchanged"):
+            print("error: PREREGISTRATION.md changed after the commit that added it (more than one commit touches it, "
+                  "or its sha256 differs from the adding commit's content); the pre-registration must be the "
+                  "original text", file=sys.stderr)
+            return 1
         if gs.get("src_dirty"):
             print("error: pipeline/src has uncommitted changes; the evaluated code must be committed: "
                   + "; ".join(gs["src_dirty"]), file=sys.stderr)
@@ -545,6 +550,8 @@ def _cmd_holdout(args) -> int:
         "prereg_sha256": holdout.file_sha256(paths.PREREG_PATH),
         "git_head": gs.get("head"),
         "prereg_commit": gs.get("prereg_commit"),
+        "prereg_last_commit": gs.get("prereg_last_commit"),
+        "prereg_unchanged": gs.get("prereg_unchanged") if gs["available"] else None,
         "weights_commit": gs.get("weights_commit"),
         "src_clean": (not gs.get("src_dirty")) if gs["available"] else None,
     }

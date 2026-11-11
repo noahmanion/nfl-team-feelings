@@ -312,6 +312,36 @@ def test_git_state_wrong_order(tmp_path):
     assert st["available"] is True and st["ordered"] is False
 
 
+def test_git_state_prereg_unchanged(tmp_path):
+    root = _repo(tmp_path, ["PREREGISTRATION.md", "weights.yaml"])
+    st = holdout.git_state(root)
+    assert st["prereg_unchanged"] is True and st["prereg_commits"] == 1
+    assert st["prereg_last_commit"] == st["prereg_commit"]
+
+
+def test_git_state_prereg_edited_after_freeze(tmp_path):
+    # WR-07: an edit committed after the freeze fails both checks
+    root = _repo(tmp_path, ["PREREGISTRATION.md", "weights.yaml"])
+    (root / "PREREGISTRATION.md").write_text("moved the goalposts\n")
+    _git(root, "commit", "-q", "-am", "edit prereg")
+    st = holdout.git_state(root)
+    assert st["dirty"] == [] and st["prereg_commits"] == 2
+    assert st["prereg_unchanged"] is False and st["ordered"] is False
+    assert st["prereg_last_commit"] != st["prereg_commit"]
+
+
+def test_git_state_prereg_edited_before_freeze(tmp_path):
+    # ordered, but still not the text of the adding commit
+    root = _repo(tmp_path, ["PREREGISTRATION.md"])
+    (root / "PREREGISTRATION.md").write_text("v2\n")
+    _git(root, "commit", "-q", "-am", "edit prereg")
+    (root / "weights.yaml").write_text("w\n")
+    _git(root, "add", "weights.yaml")
+    _git(root, "commit", "-q", "-m", "freeze")
+    st = holdout.git_state(root)
+    assert st["ordered"] is True and st["prereg_unchanged"] is False
+
+
 def test_git_state_not_a_repo(tmp_path):
     st = holdout.git_state(tmp_path)
     assert st["available"] is False
@@ -366,6 +396,7 @@ def _canned_result(seasons, fit_last):
 
 
 GIT_OK = {"available": True, "dirty": [], "src_dirty": [], "prereg_commit": "a" * 40,
+          "prereg_last_commit": "a" * 40, "prereg_commits": 1, "prereg_unchanged": True,
           "weights_commit": "b" * 40, "ordered": True, "head": "c" * 40}
 
 
@@ -451,6 +482,12 @@ def test_holdout_guard_order(holdout_paths, monkeypatch, capsys):
     assert "pre-registration" in capsys.readouterr().err.lower()
 
 
+def test_holdout_guard_prereg_changed(holdout_paths, monkeypatch, capsys):
+    monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: {**GIT_OK, "prereg_unchanged": False})
+    assert cli.main(["holdout"]) == 1
+    assert "changed after the commit" in capsys.readouterr().err
+
+
 def test_holdout_git_unavailable_warns_and_continues(holdout_paths, monkeypatch, capsys):
     monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: {
         "available": False, "dirty": [], "src_dirty": [], "prereg_commit": None, "weights_commit": None,
@@ -501,6 +538,7 @@ def test_holdout_happy_path_writes_files(happy, capsys):
     assert prov["prereg_sha256"] == hashlib.sha256((root / "PREREGISTRATION.md").read_bytes()).hexdigest()
     assert prov["git_head"] == GIT_OK["head"] and prov["prereg_commit"] == GIT_OK["prereg_commit"]
     assert prov["weights_commit"] == GIT_OK["weights_commit"] and prov["src_clean"] is True
+    assert prov["prereg_last_commit"] == GIT_OK["prereg_last_commit"] and prov["prereg_unchanged"] is True
     assert data["evaluated_at"] and data["rerun"] is False and data["reruns"] == []
     assert (root / "HOLDOUT_RESULT.md").read_text().startswith("# Holdout result")
     assert json.loads((root / "derived" / "holdout.json").read_text()) == data

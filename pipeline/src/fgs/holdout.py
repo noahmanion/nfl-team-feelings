@@ -408,9 +408,13 @@ def git_state(root, prereg_rel: str = "PREREGISTRATION.md", weights_rel: str = "
 
     dirty: porcelain lines (modified, staged or untracked) for the two files.
     src_dirty: porcelain lines under src_rel (the code that computes the result).
-    ordered: the prereg's ADDING commit is an ancestor of the latest weights.yaml commit.
+    ordered: the prereg's ADDING commit and its LAST commit are both ancestors of the latest
+      weights.yaml commit (a post-freeze edit to the prereg fails this; WR-07).
+    prereg_unchanged: the prereg has exactly one commit and the working file's sha256 equals the
+      sha256 of its content at the adding commit, so the hashed file IS the pre-registered text.
     available False when git is missing or root is not inside a work tree."""
     out = {"available": False, "dirty": [], "src_dirty": [], "prereg_commit": None,
+           "prereg_last_commit": None, "prereg_commits": 0, "prereg_unchanged": False,
            "weights_commit": None, "ordered": False, "head": None}
     try:
         r = _git(root, "rev-parse", "--is-inside-work-tree")
@@ -426,11 +430,24 @@ def git_state(root, prereg_rel: str = "PREREGISTRATION.md", weights_rel: str = "
         out["src_dirty"] = [ln for ln in ss.stdout.splitlines() if ln.strip()]
     added = _git(root, "log", "--diff-filter=A", "--format=%H", "--", prereg_rel).stdout.split()
     out["prereg_commit"] = added[-1] if added else None
+    touching = _git(root, "log", "--format=%H", "--", prereg_rel).stdout.split()
+    out["prereg_commits"] = len(touching)
+    out["prereg_last_commit"] = touching[0] if touching else None
     wc = _git(root, "log", "-1", "--format=%H", "--", weights_rel).stdout.strip()
     out["weights_commit"] = wc or None
     head = _git(root, "rev-parse", "HEAD")
     out["head"] = head.stdout.strip() if head.returncode == 0 else None
-    if out["prereg_commit"] and out["weights_commit"]:
-        anc = _git(root, "merge-base", "--is-ancestor", out["prereg_commit"], out["weights_commit"])
-        out["ordered"] = anc.returncode == 0
+    if out["prereg_commit"]:
+        committed = subprocess.run(["git", "-C", str(root), "show", f"{out['prereg_commit']}:./{prereg_rel}"],
+                                   capture_output=True, check=False)
+        cur = Path(root) / prereg_rel
+        out["prereg_unchanged"] = (
+            committed.returncode == 0 and len(touching) == 1 and cur.exists()
+            and hashlib.sha256(committed.stdout).hexdigest() == file_sha256(cur)
+        )
+    if out["prereg_commit"] and out["prereg_last_commit"] and out["weights_commit"]:
+        out["ordered"] = all(
+            _git(root, "merge-base", "--is-ancestor", c, out["weights_commit"]).returncode == 0
+            for c in (out["prereg_commit"], out["prereg_last_commit"])
+        )
     return out
