@@ -15,8 +15,8 @@ export interface DraftInfo {
   surplus: number
   /** Capped, per-draft z, 2 dp. */
   z: number
-  /** 1..262 */
-  equiv_pick: number
+  /** 1..262; null when the surplus rounds to 0 ("about even with their original slots"). */
+  equiv_pick: number | null
   /** 1 = most capital over slot in that draft. */
   rank: number
   /** Full display sentence, generated in the pipeline. */

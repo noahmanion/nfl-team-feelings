@@ -133,7 +133,8 @@ def _draft_info(r: dict, ctx: dict) -> dict | None:
     return {
         "surplus": round(float(s), 1) + 0.0,
         "z": round(float(r["draft_z"]), 2) + 0.0,
-        "equiv_pick": draft.equiv_pick(float(s), values),
+        # null when the text says "about even with their original slots" (no pick equivalent)
+        "equiv_pick": None if draft.is_even(float(s)) else draft.equiv_pick(float(s), values),
         "rank": ctx["ranks"][(int(r["season"]), r["franchise_id"])],
         "text": explain.draft_text(float(s), values, moves),
         "moves_score": moves,

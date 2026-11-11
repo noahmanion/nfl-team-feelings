@@ -151,7 +151,10 @@ def test_week0_deltas_and_draft(real_files):
         d = r["draft"]
         assert d is not None and set(d) == DRAFT_KEYS, (season, r["franchise"])
         assert round(d["surplus"], 1) == d["surplus"] and round(d["z"], 2) == d["z"]
-        assert type(d["equiv_pick"]) is int and 1 <= d["equiv_pick"] <= 262
+        if "about even" in d["text"]:
+            assert d["equiv_pick"] is None
+        else:
+            assert type(d["equiv_pick"]) is int and 1 <= d["equiv_pick"] <= 262
         assert d["moves_score"] is (weight != 0)
         assert d["text"].startswith("Draft haul: ")
         assert d["text"].endswith(" — doesn't move the score." if weight == 0 else ".")
@@ -599,6 +602,9 @@ def test_export_with_live_draft_weight(monkeypatch):
                 assert r["blurb"].startswith("Preseason, carrying last season's form plus extra draft capital: ")
             if r["franchise"] == "NE":
                 assert d["text"] == "Draft haul: about even with their original slots."
+                assert d["equiv_pick"] is None
+            else:
+                assert type(d["equiv_pick"]) is int
         else:
             assert r["draft"] is None
     assert seen == 4
