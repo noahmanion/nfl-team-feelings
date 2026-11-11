@@ -4,6 +4,8 @@
   let { abbr, name }: { abbr: string; name: string } = $props()
 
   const pinned = $derived(myTeam.abbr === abbr)
+  // WR-06: a toggle keeps one fixed label; aria-pressed alone carries the on/off state
+  // ("My team: Buffalo Bills, toggle button, pressed").
 </script>
 
 <button
@@ -11,7 +13,7 @@
   class="pin"
   class:pinned
   aria-pressed={pinned}
-  aria-label={pinned ? `Unpin ${name} as my team` : `Pin ${name} as my team`}
+  aria-label="My team: {name}"
   onclick={() => toggleMyTeam(abbr)}
 >
   <span aria-hidden="true">{pinned ? '★' : '☆'}</span>
