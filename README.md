@@ -1,23 +1,46 @@
 # feel-good-score
 
-How should NFL fans *actually* feel about their team? A momentum-weighted, Elo-like "feel-good score" for every team since 1999, built from record, last-16 games, efficiency trend, strength of win, opponent quality, expectations and more, then backtested so it predicts future performance. It's a reality check for fanbases that think their team is worse (or better) than it is.
+How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is Elo only, shown as a mood board in a small local site.
 
-## Pipeline
+## Run it
+
+**Refresh data** (once a week, after games finish):
+
+```bash
+cd pipeline
+uv run fgs refresh    # re-download nflverse, run every check, regenerate web/public/data (writes nothing if a check fails)
+uv run fgs export     # rebuild the site JSON from the local cache, no network
+```
+
+**Start the site:**
+
+```bash
+cd web
+nvm use && npm install   # once; Node >=22.12, pinned by web/.nvmrc
+npm run dev              # the one command after that
+```
+
+The generated JSON in `web/public/data/` is committed, so the site runs without Python.
+
+**Other pipeline commands:**
 
 ```bash
 cd pipeline
 uv run fgs build                         # download (once) + derive games, team_games, elo_snapshots
-uv run fgs check                         # data-trust checks (team counts, games, codes, continuity, Elo, weekly grid); exit 1 on failure
+uv run fgs check                         # data-trust checks; exit 1 on failure
 uv run fgs elo                           # ranked Elo + W-L-T for the latest played week, with a "data through" date
 uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = preseason (regressed) ratings
 ```
 
-- `fgs elo` refuses weeks that haven't been played yet, and flags a partially played week (e.g. Monday night still to come).
-- Records are regular-season only; playoff games move Elo but not W-L-T. Ties count as half a win.
+- Data is cached in `pipeline/data/` (gitignored). `fgs refresh` or `uv run fgs ingest --refresh` re-downloads it.
+- Records are regular-season only. Playoff games move Elo but not W-L-T, and ties count as half a win.
+- nflverse `location` coding is used as-is, so the Bills' Toronto games (2009–2012) and the Saints' 2005 relocation games count as home games.
 
-- Data is cached in `pipeline/data/` (gitignored). Re-runs read the cache; `uv run fgs ingest --refresh` re-downloads.
-- nflverse `location` coding is used as-is, so the Bills Toronto games (2009–2012) and the 2005 Saints relocation games count as home games.
+## How the score works today
 
-Later: a Vite + Svelte site (`web/`) renders static JSON written by the pipeline.
+- The score is an integer from 0 to 100: the percentile of a team's Elo against every preseason and regular-season team-week since 1999.
+- Seven mood bands turn the score into a label. A team has to move 2 points past a band edge to change label, so labels don't flicker.
+- The reference set includes the current season, so a historical score can shift by 1 point after a refresh.
+- A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
-**Status:** Phase 1 done: clean 1999→now data, data checks, and a weekly Elo grid; next is the Elo mood board site (Phase 2).
+**Status:** Phase 2 is done: an Elo-only mood board with week scrubbing and deep links. Next is Phase 3: the backtest harness and the additive score.
