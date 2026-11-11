@@ -20,8 +20,13 @@
 #
 # mov (margin of victory, last 8 games, capped at 24 per game) is positive: given Elo and the
 # records, bigger recent margins predict better future margins.
+#
+# sow (quality of results vs an average team's expected results) is negative on purpose.
+# Alone it is positive (univariate Spearman 0.43), but Elo already rewards beating good
+# teams; leftover sow means results running ahead of margins, which regress.
 weights:
-  elo: 3.76
-  season_record: 0.42
-  last16: -1.16
-  mov: 1.04
+  elo: 3.92
+  season_record: 0.79
+  last16: -0.90
+  mov: 1.54
+  sow: -1.29
