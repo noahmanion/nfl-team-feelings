@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardHash, historyHash, parseHash } from './router'
+import { boardHash, historyHash, parseHash, teamHash } from './router'
 
 describe('parseHash', () => {
   it('empty and root hashes are the latest board', () => {
@@ -31,9 +31,33 @@ describe('parseHash', () => {
     expect(parseHash('#/history/B1')).toEqual({ kind: 'invalid' })
   })
   it('recognises routes reserved for later phases', () => {
-    for (const h of ['#/team/BUF', '#/team/BUF/2024/3', '#/records', '#/methodology']) {
+    for (const h of ['#/records', '#/methodology', '#/records/']) {
       expect(parseHash(h)).toEqual({ kind: 'reserved' })
     }
+  })
+})
+
+describe('team routes', () => {
+  it('parses team routes, uppercasing the team', () => {
+    expect(parseHash('#/team/buf')).toEqual({ kind: 'team', team: 'BUF' })
+    expect(parseHash('#/team/BUF/')).toEqual({ kind: 'team', team: 'BUF' })
+    expect(parseHash('#/team/BUF/2024/5')).toEqual({ kind: 'team', team: 'BUF', season: 2024, week: 5 })
+    expect(parseHash('#/team/kc/1999/0/')).toEqual({ kind: 'team', team: 'KC', season: 1999, week: 0 })
+  })
+  it('flags malformed team routes as invalid', () => {
+    expect(parseHash('#/team/TOOLONG')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/team/B1')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/team/BUF/2024')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/team')).toEqual({ kind: 'invalid' })
+  })
+  it('builds team hashes', () => {
+    expect(teamHash('kc')).toBe('#/team/KC')
+    expect(teamHash('KC', 2024, 3)).toBe('#/team/KC/2024/3')
+    expect(teamHash('KC', 2024, 0)).toBe('#/team/KC/2024/0')
+  })
+  it('round-trips through parseHash', () => {
+    expect(parseHash(teamHash('det'))).toEqual({ kind: 'team', team: 'DET' })
+    expect(parseHash(teamHash('DEN', 2026, 9))).toEqual({ kind: 'team', team: 'DEN', season: 2026, week: 9 })
   })
 })
 
