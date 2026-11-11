@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest, freeze."""
+"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest, freeze, holdout."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, export, features, freeze, paths, score, sim
+from fgs import checks, export, features, freeze, holdout, paths, score, sim
 from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
@@ -16,6 +16,7 @@ from fgs.expectation import load_win_totals, vegas_expectations
 from fgs.games import build_games, build_team_games
 from fgs.ingest import load_schedules, load_teams, save_cache
 from fgs.paths import CACHE_DIR, DERIVED_DIR, WEB_DATA_DIR
+from fgs.season_config import HOLDOUT_SEASONS, TRAIN_LAST_SEASON
 from fgs.pbp import PBP_SUBDIR, cached_seasons, load_all_pbp, load_pbp_season, team_game_epa
 from fgs.snapshots import build_grid
 
@@ -460,6 +461,86 @@ def _cmd_freeze(args) -> int:
     return 0
 
 
+ALREADY_HOLDOUT_MSG = ("the holdout was already evaluated once (pipeline/HOLDOUT_RESULT.md); re-running it breaks "
+                       "the pre-registration. --force exists but don't.")
+
+
+def _cmd_holdout(args) -> int:
+    """ONE-TIME: evaluate the frozen weights on the sealed 2022-2025 holdout (PREREGISTRATION.md).
+    Every guard runs before any data load."""
+    if paths.HOLDOUT_MD_PATH.exists() and not args.force:
+        print(f"error: {ALREADY_HOLDOUT_MSG}", file=sys.stderr)
+        return 1
+    if not _weights_frozen():
+        print("error: weights.yaml is not frozen; run `fgs freeze` first", file=sys.stderr)
+        return 1
+    if not paths.PREREG_PATH.exists():
+        print("error: pipeline/PREREGISTRATION.md is missing", file=sys.stderr)
+        return 1
+    gs = holdout.git_state(paths.PIPELINE_ROOT)
+    if not gs["available"]:
+        print("warning: git is not available; commit state of PREREGISTRATION.md / weights.yaml not verified",
+              file=sys.stderr)
+    else:
+        if gs["dirty"]:
+            print("error: PREREGISTRATION.md and weights.yaml must be committed and unmodified: "
+                  + "; ".join(gs["dirty"]), file=sys.stderr)
+            return 1
+        if not gs["ordered"]:
+            print("error: PREREGISTRATION.md must be committed before the frozen weights.yaml "
+                  "(its adding commit must be an ancestor of the latest weights.yaml commit; otherwise the pre-registration "
+                  "does not precede the freeze)", file=sys.stderr)
+            return 1
+        if gs.get("src_dirty"):
+            print("error: pipeline/src has uncommitted changes; the evaluated code must be committed: "
+                  + "; ".join(gs["src_dirty"]), file=sys.stderr)
+            return 1
+
+    weights = score.load_weights()
+    doc = score.load_weights_doc()
+    # Re-derive from the cache with the frozen weights; never read features.parquet (Pitfall 8).
+    derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    result = holdout.evaluate_frozen(derived, weights, HOLDOUT_SEASONS, TRAIN_LAST_SEASON,
+                                     weights_doc=doc, allow_holdout=True)
+
+    prev = None
+    if args.force and paths.HOLDOUT_JSON_PATH.exists():
+        prev = json.loads(paths.HOLDOUT_JSON_PATH.read_text())
+    result["evaluated_at"] = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    result["provenance"] = {
+        "weights_sha256": holdout.file_sha256(paths.WEIGHTS_PATH),
+        "prereg_sha256": holdout.file_sha256(paths.PREREG_PATH),
+        "git_head": gs.get("head"),
+        "prereg_commit": gs.get("prereg_commit"),
+        "weights_commit": gs.get("weights_commit"),
+        "src_clean": (not gs.get("src_dirty")) if gs["available"] else None,
+    }
+    result["rerun"] = prev is not None
+    result["reruns"] = ([*(prev.get("reruns") or []),
+                         {"evaluated_at": prev.get("evaluated_at"), "verdict": prev.get("verdict")}]
+                        if prev is not None else [])
+
+    body = json.dumps(result, allow_nan=False, indent=1) + "\n"
+    paths.HOLDOUT_JSON_PATH.write_text(body)
+    paths.HOLDOUT_MD_PATH.write_text(holdout.render_markdown(result))
+    out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it
+    out_dir.mkdir(parents=True, exist_ok=True)
+    derived_path = out_dir / "holdout.json"
+    derived_path.write_text(body)
+
+    d = result["diff"]["spearman_n8"]
+    sp = result["spearman_n8"]
+    lo, hi = result["seasons"]
+    print(f"holdout {lo}–{hi} (frozen weights; evaluated {result['evaluated_at']})")
+    print(f"Verdict: {result['verdict']} — {result['headline']}")
+    print(f"BACK-06: {'PASS' if result['pass'] else 'FAIL'} (score − Elo Spearman N=8 > 0)")
+    print(f"Spearman N=8: composite {holdout._f(sp['composite']['value'])}, elo {holdout._f(sp['elo']['value'])}")
+    print(f"composite − elo {holdout._sg(d['value'])}; season-block CI {_fmt_ci(d.get('ci_season'))}, "
+          f"team-season CI {_fmt_ci(d.get('ci_cluster'))}; won {d.get('seasons_won')}/{d.get('of')} seasons")
+    print(f"\nwrote {paths.HOLDOUT_JSON_PATH}\nwrote {paths.HOLDOUT_MD_PATH}\nwrote {derived_path}")
+    return 0
+
+
 def _report(name: str, fails: list[str]) -> bool:
     print(f"{'FAIL' if fails else 'ok':<4}  {name}")
     for msg in fails:
@@ -522,6 +603,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--unfreeze", action="store_true",
                    help="refit even though weights.yaml is frozen (still refused once HOLDOUT_RESULT.md exists)")
     p.set_defaults(func=_cmd_freeze)
+
+    p = sub.add_parser("holdout", help="ONE-TIME: evaluate the frozen weights on the sealed 2022–2025 holdout "
+                                       "(refuses if already done)")
+    p.add_argument("--force", action="store_true",
+                   help="re-run even though a result exists — don't: it breaks the pre-registration")
+    p.set_defaults(func=_cmd_holdout)
 
     args = parser.parse_args(argv)
     return args.func(args)

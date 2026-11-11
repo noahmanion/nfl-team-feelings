@@ -315,3 +315,201 @@ def test_git_state_wrong_order(tmp_path):
 def test_git_state_not_a_repo(tmp_path):
     st = holdout.git_state(tmp_path)
     assert st["available"] is False
+
+
+# ---------------------------------------------------------------------------
+# `fgs holdout` (mocks only: paths -> tmp, derive / evaluate_frozen patched)
+# ---------------------------------------------------------------------------
+
+FROZEN_YAML = """frozen: true
+fit_seasons: [1999, 2021]
+weights:
+  elo: 2.59
+  mov: 1.24
+fit:
+  elo: {raw: 2.593074, sign: "+", fold_sign: [19, 19]}
+  mov: {raw: 1.240667, sign: "+", fold_sign: [19, 19]}
+"""
+W = {"elo": 2.59, "mov": 1.24}
+
+
+def _ci_entry(v):
+    return {"value": v, "ci_season": [v - 0.02, v + 0.02], "ci_cluster": [v - 0.03, v + 0.03]}
+
+
+def _canned_result(seasons, fit_last):
+    """A schema-complete result as evaluate_frozen would return it (numbers are made up)."""
+    cands = holdout.SPEARMAN_CANDS
+    ps = {str(s): 0.5 for s in range(seasons[0], seasons[1] + 1)}
+    return {
+        "version": 1, "seasons": list(seasons), "fit_last": fit_last, "evaluated_at": None,
+        "rerun": False, "reruns": [],
+        "provenance": {"weights_sha256": None, "prereg_sha256": None, "git_head": None,
+                       "prereg_commit": None, "weights_commit": None},
+        "bootstrap": {"B": 2000, "seed": 20221, "method": "percentile", "distinct_season_resamples": 35,
+                      "cluster_spearman": "team-season stratified by season",
+                      "cluster_brier": "season-week stratified by season"},
+        "n": {"snapshots_n8": 100, "snapshots_n4": 100, "games": 50},
+        "verdict": "slight", "headline": holdout.HEADLINES["slight"], "pass": True,
+        "spearman_n8": {c: {**_ci_entry(0.5), "buckets": {b: 0.5 for b in backtest.BUCKETS}, "per_season": ps}
+                        for c in cands},
+        "spearman_n4": {c: _ci_entry(0.45) for c in cands},
+        "brier": {**{c: _ci_entry(0.22) for c in holdout.BRIER_CANDS}, "elo_538": {"value": 0.223}},
+        "diff": {"spearman_n8": {**_ci_entry(0.01), "seasons_won": 3, "of": 4, "per_season": {s: 0.01 for s in ps}},
+                 "spearman_n4": _ci_entry(0.01), "brier_vs_elo": _ci_entry(-0.003),
+                 "brier_vs_spread": _ci_entry(0.009)},
+        "diagnostic": {"vs_exp_zeroed": {"spearman_n8": 0.49, "diff_vs_elo": {"value": -0.001,
+                                                                              "ci_cluster": [-0.02, 0.02]}}},
+        "factors": {"elo": {"weight": 2.59, "sign": "+", "fold_sign": [19, 19]},
+                    "mov": {"weight": 1.24, "sign": "+", "fold_sign": [19, 19]}},
+    }
+
+
+GIT_OK = {"available": True, "dirty": [], "src_dirty": [], "prereg_commit": "a" * 40,
+          "weights_commit": "b" * 40, "ordered": True, "head": "c" * 40}
+
+
+@pytest.fixture
+def holdout_paths(tmp_path, monkeypatch):
+    """tmp paths for every holdout artifact; any data load or evaluation raises."""
+    weights = tmp_path / "weights.yaml"
+    weights.write_text(FROZEN_YAML)
+    prereg = tmp_path / "PREREGISTRATION.md"
+    prereg.write_text("# prereg\n")
+    monkeypatch.setattr(fgs.paths, "PIPELINE_ROOT", tmp_path)
+    monkeypatch.setattr(fgs.paths, "WEIGHTS_PATH", weights)
+    monkeypatch.setattr(fgs.paths, "PREREG_PATH", prereg)
+    monkeypatch.setattr(fgs.paths, "HOLDOUT_MD_PATH", tmp_path / "HOLDOUT_RESULT.md")
+    monkeypatch.setattr(fgs.paths, "HOLDOUT_JSON_PATH", tmp_path / "HOLDOUT_RESULT.json")
+    monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path / "derived")
+
+    def boom(*a, **k):
+        raise AssertionError("a holdout guard let execution reach data loading / evaluation")
+
+    for name in ("derive", "load_schedules", "cached_inputs"):
+        monkeypatch.setattr(cli, name, boom)
+    monkeypatch.setattr(holdout, "evaluate_frozen", boom)
+    monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: dict(GIT_OK))
+    return tmp_path
+
+
+def test_holdout_guard_already_evaluated(holdout_paths, capsys):
+    (holdout_paths / "HOLDOUT_RESULT.md").write_text("done\n")
+    assert cli.main(["holdout"]) == 1
+    assert "already evaluated" in capsys.readouterr().err
+
+
+def test_holdout_guard_not_frozen(holdout_paths, capsys):
+    (holdout_paths / "weights.yaml").write_text(FROZEN_YAML.replace("frozen: true", "frozen: false"))
+    assert cli.main(["holdout"]) == 1
+    assert "not frozen" in capsys.readouterr().err
+
+
+def test_holdout_guard_weights_missing(holdout_paths, capsys):
+    (holdout_paths / "weights.yaml").unlink()
+    assert cli.main(["holdout"]) == 1
+    assert "not frozen" in capsys.readouterr().err
+
+
+def test_holdout_guard_prereg_missing(holdout_paths, capsys):
+    (holdout_paths / "PREREGISTRATION.md").unlink()
+    assert cli.main(["holdout"]) == 1
+    assert "PREREGISTRATION.md is missing" in capsys.readouterr().err
+
+
+def test_holdout_guard_dirty(holdout_paths, monkeypatch, capsys):
+    monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: {**GIT_OK, "dirty": [" M weights.yaml"]})
+    assert cli.main(["holdout"]) == 1
+    assert "weights.yaml" in capsys.readouterr().err
+
+
+def test_holdout_guard_src_dirty(holdout_paths, monkeypatch, capsys):
+    monkeypatch.setattr(holdout, "git_state",
+                        lambda root, *a, **k: {**GIT_OK, "src_dirty": [" M src/fgs/score.py"]})
+    assert cli.main(["holdout"]) == 1
+    assert "src/fgs/score.py" in capsys.readouterr().err
+
+
+def test_holdout_guard_order(holdout_paths, monkeypatch, capsys):
+    monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: {**GIT_OK, "ordered": False})
+    assert cli.main(["holdout"]) == 1
+    assert "pre-registration" in capsys.readouterr().err.lower()
+
+
+def test_holdout_git_unavailable_warns_and_continues(holdout_paths, monkeypatch, capsys):
+    monkeypatch.setattr(holdout, "git_state", lambda root, *a, **k: {
+        "available": False, "dirty": [], "src_dirty": [], "prereg_commit": None, "weights_commit": None,
+        "ordered": False, "head": None})
+    monkeypatch.setattr(cli, "load_schedules", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "cached_inputs", lambda *a, **k: {})
+    reached = {}
+
+    def stub_derive(*a, **k):
+        reached["derive"] = True
+        raise RuntimeError("stub derive reached")
+
+    monkeypatch.setattr(cli, "derive", stub_derive)
+    with pytest.raises(RuntimeError, match="stub derive reached"):
+        cli.main(["holdout"])
+    assert reached == {"derive": True}
+    assert "warning" in capsys.readouterr().err
+
+
+@pytest.fixture
+def happy(holdout_paths, monkeypatch):
+    calls = []
+    monkeypatch.setattr(cli, "load_schedules", lambda *a, **k: None)
+    monkeypatch.setattr(cli, "cached_inputs", lambda *a, **k: {})
+    monkeypatch.setattr(cli, "derive", lambda *a, **k: {"weights": dict(W)})
+
+    def fake_eval(derived, weights, seasons, fit_last, **kw):
+        calls.append({"derived": derived, "weights": weights, "seasons": seasons, "fit_last": fit_last, **kw})
+        return _canned_result(seasons, fit_last)
+
+    monkeypatch.setattr(holdout, "evaluate_frozen", fake_eval)
+    return holdout_paths, calls
+
+
+def test_holdout_happy_path_writes_files(happy, capsys):
+    root, calls = happy
+    assert cli.main(["holdout"]) == 0
+    (call,) = calls
+    from fgs.season_config import HOLDOUT_SEASONS, TRAIN_LAST_SEASON
+    assert call["seasons"] == HOLDOUT_SEASONS and call["fit_last"] == TRAIN_LAST_SEASON
+    assert call["allow_holdout"] is True
+    assert call["weights"] == W and call["weights_doc"]["fit"]["elo"]["fold_sign"] == [19, 19]
+
+    data = json.loads((root / "HOLDOUT_RESULT.json").read_text())
+    json.dumps(data, allow_nan=False)
+    prov = data["provenance"]
+    assert prov["weights_sha256"] == hashlib.sha256((root / "weights.yaml").read_bytes()).hexdigest()
+    assert prov["prereg_sha256"] == hashlib.sha256((root / "PREREGISTRATION.md").read_bytes()).hexdigest()
+    assert prov["git_head"] == GIT_OK["head"] and prov["prereg_commit"] == GIT_OK["prereg_commit"]
+    assert prov["weights_commit"] == GIT_OK["weights_commit"] and prov["src_clean"] is True
+    assert data["evaluated_at"] and data["rerun"] is False and data["reruns"] == []
+    assert (root / "HOLDOUT_RESULT.md").read_text().startswith("# Holdout result")
+    assert json.loads((root / "derived" / "holdout.json").read_text()) == data
+    out = capsys.readouterr().out
+    assert "Verdict: slight" in out and "BACK-06: PASS" in out and "wrote" in out
+
+
+def test_holdout_force_records_rerun(happy, capsys):
+    root, calls = happy
+    assert cli.main(["holdout"]) == 0
+    first = json.loads((root / "HOLDOUT_RESULT.json").read_text())
+    assert cli.main(["holdout"]) == 1  # refused without --force
+    assert len(calls) == 1
+    assert cli.main(["holdout", "--force"]) == 0
+    second = json.loads((root / "HOLDOUT_RESULT.json").read_text())
+    assert second["rerun"] is True
+    assert second["reruns"] == [{"evaluated_at": first["evaluated_at"], "verdict": first["verdict"]}]
+    assert "## Reruns" in (root / "HOLDOUT_RESULT.md").read_text()
+
+
+def test_holdout_opt_in_only_in_cli():
+    import pathlib
+
+    src = pathlib.Path(holdout.__file__).parent
+    hits = [p.name for p in src.glob("*.py") for line in p.read_text().splitlines()
+            if "allow_holdout=" + "True" in line]
+    assert hits == ["cli.py"]

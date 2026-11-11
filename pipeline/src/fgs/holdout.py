@@ -1,4 +1,4 @@
-"""ONE-TIME holdout evaluator. Only `fgs holdout` may pass allow_holdout=True; see pipeline/PREREGISTRATION.md.
+"""ONE-TIME holdout evaluator. Only `fgs holdout` may set the allow_holdout opt-in; see pipeline/PREREGISTRATION.md.
 
 DEV-ONLY, like backtest and freeze: it looks at future games (the targets), so score/features/
 export/mood/explain must never import it (leakage firewall, enforced by tests/test_leakage.py).
