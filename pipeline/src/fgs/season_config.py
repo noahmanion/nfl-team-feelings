@@ -24,13 +24,11 @@ HFA_BY_ERA: tuple[tuple[int, int, float], ...] = (
 
 
 def hfa_for(season: int) -> float:
-    if season <= 2009:
-        return 65.0
-    if season <= 2019:
-        return 58.0
-    if season == 2020:
-        return 30.0
-    return 45.0
+    # Single source of truth: HFA_BY_ERA (looked up at call time so tuning/monkeypatching takes effect).
+    for lo, hi, hfa in HFA_BY_ERA:
+        if lo <= season <= hi:
+            return hfa
+    raise KeyError(f"no HFA era for {season}")
 
 
 # ---------------------------------------------------------------------------
