@@ -7,6 +7,7 @@
   import SiteHeader from './components/SiteHeader.svelte'
   import StatusPanel from './components/StatusPanel.svelte'
   import { findSeason, isLatest as isLatestWeek, loadLatest, loadMeta, loadSeason } from './lib/data'
+  import { carryWeek } from './lib/format'
   import { go, replace, route } from './lib/route.svelte'
   import { boardHash, type Route } from './lib/router'
   import type { Meta, Row, SeasonFile, WeekFile } from './lib/types'
@@ -118,7 +119,7 @@
     if (!meta || !target) return
     const s = findSeason(meta, season)
     if (!s) return
-    go(boardHash(season, Math.min(target.week, s.max_week)))
+    go(boardHash(season, carryWeek(target.week, findSeason(meta, target.season), s)))
   }
 
   function onWeekInput(week: number) {

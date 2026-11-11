@@ -11,6 +11,18 @@ export function weekLabel(week: number, season: SeasonMeta): string {
   return POSTSEASON[week - season.reg_weeks - 1] ?? `Week ${week}`
 }
 
+/**
+ * Carry a week across a season change by meaning, not by number (reg_weeks differs by era):
+ * preseason stays preseason, a regular-season week clamps to the new season's last regular week,
+ * and a playoff round maps to the same round (Super Bowl -> Super Bowl). The result is clamped to
+ * the new season's max_week, so an in-progress season lands on its latest week.
+ */
+export function carryWeek(week: number, from: SeasonMeta | undefined, to: SeasonMeta): number {
+  const reg = from?.reg_weeks ?? to.reg_weeks
+  const mapped = week <= 0 ? 0 : week <= reg ? Math.min(week, to.reg_weeks) : to.reg_weeks + (week - reg)
+  return Math.max(0, Math.min(mapped, to.max_week))
+}
+
 export function formatRecord(wins: number, losses: number, ties: number): string {
   return ties > 0 ? `${wins}-${losses}-${ties}` : `${wins}-${losses}`
 }

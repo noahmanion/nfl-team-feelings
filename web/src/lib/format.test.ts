@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   bandIndex,
+  carryWeek,
   formatDate,
   formatDateOnly,
   formatDelta,
@@ -13,6 +14,29 @@ import type { Band, SeasonMeta } from './types'
 
 const season = (s: number, reg: number, labels: Record<string, string> = {}): SeasonMeta => ({
   season: s, max_week: reg + 4, reg_weeks: reg, n_teams: 32, week_labels: labels,
+})
+
+describe('carryWeek', () => {
+  const s2010 = season(2010, 17) // weeks 18-21 = WC, Div, Conf, SB
+  const s2021 = season(2021, 18) // weeks 19-22 = WC, Div, Conf, SB
+  const inProgress: SeasonMeta = { ...season(2026, 18), max_week: 10 }
+  it('keeps the playoff round', () => {
+    expect(carryWeek(21, s2010, s2021)).toBe(22) // Super Bowl -> Super Bowl
+    expect(carryWeek(22, s2021, s2010)).toBe(21)
+    expect(carryWeek(19, s2021, s2010)).toBe(18) // Wild Card -> Wild Card
+    expect(carryWeek(18, s2010, s2021)).toBe(19)
+  })
+  it('clamps regular weeks to the regular season', () => {
+    expect(carryWeek(18, s2021, s2010)).toBe(17) // finale -> finale, not Wild Card
+    expect(carryWeek(17, s2010, s2021)).toBe(17)
+    expect(carryWeek(5, s2010, s2021)).toBe(5)
+  })
+  it('preseason stays preseason', () => expect(carryWeek(0, s2021, s2010)).toBe(0))
+  it('clamps to max_week of an in-progress season', () => {
+    expect(carryWeek(21, s2010, inProgress)).toBe(10)
+    expect(carryWeek(12, s2010, inProgress)).toBe(10)
+    expect(carryWeek(4, s2010, inProgress)).toBe(4)
+  })
 })
 
 describe('formatRecord', () => {
