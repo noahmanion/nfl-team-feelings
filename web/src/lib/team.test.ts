@@ -89,26 +89,24 @@ const factors: FactorMeta[] = [
 
 describe('barRows', () => {
   it('returns every factor, sorted by |points| desc with factor order as tiebreak', () => {
-    const b = barRows({ elo: 10, rec: -20, l16: 5, mov: -5, luck: 1 }, factors, 49)
+    const b = barRows({ elo: 10, rec: -20, l16: 5, mov: -5, luck: 1 }, factors)
     expect(b.rows.map((r) => r.key)).toEqual(['rec', 'elo', 'l16', 'mov', 'luck'])
     expect(b.scale).toBe(20)
-    expect(b.total).toBe(49 + 10 - 20 + 5 - 5 + 1)
     expect(b.rows[0]).toMatchObject({ label: 'Record', description: 'Season record', points: -20 })
   })
   it('visible bars plus the baseline add up to the score', () => {
     const pts = { elo: 49, rec: 10, l16: -13, mov: 12, luck: -11 }
-    const b = barRows(pts, factors, 49)
+    const b = barRows(pts, factors)
     expect(b.rows).toHaveLength(factors.length)
     expect(49 + b.rows.reduce((s, r) => s + r.points, 0)).toBe(96)
   })
   it('counts a factor missing from points as 0', () => {
-    const b = barRows({ elo: 3 }, factors, 50)
+    const b = barRows({ elo: 3 }, factors)
     expect(b.rows.map((r) => r.key)).toEqual(['elo', 'rec', 'l16', 'mov', 'luck'])
     expect(b.rows[4]).toMatchObject({ key: 'luck', points: 0 })
-    expect(b.total).toBe(53)
   })
   it('scale is at least 1', () => {
-    expect(barRows({}, factors, 49).scale).toBe(1)
+    expect(barRows({}, factors).scale).toBe(1)
   })
 })
 

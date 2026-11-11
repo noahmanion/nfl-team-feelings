@@ -11,7 +11,7 @@
 
   // Factor-agnostic: whatever meta.factors lists is drawn, in |points| order. All of them, so the
   // visible numbers add up to the score.
-  const bars = $derived(points ? barRows(points, factors, baseline) : null)
+  const bars = $derived(points ? barRows(points, factors) : null)
   const width = (p: number, scale: number): string => `${(Math.abs(p) / scale) * 50}%`
 </script>
 
