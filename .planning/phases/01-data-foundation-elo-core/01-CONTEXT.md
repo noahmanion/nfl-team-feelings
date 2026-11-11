@@ -35,11 +35,16 @@ Load every NFL game 1999→current 2026 week via nflreadpy, cache locally, norma
 
 ### Elo model (538-style, verify constants in research)
 - K = 20; margin-of-victory multiplier `ln(|MOV|+1) × 2.2 / (elo_diff_winner × 0.001 + 2.2)`.
-- Era-aware home-field advantage as a per-season constant from season-config (default ~48 Elo pts pre-2020, ~10 for 2020, ~35 from 2021) — planner/researcher may refine by estimating from data, but keep it a lookup, not fitted live.
+- Era-aware home-field advantage as a per-season lookup in season-config: 65 (1999–2009), 58 (2010–2019), 30 (2020), 45 (2021+) Elo pts — per RESEARCH.md (derived from betting lines, holdout-safe). MOV multiplier uses elo_diff including HFA, and ties use 538's fixed denominator (see RESEARCH.md).
 - Offseason: regress 1/3 toward 1505 at each season boundary; week-0 snapshot = post-regression rating.
 - Elo is zero-sum: league mean stays ~1505 (test invariant, adjusting for expansion seeds).
 
 ### Snapshot grid & CLI
+- Records (W-L-T) in snapshots count regular-season games only; playoff games still move Elo.
+- Regress all teams at the season boundary (not lazily) so every team has a week-0 rating.
+- `fgs elo` for a week beyond the latest played week errors clearly (non-zero exit). Latest played week comes from cached data, not get_current_week().
+- Own parquet cache (not nflreadpy's 24h cache); schedules are one file, so `--refresh` re-downloads it whole.
+- Data check exception: BUF and CIN 2022 have 16 regular-season games (cancelled game absent from data).
 - Snapshot grid keyed by (season, week, franchise_id) covering week 0 through final postseason week of each season, filled forward over bye weeks; `elo_post` = rating after all games with week ≤ w.
 - "Current week" from `nflreadpy.get_current_week()` / latest played game.
 - CLI commands: `fgs ingest [--refresh] [--all]`, `fgs check` (runs all data checks, non-zero exit on failure), `fgs elo --season S --week W [--top N]` (prints ranked table with franchise, Elo, record as of that week), `fgs build` (ingest + derive + elo in one go).
