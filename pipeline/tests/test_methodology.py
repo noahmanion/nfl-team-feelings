@@ -45,7 +45,9 @@ HOLDOUT = {
     "brier": {**{c: _m(0.22, 0.21, 0.23, 0.2, 0.24) for c in CANDS}, "spread": _m(0.21, 0.2, 0.22, 0.19, 0.23),
               "elo_538": {"value": 0.22}},
     "diff": {"spearman_n8": {"value": 0.01, "ci_season": [-0.01, 0.03], "ci_cluster": [-0.02, 0.04],
-                             "seasons_won": 3, "of": 4}},
+                             "seasons_won": 3, "of": 4},
+             "spearman_n4": {"value": -0.0014, "ci_season": [-0.0187, 0.0161], "ci_cluster": [-0.0234, 0.0203]},
+             "brier_vs_elo": {"value": 0.0014, "ci_season": [0.0004, 0.003], "ci_cluster": [-0.0018, 0.0044]}},
     "diagnostic": {"vs_exp_zeroed": {"spearman_n8": 0.2876, "diff_vs_elo": {"value": -0.0123, "ci_cluster": [-0.03, 0.01]}}},
 }
 
@@ -94,6 +96,19 @@ def test_brier_map_disclosure():
     note = next(n for n in m["notes"] if n["key"] == "brier_maps")
     assert note["values"] == {"fit_last": 2021, "fit_first": 1999, "fit_through": 2021}
     assert "1999–21" in note["text"] and "overconfident" in note["text"] and "Elo" in note["text"]
+
+
+def test_holdout_detail_reports_n4_and_brier_with_both_cis():
+    # WR-03
+    m = build_methodology(WEIGHTS, DOC, FREEZE, HOLDOUT, live=2026)
+    notes = {n["key"]: n for n in m["notes"]}
+    t = notes["holdout_detail"]["text"]
+    assert "−0.0014" in t and "−0.0187 to +0.0161" in t and "−0.0234 to +0.0203" in t
+    assert "+0.0014" in t and "+0.0004 to +0.0030" in t and "−0.0018 to +0.0044" in t
+    assert "slightly worse than Elo" in t and "The season-block interval excludes zero." in t
+    nb = notes["not_betting"]
+    assert nb["values"]["spread_brier"] == HOLDOUT["brier"]["spread"]["value"] and "holdout 2022–25" in nb["text"]
+    assert "holdout_detail" not in {n["key"] for n in build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)["notes"]}
 
 
 def test_frozen_without_freeze_raises():

@@ -63,6 +63,15 @@ def fmt_delta(x: float) -> str:
     return f"+{r:.4f}" if r > 0 else f"−{abs(r):.4f}"
 
 
+def fmt_delta_ci(ci) -> str:
+    """Signed 4 dp interval, "−0.0187 to +0.0161"; "—" when missing."""
+    return "—" if not ci else f"{fmt_delta(ci[0])} to {fmt_delta(ci[1])}"
+
+
+def _excludes_zero(ci) -> bool:
+    return bool(ci) and (ci[0] > 0 or ci[1] < 0)
+
+
 def fmt_folds(k: int, n: int) -> str:
     return f"{int(k)} of {int(n)}"
 
@@ -240,16 +249,41 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
         "values": {},
     })
 
-    nb_values: dict[str, float] = {}
-    nb = "These scores describe how fans should feel. They aren’t betting advice: Vegas spreads still predict single games better"
-    br = ((freeze or {}).get("walk_forward") or {}).get("brier") or {}
-    if "composite" in br and "spread" in br:
-        nb_values = {"composite_brier": br["composite"]["value"], "spread_brier": br["spread"]["value"]}
-        nb += (
-            f" (walk-forward Brier score {fmt_metric(nb_values['spread_brier'])} for the spread vs "
-            f"{fmt_metric(nb_values['composite_brier'])} for the feel-good score; lower is better)"
-        )
-    notes.append({"key": "not_betting", "text": nb + ".", "values": nb_values})
+    if holdout is not None:
+        # WR-03: the holdout's other pre-registered comparisons, each with both intervals.
+        hd = holdout.get("diff") or {}
+        span = _span(*holdout["seasons"])
+        hv: dict[str, float] = {}
+        parts = []
+        d4 = hd.get("spearman_n4") or {}
+        if d4.get("value") is not None:
+            hv["n4_diff"] = d4["value"]
+            parts.append(
+                f"Over the next 4 games instead of 8, the score − Elo rank-correlation difference was "
+                f"{fmt_delta(d4['value'])} (95% interval {fmt_delta_ci(d4.get('ci_season'))} by season blocks, "
+                f"{fmt_delta_ci(d4.get('ci_cluster'))} by team-season)."
+            )
+        bve = hd.get("brier_vs_elo") or {}
+        hb = holdout.get("brier") or {}
+        if bve.get("value") is not None:
+            v = bve["value"]
+            hv["brier_vs_elo"] = v
+            how = "worse than" if v > 0 else "better than" if v < 0 else "level with"
+            cs, cc = bve.get("ci_season"), bve.get("ci_cluster")
+            pair = ""
+            if (hb.get("composite") or {}).get("value") is not None and (hb.get("elo") or {}).get("value") is not None:
+                hv["composite_brier"], hv["elo_brier"] = hb["composite"]["value"], hb["elo"]["value"]
+                pair = f" ({fmt_metric(hv['composite_brier'])} vs {fmt_metric(hv['elo_brier'])})"
+            excl = [name for name, ci in (("season-block", cs), ("season-week", cc)) if _excludes_zero(ci)]
+            parts.append(
+                f"On single games the score was {'slightly ' if v and abs(v) < 0.005 else ''}{how} Elo alone{pair}: next-game Brier difference "
+                f"{fmt_delta(v)} (lower is better), 95% interval {fmt_delta_ci(cs)} by season blocks and "
+                f"{fmt_delta_ci(cc)} by season-week."
+                + (f" The {' and '.join(excl)} interval{'s' if len(excl) > 1 else ''} exclude{'' if len(excl) > 1 else 's'} zero."
+                   if excl else "")
+            )
+        if parts:
+            notes.append({"key": "holdout_detail", "text": f"Holdout {span}: " + " ".join(parts), "values": hv})
 
     if holdout is not None and holdout.get("fit_last") is not None:
         # WR-02: disclose the built-in asymmetry of the pre-registered holdout Brier maps.
@@ -273,6 +307,23 @@ def _notes(weights: dict, doc: dict, freeze: dict | None, holdout: dict | None) 
             )
         notes.append({"key": "brier_maps", "text": text,
                       "values": {"fit_last": fl, **({"fit_first": int(fs[0]), "fit_through": int(fs[1])} if same else {})}})
+
+    nb_values: dict[str, float] = {}
+    nb = "These scores describe how fans should feel. They aren’t betting advice: Vegas spreads still predict single games better"
+    hbr = (holdout or {}).get("brier") or {}
+    br = ((freeze or {}).get("walk_forward") or {}).get("brier") or {}
+    if "composite" in hbr and "spread" in hbr:
+        nb_values = {"composite_brier": hbr["composite"]["value"], "spread_brier": hbr["spread"]["value"]}
+        where = f"holdout {_span(*holdout['seasons'])}"
+    elif "composite" in br and "spread" in br:
+        nb_values = {"composite_brier": br["composite"]["value"], "spread_brier": br["spread"]["value"]}
+        where = "walk-forward"
+    if nb_values:
+        nb += (
+            f" ({where} Brier score {fmt_metric(nb_values['spread_brier'])} for the spread vs "
+            f"{fmt_metric(nb_values['composite_brier'])} for the feel-good score; lower is better)"
+        )
+    notes.append({"key": "not_betting", "text": nb + ".", "values": nb_values})
 
     if holdout is None:
         notes.append({"key": "holdout_pending", "text": HOLDOUT_PENDING, "values": {}})

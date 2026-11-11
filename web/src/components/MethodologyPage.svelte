@@ -54,6 +54,9 @@
   })
   const wfDiff = $derived(m?.walk_forward?.diff?.spearman_n8 ?? null)
   const hoDiff = $derived(m?.holdout?.diff?.spearman_n8 ?? null)
+  const hoN4 = $derived(m?.holdout?.diff?.spearman_n4 ?? null)
+  const hoBrier = $derived(m?.holdout?.diff?.brier_vs_elo ?? null)
+  const excludesZero = (ci?: [number, number] | null) => !!ci && (ci[0] > 0 || ci[1] < 0)
 </script>
 
 <article class="methodology">
@@ -136,6 +139,22 @@
           correlation: <span class="num">{formatDelta(hoDiff.value, 3)}</span>, 95% interval
           <span class="num">{formatDeltaCI(hoDiff.ci_season)}</span> by season blocks and
           <span class="num">{formatDeltaCI(hoDiff.ci_cluster)}</span> by team-season.
+        </p>
+      {/if}
+      {#if m.holdout && (hoN4?.value != null || hoBrier?.value != null)}
+        <p>
+          {#if hoN4?.value != null}
+            Over the next 4 games instead of 8 the difference was <span class="num">{formatDelta(hoN4.value)}</span>
+            (<span class="num">{formatDeltaCI(hoN4.ci_season)}</span> by season blocks,
+            <span class="num">{formatDeltaCI(hoN4.ci_cluster)}</span> by team-season).
+          {/if}
+          {#if hoBrier?.value != null}
+            On single games the score was {hoBrier.value > 0 ? 'worse than' : hoBrier.value < 0 ? 'better than' : 'level with'}
+            Elo alone: next-game Brier difference <span class="num">{formatDelta(hoBrier.value, 4)}</span> (lower is
+            better), interval <span class="num">{formatDeltaCI(hoBrier.ci_season, 4)}</span> by season blocks{#if excludesZero(hoBrier.ci_season)}
+              (excludes zero){/if} and <span class="num">{formatDeltaCI(hoBrier.ci_cluster, 4)}</span> by
+            season-week{#if excludesZero(hoBrier.ci_cluster)} (excludes zero){/if}.
+          {/if}
         </p>
       {/if}
       <p class="muted">
