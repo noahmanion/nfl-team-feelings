@@ -610,13 +610,36 @@ def _sp_delta(pred, base, y) -> float | None:
     return None if a is None or b is None else a - b
 
 
-def _draft_fit(frame: pl.DataFrame, seasons: list[int]) -> dict:
+def _fold_x(d: pl.DataFrame, surplus: pl.DataFrame, S: int) -> tuple[np.ndarray, list[float]] | None:
+    """x = decay(week) * draft_z for d's rows, with draft_z clipped at winsor bounds computed ONLY
+    from drafts [FIRST_DRAFT, S-1] (WR-02: no look-ahead to later training drafts). None when no
+    earlier draft exists."""
+    past = surplus.filter(pl.col("season").is_between(draft.FIRST_DRAFT, S - 1))
+    if past.height == 0:
+        return None
+    b = draft.winsor_bounds(past, (draft.FIRST_DRAFT, S - 1))
+    z = draft.draft_z(surplus.filter(pl.col("season") <= S), b).select(
+        pl.col("season").cast(pl.Int32), "franchise_id", pl.col("draft_z").alias("_zf"))
+    x = (
+        d.select("season", "week", "franchise_id").with_row_index("_i")
+        .with_columns(pl.col("season").cast(pl.Int32))
+        .join(z, on=["season", "franchise_id"], how="left").sort("_i")
+        .select(pl.col("_zf").fill_null(0.0) * (1.0 - pl.col("week") / draft.DECAY_WEEKS))
+        .to_series().to_numpy()
+    )
+    return x, [float(b[0]), float(b[1])]
+
+
+def _draft_fit(frame: pl.DataFrame, seasons: list[int], surplus: pl.DataFrame | None = None) -> dict:
     """Fit core on [season, week, composite, y8, draft_z] rows (all season <= TRAIN_LAST_SEASON).
 
     Residual form: the frozen composite is fixed. Per test season S, the slope of
     (y8 - composite) ~ 1 + decay(week)*draft_z over seasons [FIRST_DRAFT, S-1] is the fold
     weight, and season S is predicted as composite + w*x. The final weight is the same fit on all
-    rows. Only weeks < DECAY_WEEKS carry the term (x = 0 afterwards)."""
+    rows. Only weeks < DECAY_WEEKS carry the term (x = 0 afterwards).
+
+    With `surplus` (draft.surplus_table rows), each fold re-derives draft_z with winsor bounds from
+    drafts before S only (per-fold caps); without it every fold uses frame["draft_z"] as given."""
     assert frame.height == 0 or int(frame["season"].max()) <= TRAIN_LAST_SEASON, "holdout rows in draft fit"
     d = (
         frame.filter((pl.col("week") < draft.DECAY_WEEKS) & (pl.col("season") >= draft.FIRST_DRAFT)
@@ -631,12 +654,19 @@ def _draft_fit(frame: pl.DataFrame, seasons: list[int]) -> dict:
 
     pred = np.full(len(d), np.nan)
     fold_w, fold_s = [], []
+    fold_b: dict[int, list[float]] = {}
     for S in seasons:
         tr, te = (sea >= draft.FIRST_DRAFT) & (sea < S), sea == S
         if not tr.any() or not te.any():
             continue
-        w = _resid_slope(x[tr], r[tr])
-        pred[te] = comp[te] + w * x[te]
+        xs = x
+        if surplus is not None:
+            fx = _fold_x(d, surplus, int(S))
+            if fx is None:
+                continue
+            xs, fold_b[int(S)] = fx
+        w = _resid_slope(xs[tr], r[tr])
+        pred[te] = comp[te] + w * xs[te]
         fold_w.append(w)
         fold_s.append(int(S))
     final = _resid_slope(x, r) if len(d) else 0.0
@@ -660,6 +690,7 @@ def _draft_fit(frame: pl.DataFrame, seasons: list[int]) -> dict:
         "seasons_pos": f"{pos}/{len(fold_s)}",
         "partial_wk0": partial,
         "n_rows": int(len(d)),
+        "fold_winsor": fold_b,  # {} when every fold used the frame's draft_z (fixed caps)
     }
 
 
@@ -687,7 +718,10 @@ def draft_walk_forward(derived: dict, weights: dict[str, float], winsor=None) ->
         .join(targets(team_games, snaps, (8,)), on=KEYS, how="left")
         .join(dz, on=["season", "franchise_id"], how="left")
     )
-    res = _draft_fit(frame, list(range(FIRST_TEST_SEASON, last + 1)))
+    # Per-fold caps (WR-02) unless fixed bounds were passed in; the final fit uses `bounds`
+    # (all training drafts), which is what ships as offseason.draft.winsor.
+    res = _draft_fit(frame, list(range(FIRST_TEST_SEASON, last + 1)),
+                     surplus=None if winsor is not None else surplus)
     res["winsor"] = [float(bounds[0]), float(bounds[1])]
     return res
 
@@ -724,6 +758,8 @@ def format_draft_report(res: dict, gate: dict, date: str) -> str:
         f"surplus {draft.FIRST_DRAFT}-{TRAIN_LAST_SEASON}, test seasons {seasons[0]}-{seasons[-1]}, "
         f"target N=8, chart {draft.CHART}, winsor [{lo:.2f}, {hi:.2f}], decay linear to 0 by week {draft.DECAY_WEEKS}",
         f"  rows (weeks 0-{draft.DECAY_WEEKS - 1}): {res['n_rows']}",
+        "  fold caps: " + ("per fold, from drafts before each test season (no look-ahead)"
+                           if res.get("fold_winsor") else "fixed (same winsor for every fold)"),
         f"  final weight (2000-{TRAIN_LAST_SEASON}): {res['final']:+.4f}",
         f"  fold weights: " + " ".join(f"{s}:{w:+.2f}" for s, w in zip(seasons, res["fold_weights"])),
         f"  fold-sign consistency vs final: {fs} ({gate['fold_sign_consistency']:.2f})",
@@ -737,7 +773,9 @@ def format_draft_report(res: dict, gate: dict, date: str) -> str:
         f"| {date} | draft | {_sgn(res['delta_wk0'], 4)} | {res['final']:+.4f} | {fs} | "
         f"{'pass' if not gate['display_only'] else 'fail'} -> {gate['weight']:.2f} | "
         f"residual on frozen composite; weeks 0-3 Δ {_sgn(res['delta_wk0_3'], 4)}; wk0 seasons Δ>0 "
-        f"{res['seasons_pos']}; training-only walk-forward {seasons[0]}-{seasons[-1]} (no fresh holdout) |",
+        f"{res['seasons_pos']}; "
+        f"{'per-fold winsor caps; ' if res.get('fold_winsor') else ''}"
+        f"training-only walk-forward {seasons[0]}-{seasons[-1]} (no fresh holdout) |",
         "",
         "weights.yaml block (append at the end):",
         "offseason:",

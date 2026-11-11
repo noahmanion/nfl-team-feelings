@@ -361,6 +361,31 @@ def test_draft_fit_refuses_holdout_rows():
         _draft_fit(bad, list(range(2003, 2022)))
 
 
+def test_draft_fit_per_fold_winsor_no_lookahead(monkeypatch):
+    """WR-02: fold S clips draft_z with caps from drafts [2000, S-1] only."""
+    import fgs.draft as dr
+
+    frame = _draft_synth(0.5)
+    sur = frame.filter(pl.col("week") == 0).select("season", "franchise_id", pl.col("draft_z").alias("surplus"))
+    # a huge outlier in 2021 would widen the caps of every fold if they were global
+    sur = sur.with_columns(pl.when((pl.col("season") == 2021) & (pl.col("franchise_id") == "T0"))
+                           .then(1e6).otherwise(pl.col("surplus")).alias("surplus"))
+    calls = []
+    orig = dr.winsor_bounds
+
+    def spy(surplus, seasons=(2000, 2021), q=(0.05, 0.95)):
+        calls.append((int(surplus["season"].max()), seasons))
+        return orig(surplus, seasons, q)
+
+    monkeypatch.setattr(dr, "winsor_bounds", spy)
+    res = _draft_fit(frame, list(range(2003, 2022)), surplus=sur)
+    assert res["fold_seasons"] == list(range(2003, 2022))
+    assert [c[1] for c in calls] == [(2000, S - 1) for S in range(2003, 2022)]
+    assert all(mx <= hi for mx, (_, hi) in calls)
+    assert sorted(res["fold_winsor"]) == list(range(2003, 2022))
+    assert res["fold_winsor"][2021][1] < 1e3  # the 2021 outlier never sets a cap
+
+
 def test_draft_report_contains_block():
     res = _draft_fit(_draft_synth(-0.2), list(range(2003, 2022)))
     res["winsor"] = [-17.29, 16.19]

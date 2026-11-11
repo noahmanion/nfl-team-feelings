@@ -77,7 +77,9 @@ fit:  # per-factor evidence (ignored by load_weights)
 # wk0 ΔSpearman (N=8) > 0; otherwise weight 0 and display only (surplus shown, not scored).
 # Verdict: gate failed: fitted -0.28, 8/19 folds share its sign, wk0 ΔSpearman +0.0003
 # -> weight 0, display only. Re-run 2026-11-11 after the CR-01 alignment fix (forfeits only from
-# draft.FORFEITS, no DP-invented forfeits): was fitted -0.2828 / 8/19 / wk0 Δ +0.0002.
+# draft.FORFEITS, no DP-invented forfeits): was fitted -0.2828 / 8/19 / wk0 Δ +0.0002. The
+# walk-forward folds now cap surplus with winsor bounds from earlier drafts only (WR-02); the
+# winsor below (all 2000-2021 drafts) is used by the final fit and the shipped z.
 offseason:
   draft:
     weight: 0.00
