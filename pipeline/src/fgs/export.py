@@ -12,7 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, draft, explain, methodology, mood, score, season_config
+from fgs import asof, draft, explain, insights, methodology, mood, paths, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 from fgs.season_config import SEEDS
@@ -207,7 +207,34 @@ def _export_weights(derived: dict, scored: pl.DataFrame) -> dict[str, float]:
     return weights
 
 
-def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> dict[str, object]:
+def _load_evidence(fp_weights: dict[str, float], evidence: dict | None = None) -> dict:
+    """The committed perception-gap base rates (pipeline/callout_evidence.json, read at call time via
+    paths.CALLOUT_EVIDENCE_PATH unless passed in), checked against the current config and weights so
+    stale numbers can never ship (ValueError, not assert: survives python -O). Only reads JSON:
+    the export never imports fgs.evidence (it imports the backtest)."""
+    if evidence is None:
+        path = paths.CALLOUT_EVIDENCE_PATH
+        if not path.exists():
+            raise ValueError(f"{path} is missing; run `uv run fgs evidence` and commit it")
+        evidence = json.loads(path.read_text(encoding="utf-8"))
+    want = {
+        "threshold": season_config.GAP_THRESHOLD,
+        "first_week": season_config.GAP_FIRST_WEEK,
+        "train_seasons": [1999, season_config.TRAIN_LAST_SEASON],
+        "weights_fingerprint": insights.weights_fingerprint(fp_weights),
+    }
+    bad = {k: (evidence.get(k), v) for k, v in want.items() if evidence.get(k) != v}
+    if bad:
+        detail = ", ".join(f"{k} {have!r} != {need!r}" for k, (have, need) in bad.items())
+        raise ValueError(f"callout_evidence.json is stale ({detail}); run `uv run fgs evidence` and commit it")
+    return evidence
+
+
+def build_export(
+    derived: dict, teams_df: pl.DataFrame, generated_at: str, *, evidence: dict | None = None,
+) -> dict[str, object]:
+    """evidence: the perception-gap base rates; None loads paths.CALLOUT_EVIDENCE_PATH. Either way it
+    is validated against the current threshold, window, training seasons and weights fingerprint."""
     games = derived["games"]
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
@@ -224,6 +251,8 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         # restore the snapshot sort: the joins in _playoff_display may reorder rows
         scored = _playoff_display(scored, games).sort(["season", "week", "rank"])
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
+    ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence)
+    by_week = insights.callouts_by_week(scored, derived["team_games"], nicks, ev)
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
@@ -252,7 +281,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         weeks: dict[str, list] = {}
         for r in snaps.iter_rows(named=True):
             weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys, nicks, first_season, draft_ctx))
-        files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks}
+        callouts = {str(w): by_week[(int(season), int(w))] for w in sorted({int(k) for k in weeks})
+                    if by_week.get((int(season), int(w)))}
+        files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks, "callouts": callouts}
         files[f"games/{season}.json"] = _games_file(games, int(season))
 
     s, w = latest
@@ -285,7 +316,7 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
             },
         }
     files["history.json"] = {"keys": keys, "teams": hist}
-    files["callouts.json"] = []
+    files["callouts.json"] = by_week.get((int(s), int(w)), [])  # the flat list for meta.latest
     # built from committed evidence only (weights.yaml + FREEZE_RESULT + optional HOLDOUT_RESULT);
     # in `files` so write_export swaps it in atomically with everything else (Pitfall 3)
     files["methodology.json"] = methodology.build_methodology(weights, *methodology.load_evidence(), live=int(s))
