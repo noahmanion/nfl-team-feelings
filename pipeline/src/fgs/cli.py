@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, check, export."""
+"""`fgs` command line: ingest, build, elo, check, export, refresh."""
 
 import argparse
 import sys
@@ -25,10 +25,7 @@ def derive(raw: pl.DataFrame, params: EloParams | None = None) -> dict[str, pl.D
 def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     raw = load_schedules(refresh=refresh)
     out = derive(raw)
-    DERIVED_DIR.mkdir(parents=True, exist_ok=True)
-    out["games"].write_parquet(DERIVED_DIR / "games.parquet")
-    out["team_games"].write_parquet(DERIVED_DIR / "team_games.parquet")
-    out["snapshots"].write_parquet(DERIVED_DIR / "elo_snapshots.parquet")
+    _write_derived(out)
     print(
         f"built: raw {raw.height} rows, games {out['games'].height}, "
         f"team_games {out['team_games'].height}, elo_snapshots {out['snapshots'].height}"
@@ -37,6 +34,13 @@ def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     if latest is not None:
         print(f"latest: {latest[0]} week {latest[1]} (data through {_data_through(out['games'], *latest)})")
     return {"raw": raw, **out}
+
+
+def _write_derived(out: dict[str, pl.DataFrame]) -> None:
+    DERIVED_DIR.mkdir(parents=True, exist_ok=True)  # module global read at call time (tests monkeypatch it)
+    out["games"].write_parquet(DERIVED_DIR / "games.parquet")
+    out["team_games"].write_parquet(DERIVED_DIR / "team_games.parquet")
+    out["snapshots"].write_parquet(DERIVED_DIR / "elo_snapshots.parquet")
 
 
 # Kept under the old names so existing callers/tests keep working.
@@ -110,22 +114,48 @@ def _cmd_elo(args) -> int:
     return 0
 
 
-def _cmd_check(args) -> int:
-    raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
+def _checked_derive(raw: pl.DataFrame) -> tuple[bool, dict[str, pl.DataFrame] | None, EloParams]:
+    """Pre-derive checks (columns, codes), then derive and run every post-derive check. No file I/O."""
+    params = EloParams()
     failed = False
     for name, fails in (("columns", checks.check_columns(raw)), ("codes", checks.check_codes(raw))):
         failed |= _report(name, fails)
     if failed:
         print("raw data failed pre-derive checks; not deriving")
-        return 1
-    params = EloParams()
+        return False, None, params
     derived = derive(raw, params)
     for name, fails in checks.run_checks(raw, derived, params):
         if name == "columns":
             continue  # already reported above
         failed |= _report(name, fails)
     print("FAILED" if failed else "all checks passed")
-    return 1 if failed else 0
+    return not failed, derived, params
+
+
+def _cmd_check(args) -> int:
+    raw = load_schedules()  # module-level name so tests can monkeypatch fgs.cli.load_schedules
+    ok, _, _ = _checked_derive(raw)
+    return 0 if ok else 1
+
+
+def _cmd_refresh(args) -> int:
+    """D-09: re-download -> derive -> check (abort, writing nothing) -> parquet -> site JSON."""
+    raw = load_schedules(refresh=True)
+    teams = load_teams(refresh=True)
+    ok, derived, _ = _checked_derive(raw)
+    if not ok:
+        print("checks failed; JSON not regenerated", file=sys.stderr)
+        return 1
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    files = export.build_export(derived, teams, generated_at=generated_at)  # pure; may still raise before writes
+    _write_derived(derived)
+    export.write_export(files, WEB_DATA_DIR)
+    meta = files["meta.json"]
+    print(
+        f"refreshed: exported {len(files)} files; latest {meta['latest']['season']} week "
+        f"{meta['latest']['week']} (partial={meta['partial_week']}); data through {meta['data_through']}"
+    )
+    return 0
 
 
 def _cmd_export(args) -> int:
@@ -175,6 +205,10 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("export", help="write the site JSON contract to web/public/data from cached data; no network")
     p.set_defaults(func=_cmd_export)
+
+    p = sub.add_parser("refresh", help="re-download nflverse data, run all checks, then regenerate derived "
+                                       "parquet and the site JSON (writes nothing if a check fails)")
+    p.set_defaults(func=_cmd_refresh)
 
     args = parser.parse_args(argv)
     return args.func(args)
