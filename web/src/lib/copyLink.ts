@@ -5,6 +5,8 @@ export interface CopyDoc {
   createElement(tag: 'textarea'): HTMLTextAreaElement
   execCommand(cmd: string): boolean
   body: { appendChild(n: Node): unknown } | null
+  /** Focus owner before the copy; focus goes back to it afterwards (e.g. the Copy button). */
+  readonly activeElement?: Element | null
 }
 export interface CopyEnv {
   isSecureContext: boolean
@@ -29,21 +31,32 @@ export async function copyText(text: string, env: CopyEnv = defaultEnv()): Promi
   } catch {
     // fall through to execCommand
   }
+  // WR-04: execCommand only copies the *active* selection, and Chromium returns true whenever the
+  // command is enabled, copied or not. So the textarea is focused, selected with setSelectionRange
+  // (iOS Safari ignores select() on a readonly field), and the tier only counts as a success when
+  // the textarea really holds focus and the whole text is selected. Focus is restored afterwards.
+  const doc = env.doc
+  const prev = (doc?.activeElement ?? null) as HTMLElement | null
   try {
-    const doc = env.doc
     if (doc?.body) {
       const ta = doc.createElement('textarea')
       ta.value = text
       ta.setAttribute('readonly', '')
       ta.style.position = 'fixed'
+      ta.style.top = '0'
+      ta.style.left = '0'
       ta.style.opacity = '0'
       doc.body.appendChild(ta)
       let ok = false
       try {
+        ta.focus()
         ta.select()
-        ok = doc.execCommand('copy')
+        ta.setSelectionRange(0, text.length)
+        const selected = doc.activeElement === ta && ta.selectionStart === 0 && ta.selectionEnd === text.length
+        ok = selected && doc.execCommand('copy')
       } finally {
         ta.remove()
+        restoreFocus(prev)
       }
       if (ok) return 'copied'
     }
@@ -51,6 +64,14 @@ export async function copyText(text: string, env: CopyEnv = defaultEnv()): Promi
     // fall through to manual
   }
   return 'manual'
+}
+
+function restoreFocus(el: HTMLElement | null) {
+  try {
+    if (el && typeof el.focus === 'function') el.focus()
+  } catch {
+    // focus is best effort
+  }
 }
 
 /** Absolute URL for a hash route; just the hash outside a browser. */
