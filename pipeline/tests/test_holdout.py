@@ -229,6 +229,16 @@ def test_standin_cis_ordered_and_strict_json(standin):
     json.dumps(r, allow_nan=False)
 
 
+def test_evaluate_frozen_refuses_null_factor(standin):
+    # IN-06: a missing factor value must not silently count as 0 in the frozen composite
+    derived, w, _ = standin
+    f = next(iter(w))
+    feats = derived["features"].with_columns(
+        pl.when(pl.col("season") == STANDIN[0]).then(None).otherwise(pl.col(f"z_{f}")).alias(f"z_{f}"))
+    with pytest.raises(ValueError, match=f"null/NaN factor values.*{f}"):
+        holdout.evaluate_frozen({**derived, "features": feats}, w, STANDIN, STANDIN_FIT_LAST, B=10)
+
+
 def test_standin_factors_from_doc(standin):
     derived, w, _ = standin
     doc = {"fit": {f: {"sign": freeze.sign_of(v), "fold_sign": [3, 4]} for f, v in w.items()}}

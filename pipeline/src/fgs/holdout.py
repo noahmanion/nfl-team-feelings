@@ -172,6 +172,17 @@ def evaluate_frozen(
         .sort(backtest.KEYS)
     )
 
+    # A null z_<factor> would silently drop out of the composite (sum_horizontal skips nulls), so the
+    # frozen score would no longer be the pre-registered one on those rows: refuse (IN-06).
+    missing = [f for f in weights if f"z_{f}" not in rows.columns]
+    if missing:
+        raise ValueError(f"factor z-columns missing from the evaluated rows: {', '.join(missing)}")
+    bad = {f: n for f in weights
+           if (n := rows.select(pl.col(f"z_{f}").is_null() | pl.col(f"z_{f}").is_nan()).to_series().sum())}
+    if bad:
+        raise ValueError("null/NaN factor values on evaluated rows (the frozen composite would silently treat "
+                         "them as 0): " + ", ".join(f"{f} ({n})" for f, n in bad.items()))
+
     # --- Spearman N=8 (primary) ---
     d8 = rows.filter(pl.col("y8").is_not_null())
     x8 = {c: COLS[c] for c in SPEARMAN_CANDS}
