@@ -31,7 +31,7 @@
 - [x] **MODEL-12**: Factor: playoff-odds trend
 - [x] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
 - [x] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
-- [ ] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
+- [x] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
 - [ ] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
 
 ### Backtest & Tuning
@@ -39,9 +39,9 @@
 - [x] **BACK-01**: The primary target (opponent- and HFA-adjusted average margin over the next 4–8 games) is documented in the README before any tuning
 - [x] **BACK-02**: A walk-forward-by-season backtest compares the score against baselines: plain Elo, season win %, last-16 win %, point differential, and the Vegas spread as a ceiling
 - [x] **BACK-03**: A leakage test (appending fake future games changes no past score) passes
-- [ ] **BACK-04**: Weights are fit with Ridge on standardized inputs, rounded by a human, and committed to `weights.yaml`; the weekly refresh never refits
-- [ ] **BACK-05**: 2022–2025 is held out and evaluated once after weights are frozen, with season-level bootstrap confidence intervals and the fitted sign of every factor reported
-- [ ] **BACK-06**: The final score beats the plain-Elo baseline out of sample
+- [x] **BACK-04**: Weights are fit with Ridge on standardized inputs, rounded by a human, and committed to `weights.yaml`; the weekly refresh never refits
+- [x] **BACK-05**: 2022–2025 is held out and evaluated once after weights are frozen, with season-level bootstrap confidence intervals and the fitted sign of every factor reported
+- [x] **BACK-06**: The final score beats the plain-Elo baseline out of sample
 
 ### Insights
 
@@ -60,7 +60,7 @@
 - [x] **SITE-04**: User can scrub the mood board to any season/week since 1999
 - [ ] **SITE-05**: User sees a biggest-movers strip for the current week
 - [ ] **SITE-06**: User can browse a records page of historical extremes and longest misery/joy streaks
-- [ ] **SITE-07**: User can read a methodology page explaining the factors, fitted weights and signs, and a backtest chart vs baselines
+- [x] **SITE-07**: User can read a methodology page explaining the factors, fitted weights and signs, and a backtest chart vs baselines
 - [ ] **SITE-08**: User can pin "my team" and see it highlighted across views (remembered locally)
 - [ ] **SITE-09**: Shareable callouts are surfaced on the board and team pages
 - [x] **SITE-10**: Site works on mobile and shows a "last updated" stamp; every view has a hash deep link
@@ -126,14 +126,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODEL-12 | Phase 5 | Complete |
 | MODEL-13 | Phase 5 | Complete |
 | MODEL-14 | Phase 3 | Complete |
-| MODEL-15 | Phase 6 | Pending |
+| MODEL-15 | Phase 6 | Complete |
 | MODEL-16 | Phase 7 | Pending |
 | BACK-01 | Phase 3 | Complete |
 | BACK-02 | Phase 3 | Complete |
 | BACK-03 | Phase 3 | Complete |
-| BACK-04 | Phase 6 | Pending |
-| BACK-05 | Phase 6 | Pending |
-| BACK-06 | Phase 6 | Pending |
+| BACK-04 | Phase 6 | Complete |
+| BACK-05 | Phase 6 | Complete |
+| BACK-06 | Phase 6 | Complete (PASS by prereg rule: +0.0039 Spearman N=8, CI incl. 0; verdict "slight") |
 | INSIGHT-01 | Phase 2 | Complete |
 | INSIGHT-02 | Phase 8 | Pending |
 | INSIGHT-03 | Phase 8 | Pending |
@@ -146,7 +146,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SITE-04 | Phase 2 | Complete |
 | SITE-05 | Phase 8 | Pending |
 | SITE-06 | Phase 8 | Pending |
-| SITE-07 | Phase 6 | Pending |
+| SITE-07 | Phase 6 | Complete |
 | SITE-08 | Phase 8 | Pending |
 | SITE-09 | Phase 8 | Pending |
 | SITE-10 | Phase 2 | Complete |
