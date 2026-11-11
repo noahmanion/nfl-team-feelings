@@ -98,7 +98,22 @@ Plans:
   4. The score is now a sum of weight × z-score with each factor's stored contribution, and the current-season record and rolling last-16 factors (across season boundaries) show a measured backtest delta.
   5. User can view a mood-over-time chart of all teams from 1999 to now, with one team highlighted, a fixed y-axis, and breaks at season boundaries.
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — README backtest target (committed first), as-of season_record/last16/pd_pg features, `fgs backtest` walk-forward baselines + backtest.json with sealed holdout
+- [ ] 03-04-PLAN.md — Mood-over-time chart: `#/history[/ABBR]` route, top nav, Observable Plot spaghetti + highlight + season breaks + band stripes
+
+**Wave 2** *(blocked on 03-01)*
+
+- [ ] 03-02-PLAN.md — score.py additive engine (per-snapshot z, contribs), walk-forward ridge composites, `--propose-weights`, weights.yaml, BACKTEST_LOG.md
+
+**Wave 3** *(blocked on 03-02)*
+
+- [ ] 03-03-PLAN.md — Composite on the board: frozen 1999–2021 percentile reference, leakage test, meta.factors + row contribs, regenerated site data, README
+
 **UI hint**: yes
 
 ### Phase 4: Game-Result Factors & Team Deep-Dive
