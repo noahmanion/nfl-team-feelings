@@ -155,6 +155,8 @@ PHRASES: dict[tuple[str, str], tuple[str, str]] = {
     ("qb_trend", "lo"): ("are getting poor play from their quarterback", "are getting shaky quarterback play"),
     ("vs_exp", "hi"): ("are beating preseason expectations", "are a bit ahead of preseason expectations"),
     ("vs_exp", "lo"): ("are falling short of preseason expectations", "are a bit behind preseason expectations"),
+    ("po_trend", "hi"): ("have seen their playoff odds climb", "have seen their playoff odds tick up"),
+    ("po_trend", "lo"): ("have seen their playoff odds slide", "have seen their playoff odds dip"),
 }
 # Appended when the points point the other way to the fact (a negative-weight factor).
 FADE = {"hi": " (that tends to fade)", "lo": " (that tends to even out)"}

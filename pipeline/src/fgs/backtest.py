@@ -245,6 +245,8 @@ RIDGE_SETS = {
     "ridge:+qb_trend": ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend"],
     "ridge:+vs_exp": ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend",
                       "vs_exp"],
+    "ridge:+po_trend": ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend",
+                        "vs_exp", "po_trend"],
 }
 PROPOSAL_FACTORS = RIDGE_SETS[list(RIDGE_SETS)[-1]]
 FIT_TARGET = "y8"

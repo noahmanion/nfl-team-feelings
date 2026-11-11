@@ -209,8 +209,9 @@ def test_propose_weights_holdout_sealed(real_report):
 
 
 RIDGE_NAMES = ("ridge:elo", "ridge:+season_record", "ridge:+last16", "ridge:+mov", "ridge:+sow", "ridge:+streak", "ridge:+luck",
-               "ridge:+epa_traj", "ridge:+qb_trend", "ridge:+vs_exp")
-FINAL_KEYS = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend", "vs_exp"]
+               "ridge:+epa_traj", "ridge:+qb_trend", "ridge:+vs_exp", "ridge:+po_trend")
+FINAL_KEYS = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend", "vs_exp",
+              "po_trend"]
 
 
 def test_ridge_composites_in_report(real_report):
@@ -227,6 +228,7 @@ def test_ridge_composites_in_report(real_report):
     assert 0.5199 <= c["ridge:+epa_traj"]["N8"]["all"]["spearman"] <= 0.5239
     assert 0.5226 <= c["ridge:+qb_trend"]["N8"]["all"]["spearman"] <= 0.5266
     assert 0.5245 <= c["ridge:+vs_exp"]["N8"]["all"]["spearman"] <= 0.5285
+    assert 0.523 <= c["ridge:+po_trend"]["N8"]["all"]["spearman"] <= 0.529  # VALIDATION final range
     prop = propose_weights(cli.derive(raw, **derive_inputs()))
     assert set(prop["weights"]) == set(FINAL_KEYS)
     assert all(math.isfinite(v) for v in prop["weights"].values())

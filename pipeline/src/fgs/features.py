@@ -36,6 +36,10 @@ the dev-only evaluation harness (leakage firewall).
                  snapshot's as-of REG games; 0.0 at week 0 and without sim. Phase 6 flag (RESEARCH
                  Pitfall 1): its signal is learned mostly on Vegas-sourced rows (2003-2020), while
                  2021+ (holdout and live season) is always model-sourced.
+- po_trend:      playoff-odds trend (MODEL-12): playoff_prob(season, week) minus
+                 playoff_prob(season, max(week - 3, 0)), same season, raw sim values (never the
+                 export's post-season display override); 0.0 at week 0, for a missing lag and
+                 without sim
 - qb_name, qb_new: display columns (not factors): the current QB's name (null at week 0 / no
                  pbp) and whether he has fewer than 2 starts (False without pbp)
 """
@@ -47,13 +51,14 @@ from fgs import efficiency, expectation
 from fgs.season_config import MEAN_ELO, hfa_for, reg_games
 
 FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend",
-                   "playoff_prob", "exp_wins", "vs_exp"]
+                   "playoff_prob", "exp_wins", "vs_exp", "po_trend"]
 GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
 SOW_N = 8
 STREAK_CAP = 8
 LUCK_N, ONE_SCORE = 16, 8
+PO_LAG = 3
 
 
 def _last16(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
@@ -209,14 +214,22 @@ def _sim_columns(snap: pl.DataFrame, sim: pl.DataFrame | None, vegas: pl.DataFra
         return snap.with_columns(
             pl.lit(0.0).alias("playoff_prob"), pl.lit(0.0).alias("exp_wins"),
             pl.lit(None, pl.Float64).alias("exp_total"), pl.lit(None, pl.String).alias("expectation_source"),
-            pl.lit(0.0).alias("vs_exp"),
+            pl.lit(0.0).alias("vs_exp"), pl.lit(0.0).alias("po_trend"),
         )
     s = sim.select(
         pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32), "franchise_id",
         pl.col("playoff_prob").cast(pl.Float64), pl.col("exp_wins").cast(pl.Float64),
     )
+    lag = s.select(
+        "season", "franchise_id", pl.col("week").alias("lag_week"), pl.col("playoff_prob").alias("_p_lag"),
+    )
     return (
         snap.join(s, on=["season", "week", "franchise_id"], how="left")
+        .with_columns((pl.col("week") - PO_LAG).clip(lower_bound=0).cast(pl.Int32).alias("lag_week"))
+        .join(lag, on=["season", "franchise_id", "lag_week"], how="left")
+        # raw sim values; a missing current or lagged value -> 0.0 (CONTEXT MODEL-12)
+        .with_columns((pl.col("playoff_prob") - pl.col("_p_lag")).fill_null(0.0).alias("po_trend"))
+        .drop("lag_week", "_p_lag")
         .with_columns(pl.col("playoff_prob").fill_null(0.0), pl.col("exp_wins").fill_null(0.0))
         .join(expectation.expectations(sim, vegas), on=["season", "franchise_id"], how="left")
         .with_columns(_vs_exp())

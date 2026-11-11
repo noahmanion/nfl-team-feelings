@@ -63,6 +63,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "otherwise the model's preseason projection); given the record, beating expectations tends to fade "
         "(expectations usually catch up), so it lowers the score",
     },
+    "po_trend": {
+        "label": "Playoff odds trend",
+        "description": "Change in simulated playoff odds over the last 3 weeks; "
+        "adds about nothing beyond the other factors (kept so its weight is on record)",
+    },
 }
 
 SNAPSHOT = ("season", "week")

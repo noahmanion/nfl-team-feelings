@@ -7,7 +7,7 @@ import pytest
 from fgs import explain
 from fgs.explain import FADE, PHRASES, add_points, baseline, blurb, largest_remainder, slope, smooth_map
 
-FACTORS7 = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend", "vs_exp"]
+FACTORS7 = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend", "vs_exp", "po_trend"]
 
 
 # --- largest_remainder ---------------------------------------------------------------------
