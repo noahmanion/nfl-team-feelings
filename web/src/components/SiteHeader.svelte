@@ -2,7 +2,7 @@
   import Sep from './Sep.svelte'
 
   // 'team': neither nav link is the current page.
-  let { current = 'board' }: { current?: 'board' | 'history' | 'team' | 'methodology' } = $props()
+  let { current = 'board' }: { current?: 'board' | 'history' | 'team' | 'records' | 'methodology' } = $props()
 </script>
 
 <header class="site-header">
@@ -13,6 +13,8 @@
     <a href="#/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
     <Sep />
     <a href="#/history" aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a>
+    <Sep />
+    <a href="#/records" aria-current={current === 'records' ? 'page' : undefined}>Records</a>
     <Sep />
     <a href="#/methodology" aria-current={current === 'methodology' ? 'page' : undefined}>How it works</a>
   </nav>

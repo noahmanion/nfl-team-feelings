@@ -2,6 +2,7 @@
   import { onMount } from 'svelte'
   import HistoryPage from './components/HistoryPage.svelte'
   import MethodologyPage from './components/MethodologyPage.svelte'
+  import RecordsPage from './components/RecordsPage.svelte'
   import BoardHeading from './components/BoardHeading.svelte'
   import CalloutCards from './components/CalloutCards.svelte'
   import MoversStrip from './components/MoversStrip.svelte'
@@ -100,7 +101,7 @@
     const r = route.current
     if (r.kind === 'reserved') {
       replace('#/')
-    } else if (r.kind === 'history' || r.kind === 'methodology') {
+    } else if (r.kind === 'history' || r.kind === 'methodology' || r.kind === 'records') {
       notice = null
     } else if (r.kind === 'team') {
       if (!validTeam(meta, r.team)) {
@@ -209,7 +210,9 @@
         ? 'team'
         : route.current.kind === 'methodology'
           ? 'methodology'
-          : 'board'}
+          : route.current.kind === 'records'
+            ? 'records'
+            : 'board'}
   />
 
   <main>
@@ -233,6 +236,10 @@
     {:else if route.current.kind === 'methodology' && status === 'ready' && meta}
       <MethodologyPage {meta} />
     {:else if route.current.kind === 'methodology'}
+      <p class="loading" role="status">Loading…</p>
+    {:else if route.current.kind === 'records' && status === 'ready' && meta}
+      <RecordsPage {meta} />
+    {:else if route.current.kind === 'records'}
       <p class="loading" role="status">Loading…</p>
     {:else}
       <Scrubber

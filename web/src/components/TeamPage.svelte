@@ -9,11 +9,12 @@
   import StatusPanel from './StatusPanel.svelte'
   import TeamChip from './TeamChip.svelte'
   import { cardCallouts, forTeam, forWeek } from '../lib/callouts'
-  import { findSeason, loadGames, loadSeason } from '../lib/data'
+  import { findSeason, loadGames, loadRecords, loadSeason } from '../lib/data'
   import { formatRecord, weekLabel } from '../lib/format'
+  import { formatDate, streakLine } from '../lib/records'
   import { historyHash, teamHash } from '../lib/router'
   import { findTeamRow, playoffText, recentGames, seasonSeries } from '../lib/team'
-  import type { GamesFile, Meta, SeasonFile } from '../lib/types'
+  import type { ActiveStreak, GamesFile, Meta, SeasonFile } from '../lib/types'
 
   let { meta, team, season, week, latest }: { meta: Meta; team: string; season: number; week: number; latest: boolean } =
     $props()
@@ -79,10 +80,42 @@
     }
   })
 
+  // ---- active streak (latest view only): records.json, failure-tolerant (no line on error) ----
+  let streak = $state<{ team: string; active: ActiveStreak | null } | null>(null)
+
+  $effect(() => {
+    const t = team
+    if (!latest) return
+    let live = true
+    loadRecords(meta).then(
+      (r) => {
+        if (live) streak = { team: t, active: r.active?.[t] ?? null }
+      },
+      (err) => {
+        console.error(err)
+        if (live) streak = { team: t, active: null }
+      },
+    )
+    return () => {
+      live = false
+    }
+  })
+
+  const activeStreak = $derived(latest && streak?.team === team ? streak.active : null)
+  const streakText = $derived(streakLine(activeStreak))
+
   const ready = $derived(seasonFile?.season === season)
   const row = $derived(ready && seasonFile ? findTeamRow(seasonFile, team, week) : undefined)
   const series = $derived(ready && seasonFile ? seasonSeries(seasonFile, team).filter((p) => p.week <= week) : [])
-  const teamCallouts = $derived(ready && seasonFile ? cardCallouts(forTeam(forWeek(seasonFile, week), team)) : [])
+  // With the streak line shown, drop this team's misery/joy cards: the week-dated callout and the
+  // as-of-export line would show two different day counts on one page.
+  const teamCallouts = $derived(
+    ready && seasonFile
+      ? cardCallouts(forTeam(forWeek(seasonFile, week), team)).filter(
+          (c) => !(streakText && (c.type === 'misery' || c.type === 'joy')),
+        )
+      : [],
+  )
   const games = $derived(gamesFiles?.key === gamesKey ? recentGames(gamesFiles.files, team, season, week) : null)
 
   const when = $derived(`${season} · ${seasonMeta ? weekLabel(week, seasonMeta) : `Week ${week}`}`)
@@ -136,6 +169,9 @@
       <div class="mood"><MoodLabel emoji={row.emoji} label={row.label} size="heading" /></div>
     </header>
 
+    {#if streakText && activeStreak}
+      <p class="streak">{streakText}, since {formatDate(activeStreak.start)}</p>
+    {/if}
     {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
     {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
 
@@ -234,6 +270,12 @@
   .blurb {
     font-size: var(--text-body);
     line-height: var(--lh-body);
+  }
+  .streak {
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
   }
   .delta-note {
     font-size: var(--text-label);
