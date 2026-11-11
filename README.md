@@ -22,6 +22,8 @@ npm run dev              # the one command after that
 
 The generated JSON in `web/public/data/` is committed, so the site runs without Python.
 
+`web/public/data/teams/{ABBR}.json` (e.g. `teams/BUF.json`) is a public per-team data file: the team's name, colors and full score/Elo/label history since 1999. The site itself doesn't fetch it; it's there for anyone who wants one team's series. A pipeline test pins its last entry to the latest board row.
+
 **Other pipeline commands:**
 
 ```bash

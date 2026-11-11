@@ -221,6 +221,17 @@ def test_contract_history_and_teams(real_files):
     assert len({len(v) for v in h.values()}) == 1
 
 
+def test_team_files_end_at_latest_row(real_files):
+    """teams/{ABBR}.json is a public per-team file the site doesn't fetch: pin it to latest.json so it can't drift."""
+    _, files = real_files
+    latest = files["latest.json"]
+    for row in latest["rows"]:
+        h = files[f"teams/{row['franchise']}.json"]["history"]
+        last = {k: v[-1] for k, v in h.items()}
+        assert last == {"season": latest["season"], "week": latest["week"],
+                        "score": row["score"], "elo": row["elo"], "label": row["label"]}, row["franchise"]
+
+
 def test_contract_written_files(real_files, tmp_path):
     _, files = real_files
     (tmp_path / "teams").mkdir()
