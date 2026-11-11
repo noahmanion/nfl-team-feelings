@@ -16,6 +16,7 @@ import numpy as np
 import polars as pl
 
 from fgs import mood
+from fgs.features import STREAK_CAP
 
 # --- attribution ---------------------------------------------------------------------------
 
@@ -105,7 +106,8 @@ def add_points(scored: pl.DataFrame, factor_keys: list[str], ref: np.ndarray) ->
 # --- blurb ---------------------------------------------------------------------------------
 
 # Fact phrases keyed by (factor, raw direction = sign(z)) -> (strong, mild). Plural verbs: every
-# team_nick is plural ("Bills", "49ers"). {rec} = W-L or W-L-T, {k} = |raw streak|.
+# team_nick is plural ("Bills", "49ers"). {rec} = W-L or W-L-T, {k} = |raw streak| ("8+" at the
+# feature cap, since the stored streak is clipped and the true run may be longer).
 PHRASES: dict[tuple[str, str], tuple[str, str]] = {
     ("elo", "hi"): ("are one of the best teams in football", "are a good team on paper"),
     ("elo", "lo"): ("are one of the worst teams in football", "are a below-average team on paper"),
@@ -120,7 +122,7 @@ PHRASES: dict[tuple[str, str], tuple[str, str]] = {
     ("sow", "hi"): ("have been winning more than their schedule would predict", "have results a bit better than their schedule"),
     ("sow", "lo"): ("have come up short against beatable opponents", "have results a bit worse than their schedule"),
     ("streak", "hi"): ("have won {k} straight", "have won {k} straight"),
-    ("streak", "lo"): ("are stuck in a {k}-game skid", "have lost {k} straight"),
+    ("streak", "lo"): ("have lost {k} in a row", "have lost {k} straight"),
     ("luck", "hi"): ("have won a lot of coin-flip games", "have won more than their share of close games"),
     ("luck", "lo"): ("have lost a lot of coin-flip games", "have lost more than their share of close games"),
 }
@@ -145,12 +147,13 @@ def _phrase(row: dict, f: str, pts: int, week: int) -> str | None:
         return None
     if f == "season_record" and week == 0:
         return None
-    k = 0
+    k = "0"
     if f == "streak":
         raw = row.get("streak")
         if raw is None or abs(int(raw)) < 2:
             return None
-        k = abs(int(raw))
+        n = abs(int(raw))
+        k = f"{STREAK_CAP}+" if n >= STREAK_CAP else str(n)
     d = "hi" if z > 0 else "lo"
     strong, mild = PHRASES[(f, d)]
     text = (strong if abs(pts) >= STRONG.get(f, STRONG_DEFAULT) else mild).format(rec=_record(row), k=k)

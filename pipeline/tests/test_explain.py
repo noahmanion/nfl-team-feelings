@@ -158,7 +158,14 @@ def test_blurb_streak_needs_two():
     out = blurb(r, FACTORS7, "Bears", 5)
     assert "straight" not in out and "close games" in out
     r = _row(streak=-4, z_streak=-1.0, pts_streak=12)
-    assert blurb(r, FACTORS7, "Bears", 5) == "The Bears are stuck in a 4-game skid (that tends to even out)."
+    assert blurb(r, FACTORS7, "Bears", 5) == "The Bears have lost 4 in a row (that tends to even out)."
+
+
+def test_blurb_streak_at_cap_says_plus():
+    r = _row(streak=-8, z_streak=-1.0, pts_streak=-12)
+    assert blurb(r, FACTORS7, "Bears", 12) == "The Bears have lost 8+ in a row."
+    r = _row(streak=8, z_streak=1.0, pts_streak=3)
+    assert blurb(r, FACTORS7, "Bears", 12) == "The Bears have won 8+ straight."
 
 
 def test_blurb_fade_suffix_when_points_negative_but_raw_high():
