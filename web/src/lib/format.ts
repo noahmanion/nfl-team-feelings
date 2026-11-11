@@ -48,3 +48,12 @@ export function bandIndexForLabel(label: string, bands: Band[]): number {
 export function moodToken(i: number, n: number): number {
   return n <= 1 ? 0 : Math.round((i * 6) / (n - 1))
 }
+
+const POSTSEASON_TICKS = ['WC', 'Div', 'Conf', 'SB']
+
+/** Short label under the slider track: "Pre", "Wk N", "WC", "Div", "Conf", "SB". Uses meta's reg_weeks. */
+export function tickLabel(week: number, season: SeasonMeta): string {
+  if (week === 0) return 'Pre'
+  if (week <= season.reg_weeks) return `Wk ${week}`
+  return POSTSEASON_TICKS[week - season.reg_weeks - 1] ?? `Wk ${week}`
+}
