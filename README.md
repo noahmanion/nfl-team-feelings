@@ -1,6 +1,6 @@
 # feel-good-score
 
-How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is Elo only, shown as a mood board in a small local site.
+How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is a weighted, backtested blend of three factors, shown as a mood board and a mood-over-time chart in a small local site.
 
 ## Run it
 
@@ -26,11 +26,15 @@ The generated JSON in `web/public/data/` is committed, so the site runs without 
 
 ```bash
 cd pipeline
-uv run fgs build                         # download (once) + derive games, team_games, elo_snapshots
+uv run fgs build                         # download (once) + derive games, team_games, elo_snapshots, features
 uv run fgs check                         # data-trust checks; exit 1 on failure
 uv run fgs elo                           # ranked Elo + W-L-T for the latest played week, with a "data through" date
 uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = preseason (regressed) ratings
+uv run fgs backtest                      # walk-forward backtest (2003–2021) of the score vs baselines
+uv run fgs backtest --propose-weights    # also print ridge weights fit on 1999–2021, ready for weights.yaml
 ```
+
+`fgs backtest --include-holdout` also scores the sealed 2022–2025 seasons. It's reserved for Phase 6.
 
 - Data is cached in `pipeline/data/` (gitignored). `fgs refresh` or `uv run fgs ingest --refresh` re-downloads it.
 - Records are regular-season only. Playoff games move Elo but not W-L-T, and ties count as half a win.
@@ -38,9 +42,11 @@ uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = pr
 
 ## How the score works today
 
-- The score is an integer from 0 to 100: the percentile of a team's Elo against every preseason and regular-season team-week since 1999.
+- The score is an integer from 0 to 100. Each factor is z-scored across all teams in the same week, multiplied by its weight in `pipeline/weights.yaml`, and the products are summed. The score is that sum's percentile.
+- Factors and current weights: **Elo** 4.58, **season record** (regular-season win %) 0.63, **last 16 games** (win %, across seasons, playoffs included) −1.25.
+- Last-16 has a negative weight on purpose. Once Elo is known, a hot recent record tends to run ahead of real strength. Each factor's backtest gain is logged in `pipeline/BACKTEST_LOG.md`.
+- Percentiles compare against every preseason and regular-season team-week from 1999–2021. That reference is fixed, so a historical score never shifts after a refresh. A test checks that future games can't move a past score.
 - Seven mood bands turn the score into a label. A team's label only changes once its score is 2 points into the new band, going up or down. For the 60 edge, a team rises to the higher label at 61 and drops to the lower one at 58. Scores of 59 and 60 keep whatever label it already had, so labels don't flicker.
-- The reference set includes the current season, so a historical score can shift by 1 point after a refresh.
 - A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
 ## Backtest target
@@ -54,4 +60,4 @@ This target was written down before any score weights were fit. Weights get tune
 - **Walk-forward by season.** Anything fit for test season S uses only earlier seasons. The first test season is 2003.
 - **Sealed holdout.** Seasons 2022–2025 are a holdout that `fgs backtest` only touches with `--include-holdout`. The 2026 season in progress is never a test season.
 
-**Status:** Phase 2 is done: an Elo-only mood board with week scrubbing and deep links. Next is Phase 3: the backtest harness and the additive score.
+**Status:** Phase 3 is done: a backtest harness, the additive score with season-record and last-16 factors, and a mood-over-time chart at `#/history`. Next is Phase 4: game-result factors and team pages.
