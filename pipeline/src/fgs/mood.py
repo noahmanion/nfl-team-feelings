@@ -78,6 +78,20 @@ def hysteresis(scores: list[int], buf: int = HYSTERESIS) -> list[int]:
     return out
 
 
+def reference_values(
+    df: pl.DataFrame, value: str = "composite", ref_seasons: tuple[int, int] | None = None
+) -> np.ndarray:
+    """The frozen percentile reference: `value` over rows with season in ref_seasons (inclusive)
+    and week <= reg_weeks(season) (week 0 + REG). ref_seasons None -> season_config.REF_SEASONS,
+    read at call time. Shared by score_frame and fgs.explain so they can never drift apart."""
+    lo, hi = season_config.REF_SEASONS if ref_seasons is None else ref_seasons
+    rw = df["season"].map_elements(reg_weeks, return_dtype=pl.Int32)
+    ref = df.filter(pl.col("season").is_between(lo, hi) & (pl.col("week") <= rw))[value].to_numpy()
+    if ref.size == 0:
+        raise ValueError(f"empty percentile reference: no week-0/REG rows for seasons {lo}-{hi}")
+    return ref
+
+
 def score_frame(
     df: pl.DataFrame, value: str = "composite", ref_seasons: tuple[int, int] | None = None
 ) -> pl.DataFrame:
@@ -86,16 +100,8 @@ def score_frame(
     Reference = `value` over rows with season in ref_seasons (inclusive) and week <= reg_weeks
     (week 0 + REG). ref_seasons None -> season_config.REF_SEASONS, read at call time.
     """
-    lo, hi = season_config.REF_SEASONS if ref_seasons is None else ref_seasons
+    ref = reference_values(df, value, ref_seasons)
     df = df.with_columns(
-        pl.col("season").map_elements(reg_weeks, return_dtype=pl.Int32).alias("_reg_weeks")
-    )
-    ref = df.filter(
-        pl.col("season").is_between(lo, hi) & (pl.col("week") <= pl.col("_reg_weeks"))
-    )[value].to_numpy()
-    if ref.size == 0:
-        raise ValueError(f"empty percentile reference: no week-0/REG rows for seasons {lo}-{hi}")
-    df = df.drop("_reg_weeks").with_columns(
         pl.Series("score", percentile_scores(df[value].to_numpy(), ref), dtype=pl.Int32)
     )
 
