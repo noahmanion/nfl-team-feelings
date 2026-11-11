@@ -60,7 +60,8 @@ def _row(r: dict, factor_keys: list[str]) -> dict:
         "wins": int(r["wins"]), "losses": int(r["losses"]), "ties": int(r["ties"]),
         "score_delta": None if r["score_delta"] is None else int(r["score_delta"]),
         "rank_delta": None if r["rank_delta"] is None else int(r["rank_delta"]),
-        "contribs": {k: round(float(r[f"contrib_{k}"]), 2) for k in factor_keys},
+        # + 0.0 turns -0.0 (negative weight * 0, or a tiny negative rounded) into 0.0
+        "contribs": {k: round(float(r[f"contrib_{k}"]), 2) + 0.0 for k in factor_keys},
     }
 
 

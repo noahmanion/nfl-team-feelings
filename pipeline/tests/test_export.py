@@ -2,6 +2,7 @@
 
 import json
 import math
+import re
 
 import polars as pl
 import pytest
@@ -287,3 +288,11 @@ def test_export_weights_come_from_derived_not_the_yaml(synthetic_games):
         _export_weights({**derived, "weights": {**w, "last16": 1.0}}, derived["features"])
     with pytest.raises(ValueError, match="not in the weights"):
         _export_weights({**derived, "weights": {"elo": 2.0}}, derived["features"])
+
+
+def test_contribs_have_no_negative_zero(real_files):
+    _, files = real_files
+    for _, _, r in _all_rows(files):
+        for v in r["contribs"].values():
+            assert not (v == 0 and math.copysign(1.0, v) < 0), r
+    assert not re.search(r"-0\.0[,}\]]", json.dumps(files["latest.json"], separators=(",", ":")))
