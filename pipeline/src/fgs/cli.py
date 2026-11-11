@@ -1,12 +1,14 @@
-"""`fgs` command line: ingest, build, elo, check, export, refresh."""
+"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest."""
 
 import argparse
+import json
 import sys
 from datetime import datetime, timezone
 
 import polars as pl
 
 from fgs import checks, export
+from fgs.backtest import format_report, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
@@ -180,6 +182,18 @@ def _cmd_export(args) -> int:
     return 0
 
 
+def _cmd_backtest(args) -> int:
+    derived = derive(load_schedules())  # cache only (downloads once if missing)
+    report = run_backtest(derived, include_holdout=args.include_holdout)
+    print(format_report(report))
+    out_dir = DERIVED_DIR  # module global read at call time so tests can monkeypatch it
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / "backtest.json"
+    path.write_text(json.dumps(report, allow_nan=False, indent=1) + "\n")
+    print(f"\nwrote {path}")
+    return 0
+
+
 def _report(name: str, fails: list[str]) -> bool:
     print(f"{'FAIL' if fails else 'ok':<4}  {name}")
     for msg in fails:
@@ -216,6 +230,10 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("refresh", help="re-download nflverse data, run all checks, then regenerate derived "
                                        "parquet and the site JSON (writes nothing if a check fails)")
     p.set_defaults(func=_cmd_refresh)
+
+    p = sub.add_parser("backtest", help="walk-forward backtest vs baselines; writes data/derived/backtest.json")
+    p.add_argument("--include-holdout", action="store_true", help="Phase 6 only: also test 2022–2025")
+    p.set_defaults(func=_cmd_backtest)
 
     args = parser.parse_args(argv)
     return args.func(args)

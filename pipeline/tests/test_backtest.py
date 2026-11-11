@@ -1,7 +1,11 @@
+import json
+
 import polars as pl
 import pytest
 
-from fgs.backtest import adjusted_margins, targets
+from fgs import cli
+from fgs.backtest import adjusted_margins, run_backtest, targets, test_seasons
+from fgs.ingest import load_schedules
 
 TG_SCHEMA = {
     "game_id": pl.String, "season": pl.Int32, "week": pl.Int32, "asof_week": pl.Int32,
@@ -96,3 +100,62 @@ def test_target_n4_caps_window():
     assert _t(t, 2023, 0, "X", "y4") == pytest.approx((1 + 2 + 3 + 4) / 4)
     assert _t(t, 2023, 0, "X", "y8") == pytest.approx(sum(range(1, 9)) / 8)
     assert _t(t, 2023, 5, "X", "y8") == pytest.approx((6 + 7 + 8 + 9 + 10) / 5)
+
+
+# ---------------------------------------------------------------------------
+# Walk-forward baselines (real cache)
+# ---------------------------------------------------------------------------
+
+
+
+@pytest.fixture(scope="module")
+def real_report():
+    from fgs.paths import CACHE_DIR
+
+    if not (CACHE_DIR / "schedules.parquet").exists():
+        pytest.skip("no cached schedules; run `uv run fgs build` first")
+    raw = load_schedules()
+    return raw, run_backtest(cli.derive(raw))
+
+
+def test_holdout_test_seasons():
+    assert test_seasons(False)[0] == 2003 and test_seasons(False)[-1] == 2021
+    assert test_seasons(True)[-1] == 2025
+    assert 2026 not in test_seasons(True)
+
+
+def test_holdout_sealed_by_default(real_report):
+    raw, report = real_report
+    assert report["test_seasons"][-1] == 2021 and not report["include_holdout"]
+    for name, c in report["candidates"].items():
+        if c["per_season"] is None:
+            continue
+        for n in ("N4", "N8"):
+            assert all(int(s) < 2022 for s in c["per_season"][n]), name
+    # Rewriting every 2024 result must not change the default report at all.
+    swapped = raw.with_columns(
+        pl.when(pl.col("season") == 2024).then(pl.col("away_score")).otherwise(pl.col("home_score")).alias("home_score"),
+        pl.when(pl.col("season") == 2024).then(pl.col("home_score")).otherwise(pl.col("away_score")).alias("away_score"),
+        pl.when(pl.col("season") == 2024).then(-pl.col("result")).otherwise(pl.col("result")).alias("result"),
+    )
+    assert run_backtest(cli.derive(swapped)) == report
+
+
+def test_baselines_real_cache(real_report):
+    _, report = real_report
+    c = report["candidates"]
+    assert {"elo", "season_wpct", "last16", "pd_pg", "spread"} <= set(c)
+    assert 0.215 <= c["elo"]["brier"] <= 0.23
+    assert c["spread"]["brier"] < c["elo"]["brier"]
+    assert c["elo"]["N8"]["all"]["spearman"] > 0.4
+    assert c["season_wpct"]["N8"]["wk0"]["spearman"] is None
+    json.dumps(report, allow_nan=False)
+
+
+def test_cli_backtest_writes_json(real_cache, tmp_path, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "DERIVED_DIR", tmp_path)
+    assert cli.main(["backtest"]) == 0
+    out = capsys.readouterr().out
+    assert "Spearman" in out and "spread" in out
+    data = json.loads((tmp_path / "backtest.json").read_text())
+    assert data["test_seasons"][-1] == 2021
