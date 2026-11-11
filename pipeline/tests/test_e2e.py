@@ -17,11 +17,19 @@ def _rows(out: str) -> list[tuple[int, str, int, str]]:
 
 
 @pytest.fixture(scope="module")
-def built():
-    from fgs.cli import main
+def built(tmp_path_factory):
+    """Build from the cached schedules into a temp derived dir; never touches data/derived or the network."""
+    if not (CACHE_DIR / "schedules.parquet").exists():
+        pytest.skip("no cached schedules; run `uv run fgs build` first")
+    import fgs.cli as cli
 
-    assert main(["build"]) == 0
-    return main
+    mp = pytest.MonkeyPatch()
+    mp.setattr(cli, "DERIVED_DIR", tmp_path_factory.mktemp("derived"))
+    try:
+        assert cli.main(["build"]) == 0
+        yield cli.main
+    finally:
+        mp.undo()
 
 
 def _latest_played(cache_path) -> tuple[int, int] | None:
