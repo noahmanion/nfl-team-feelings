@@ -241,6 +241,7 @@ RIDGE_SETS = {
     "ridge:+sow": ["elo", "season_record", "last16", "mov", "sow"],
     "ridge:+streak": ["elo", "season_record", "last16", "mov", "sow", "streak"],
     "ridge:+luck": ["elo", "season_record", "last16", "mov", "sow", "streak", "luck"],
+    "ridge:+epa_traj": ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj"],
 }
 PROPOSAL_FACTORS = RIDGE_SETS[list(RIDGE_SETS)[-1]]
 FIT_TARGET = "y8"
@@ -281,8 +282,13 @@ def choose_alpha(X, y, seasons, grid=ALPHA_GRID) -> float:
     return best
 
 
-def _z_frame(snaps: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
-    feats = build_features(snaps, team_games)
+def _sealed_pbp(derived: dict, last: int) -> pl.DataFrame | None:
+    tge = derived.get("team_game_epa")
+    return None if tge is None else tge.filter(pl.col("season") <= last)
+
+
+def _z_frame(snaps: pl.DataFrame, team_games: pl.DataFrame, pbp_games: pl.DataFrame | None = None) -> pl.DataFrame:
+    feats = build_features(snaps, team_games, pbp_games=pbp_games)
     return zscore(feats, PROPOSAL_FACTORS)
 
 
@@ -292,8 +298,9 @@ def propose_weights(derived: dict) -> dict:
     lo, hi = REF_SEASONS[0], TRAIN_LAST_SEASON
     snaps = derived["snapshots"].filter(pl.col("season") <= hi)
     team_games = derived["team_games"].filter(pl.col("season") <= hi)
+    pbp_games = _sealed_pbp(derived, hi)
     d = (
-        _z_frame(snaps, team_games)
+        _z_frame(snaps, team_games, pbp_games)
         .join(targets(team_games, snaps, (8,)), on=KEYS, how="left")
         .filter(pl.col("season").is_between(lo, hi) & pl.col(FIT_TARGET).is_not_null())
     )
@@ -374,8 +381,9 @@ def run_backtest(derived: dict, include_holdout: bool = False) -> dict:
     snaps = derived["snapshots"].filter(pl.col("season") <= last_season)
     team_games = derived["team_games"].filter(pl.col("season") <= last_season)
     games = derived["games"].filter(pl.col("season") <= last_season)
+    pbp_games = _sealed_pbp(derived, last_season)
 
-    feats = _z_frame(snaps, team_games)
+    feats = _z_frame(snaps, team_games, pbp_games)
     full = feats.join(targets(team_games, snaps, NS), on=KEYS, how="left").sort(KEYS)
     ng = next_game_frame(games, feats, list(CANDIDATES.values()))
 

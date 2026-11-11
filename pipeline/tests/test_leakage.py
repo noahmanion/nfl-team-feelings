@@ -103,6 +103,34 @@ def test_truncating_future_keeps_past(real_raw, real_base):
     _assert_unchanged(kept, truncated)
 
 
+def test_fake_future_pbp_changes_nothing(real_raw, real_base):
+    """Future games get played (60-0) AND get extreme pbp rows: no past snapshot may move."""
+    tge = _inputs()["pbp_games"]
+    if tge is None:
+        pytest.skip("no cached pbp; run `uv run fgs build` first")
+    s, w = _latest_played(real_raw)
+    future = pl.col("result").is_null() & ((pl.col("season") > s) | ((pl.col("season") == s) & (pl.col("week") > w)))
+    if real_raw.filter(future).is_empty():
+        pytest.skip("no unplayed games after the latest played week")
+    faked = _set_result(real_raw, future, 60, 0)
+    tg = derive(faked, scored=False)["team_games"]
+    new = tg.join(tge.select("game_id", "franchise_id"), on=["game_id", "franchise_id"], how="anti").filter(
+        pl.col("played") & ((pl.col("season") > s) | ((pl.col("season") == s) & (pl.col("week") > w)))
+    )  # future games only (a few old games legitimately have no pbp)
+    assert not new.is_empty()
+    template = tge.row(0, named=True)
+    rows = [
+        template | {"game_id": r["game_id"], "season": r["season"], "franchise_id": r["franchise_id"],
+                    "off_epa": 5.0, "def_epa": -5.0, "net_epa": 10.0, "qb_id": "FAKE-QB", "qb_name": "Fake QB",
+                    "dropbacks": 60, "qb_epa": 5.0, "team_db": 60, "team_db_epa_sum": 300.0}
+        for r in new.select("game_id", "season", "franchise_id").to_dicts()
+    ]
+    fake_tge = pl.concat([tge, pl.DataFrame(rows, schema=tge.schema)])
+    fake = _with_points(derive(faked, pbp_games=fake_tge))
+    assert fake.height > real_base.height
+    _assert_unchanged(real_base, fake)
+
+
 def test_synthetic_leakage(monkeypatch):
     monkeypatch.setattr(season_config, "REF_SEASONS", (2023, 2023))
     weights = {"elo": 1.0, "season_record": 0.5, "last16": -0.5}
@@ -127,6 +155,6 @@ def test_synthetic_leakage(monkeypatch):
 def test_backtest_not_imported_upstream():
     src = Path(fgs.__file__).parent
     imp = re.compile(r"^\s*(from|import)\s+[\w., ]*backtest", re.M)
-    for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py"):
+    for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())
         assert not imp.search(code), f"{name} imports the backtest harness"

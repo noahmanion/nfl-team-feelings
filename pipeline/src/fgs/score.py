@@ -47,6 +47,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "description": "One-score wins minus one-score losses (8 points or fewer) over the last 16 games; "
         "close-game luck evens out, so a lucky record lowers the score",
     },
+    "epa_traj": {
+        "label": "Getting better (efficiency trend)",
+        "description": "Recent opponent-adjusted EPA per play (weighted toward the last ~4 games) minus this season's average; "
+        "given the other factors, an efficiency upswing tends to fade, so it slightly lowers the score",
+    },
 }
 
 SNAPSHOT = ("season", "week")

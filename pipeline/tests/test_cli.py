@@ -218,6 +218,11 @@ def test_unscored_derive_needs_no_weights_file(synthetic_games, tmp_path, monkey
 def test_derive_carries_pbp_games(synthetic_games, monkeypatch):
     import polars as pl
 
-    tge = pl.DataFrame({"game_id": ["g"], "franchise_id": ["BUF"]})
+    from fgs.pbp import TGE_COLUMNS
+
+    # one pbp row for a game that is not in the schedule: carried through, joins to nothing
+    tge = pl.DataFrame({"game_id": ["g"], "season": [2023], "franchise_id": ["BUF"]}).with_columns(
+        pl.lit(None, pl.Float64).alias(c) for c in TGE_COLUMNS if c not in ("game_id", "season", "franchise_id")
+    ).with_columns(pl.col("season").cast(pl.Int32), pl.col("qb_id").cast(pl.String), pl.col("qb_name").cast(pl.String))
     assert cli.derive_games(synthetic_games, scored=False, pbp_games=tge)["team_game_epa"] is tge
     assert cli.derive_games(synthetic_games, None, None, pbp_games=tge)["team_game_epa"] is tge

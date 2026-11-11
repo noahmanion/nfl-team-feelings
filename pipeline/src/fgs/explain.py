@@ -149,6 +149,8 @@ PHRASES: dict[tuple[str, str], tuple[str, str]] = {
     ("streak", "lo"): ("have lost {k} in a row", "have lost {k} straight"),
     ("luck", "hi"): ("have won a lot of coin-flip games", "have won more than their share of close games"),
     ("luck", "lo"): ("have lost a lot of coin-flip games", "have lost more than their share of close games"),
+    ("epa_traj", "hi"): ("have been trending up in efficiency", "have been a bit more efficient lately"),
+    ("epa_traj", "lo"): ("have been trending down in efficiency", "have been a bit less efficient lately"),
 }
 # Appended when the points point the other way to the fact (a negative-weight factor).
 FADE = {"hi": " (that tends to fade)", "lo": " (that tends to even out)"}

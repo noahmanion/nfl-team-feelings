@@ -19,14 +19,18 @@ the dev-only evaluation harness (leakage firewall).
                  a tie resets it to 0, capped at +/-8, carried across seasons; 0.0 with no games
 - luck:          one-score wins minus one-score losses (|margin| <= 8, ties excluded) over the
                  last 16 played games (REG + playoffs, crossing seasons); 0.0 with no games
+- epa_traj:      opponent-adjusted net EPA/play trajectory: EWMA (half-life 4 games, crossing
+                 seasons) minus this season's mean (fgs.efficiency); 0.0 with no game yet this
+                 season or without pbp_games
 """
 
 import numpy as np
 import polars as pl
 
+from fgs import efficiency
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj"]
 GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
@@ -183,11 +187,18 @@ def _game_factors(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
     return _asof(snap, g, GAME_FACTORS)
 
 
-def build_features(snapshots: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
-    """Snapshot rows (same height and keys) plus season_record, last16, pd_pg and the game factors. No nulls added."""
+def build_features(
+    snapshots: pl.DataFrame, team_games: pl.DataFrame, *, pbp_games: pl.DataFrame | None = None
+) -> pl.DataFrame:
+    """Snapshot rows (same height and keys) plus season_record, last16, pd_pg, the game factors
+    and the pbp factors (0.0 when pbp_games, the pbp.team_game_epa frame, is None). No nulls added."""
     snap = snapshots.with_columns(pl.col("season").cast(pl.Int32), pl.col("week").cast(pl.Int32))
     snap = snap.with_columns(pl.col("win_pct").fill_null(0.5).cast(pl.Float64).alias("season_record"))
     snap = _last16(snap, team_games)
     snap = _pd_pg(snap, team_games)
     snap = _game_factors(snap, team_games)
+    if pbp_games is None:
+        snap = snap.with_columns(pl.lit(0.0).alias("epa_traj"))
+    else:
+        snap = efficiency.epa_factors(snap, team_games, pbp_games)
     return snap.sort("season", "week", "franchise_id")

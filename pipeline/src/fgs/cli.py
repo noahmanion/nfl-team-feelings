@@ -35,7 +35,7 @@ def derive_games(
     snapshots = build_grid(games, team_games, sparse)
     if not scored:
         return {"games": games, "team_games": team_games, "snapshots": snapshots, "team_game_epa": pbp_games}
-    feats = features.build_features(snapshots, team_games)
+    feats = features.build_features(snapshots, team_games, pbp_games=pbp_games)
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
     return {
