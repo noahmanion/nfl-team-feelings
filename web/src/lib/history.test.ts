@@ -3,6 +3,7 @@ import {
   connectors,
   contrastRatio,
   currentPoint,
+  defaultTeam,
   lowPoint,
   parseHex,
   pickHighlight,
@@ -148,5 +149,22 @@ describe('connectors', () => {
       { team: 'AAA', x1: 4, y1: 4, x2: 6, y2: 5 },
     ])
     expect(out.filter((c) => c.team === 'BBB')).toHaveLength(2)
+  })
+})
+
+describe('defaultTeam', () => {
+  const rows = [{ franchise: 'KC' }, { franchise: 'BUF' }] as unknown as import('./types').Row[]
+  it('falls back to the top team', () => {
+    expect(defaultTeam(rows)).toBe('KC')
+    expect(defaultTeam(rows, null)).toBe('KC')
+  })
+  it('prefers my team when it is on the board', () => {
+    expect(defaultTeam(rows, 'BUF')).toBe('BUF')
+  })
+  it('ignores my team when it is not on the board', () => {
+    expect(defaultTeam(rows, 'NYJ')).toBe('KC')
+  })
+  it('is undefined for an empty board', () => {
+    expect(defaultTeam([], 'BUF')).toBeUndefined()
   })
 })
