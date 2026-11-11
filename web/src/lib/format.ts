@@ -40,11 +40,12 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 /**
  * Board change sentence (screen-reader text). In season: vs last week. At week 0 the deltas
  * are vs the franchise's last snapshot of the prior season (07-04); null there (first season,
- * expansion team, or older data) reads as "No change, preseason."
+ * expansion team, or older data) reads as "No change, preseason."; a null delta in season reads
+ * "No change from last week."
  */
 export function changeText(r: Pick<Row, 'score_delta' | 'rank_delta'>, week: number): string {
-  if (!isNum(r.score_delta)) return 'No change, preseason.'
   const pre = week === 0
+  if (!isNum(r.score_delta)) return pre ? 'No change, preseason.' : 'No change from last week.'
   const sd = r.score_delta
   const rd = isNum(r.rank_delta) ? r.rank_delta : 0
   if (sd === 0 && rd === 0) return pre ? 'No change from the end of last season.' : 'No change from last week.'

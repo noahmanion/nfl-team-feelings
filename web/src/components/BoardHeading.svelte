@@ -10,8 +10,17 @@
     partial,
     isLatest,
     scoreKind,
-  }: { season: SeasonMeta; week: number; count: number; partial: boolean; isLatest: boolean; scoreKind: string } =
-    $props()
+    firstSeason = false,
+  }: {
+    season: SeasonMeta
+    week: number
+    count: number
+    partial: boolean
+    isLatest: boolean
+    scoreKind: string
+    /** The first season in the data: there is no "last season" to compare week 0 against. */
+    firstSeason?: boolean
+  } = $props()
 
   const label = $derived(weekLabel(week, season))
   const inProgress = $derived(partial && isLatest)
@@ -26,7 +35,11 @@
   {#if inProgress}
     <p class="note">Some {label} games haven’t been played yet. Teams that haven’t played keep last week’s score.</p>
   {:else if week === 0}
-    <p class="note">Before kickoff: last season’s mood, pulled back toward the middle. Change is vs the end of last season.</p>
+    {#if firstSeason}
+      <p class="note">Before kickoff: the first season in the data, so everyone starts even.</p>
+    {:else}
+      <p class="note">Before kickoff: last season’s mood, pulled back toward the middle. Change is vs the end of last season.</p>
+    {/if}
   {/if}
 </div>
 

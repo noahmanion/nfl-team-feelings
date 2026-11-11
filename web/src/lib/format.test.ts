@@ -124,6 +124,9 @@ describe('changeText', () => {
   it('null week-0 delta (first season, expansion, older data) reads as preseason', () => {
     expect(changeText({ score_delta: null, rank_delta: null }, 0)).toBe('No change, preseason.')
   })
+  it('null in-season delta does not say preseason', () => {
+    expect(changeText({ score_delta: null, rank_delta: null }, 4)).toBe('No change from last week.')
+  })
   it('keeps in-season wording', () => {
     expect(changeText({ score_delta: -1, rank_delta: -1 }, 3)).toBe('Down 1 point, down 1 spot from last week.')
     expect(changeText({ score_delta: 0, rank_delta: 0 }, 3)).toBe('No change from last week.')

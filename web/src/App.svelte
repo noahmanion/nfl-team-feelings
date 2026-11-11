@@ -241,6 +241,7 @@
             {partial}
             isLatest={target.latest}
             scoreKind={meta.score_kind}
+            firstSeason={target.season === Math.min(...meta.seasons.map((s) => s.season))}
           />
           <MoodBoard
             rows={shown.rows}
