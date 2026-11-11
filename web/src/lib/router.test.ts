@@ -44,10 +44,14 @@ describe('team routes', () => {
     expect(parseHash('#/team/BUF/2024/5')).toEqual({ kind: 'team', team: 'BUF', season: 2024, week: 5 })
     expect(parseHash('#/team/kc/1999/0/')).toEqual({ kind: 'team', team: 'KC', season: 1999, week: 0 })
   })
+  it('parses a team season without a week (App redirects it to the team page)', () => {
+    expect(parseHash('#/team/buf/2024')).toEqual({ kind: 'team', team: 'BUF', season: 2024 })
+  })
   it('flags malformed team routes as invalid', () => {
     expect(parseHash('#/team/TOOLONG')).toEqual({ kind: 'invalid' })
     expect(parseHash('#/team/B1')).toEqual({ kind: 'invalid' })
-    expect(parseHash('#/team/BUF/2024')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/team/BUF/2024/')).toEqual({ kind: 'team', team: 'BUF', season: 2024 })
+    expect(parseHash('#/team/BUF/24')).toEqual({ kind: 'invalid' })
     expect(parseHash('#/team')).toEqual({ kind: 'invalid' })
   })
   it('builds team hashes', () => {

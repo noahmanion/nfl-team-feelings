@@ -10,7 +10,7 @@ export type Route =
 
 const BOARD = /^\/board\/(\d{4})\/(\d{1,2})\/?$/
 const HISTORY = /^\/history(?:\/([A-Za-z]{2,3}))?\/?$/
-const TEAM = /^\/team\/([A-Za-z]{2,3})(?:\/(\d{4})\/(\d{1,2}))?\/?$/
+const TEAM = /^\/team\/([A-Za-z]{2,3})(?:\/(\d{4})(?:\/(\d{1,2}))?)?\/?$/
 const RESERVED = [/^\/(records|methodology)\/?$/]
 
 export function parseHash(hash: string): Route {
@@ -23,7 +23,9 @@ export function parseHash(hash: string): Route {
   const tm = TEAM.exec(h)
   if (tm) {
     const team = tm[1].toUpperCase()
-    return tm[2] ? { kind: 'team', team, season: Number(tm[2]), week: Number(tm[3]) } : { kind: 'team', team }
+    if (!tm[2]) return { kind: 'team', team }
+    // '/team/ABBR/season' (no week) parses with season only; App sends it to the team's latest page
+    return tm[3] ? { kind: 'team', team, season: Number(tm[2]), week: Number(tm[3]) } : { kind: 'team', team, season: Number(tm[2]) }
   }
   if (RESERVED.some((re) => re.test(h))) return { kind: 'reserved' }
   return { kind: 'invalid' }

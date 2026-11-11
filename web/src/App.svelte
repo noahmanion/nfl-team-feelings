@@ -78,7 +78,7 @@
   let notice = $state<string | null>(null)
 
   // Bad or reserved links fall back to #/; bad ones also get a dismissible notice.
-  // An unknown team goes to the board (with a notice); a bad season/week goes to the team's latest page.
+  // An unknown team goes to the board (with a notice); a bad or week-less season goes to the team's latest page.
   // The notice belongs to that one redirect: any other successful route clears it, so it can't
   // reappear on a later visit to the latest board.
   $effect(() => {
@@ -95,7 +95,8 @@
         return
       }
       notice = null
-      if (r.season !== undefined && r.week !== undefined && !validTeamWeek(meta, r.season, r.week)) {
+      // a season without a week, or a bad season/week, goes to the team's latest page
+      if (r.season !== undefined && (r.week === undefined || !validTeamWeek(meta, r.season, r.week))) {
         replace(teamHash(r.team))
       }
     } else if (r.kind === 'invalid' || (r.kind === 'board' && !validBoard(meta, r))) {
