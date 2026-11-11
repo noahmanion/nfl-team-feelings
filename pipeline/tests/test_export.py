@@ -270,3 +270,20 @@ def test_partial_flag_matches_week_progress_on_real_data(real_files):
     assert meta["partial_week"] is (played < total)
     if played == total:
         assert meta["partial_week"] is False
+
+
+# --- WR-04: meta.factors weights are the ones that produced contrib_* ------------------------
+
+def test_export_weights_come_from_derived_not_the_yaml(synthetic_games):
+    from fgs.cli import derive_games
+    from fgs.export import _export_weights
+
+    w = {"elo": 2.0, "season_record": 1.0}  # deliberately not weights.yaml
+    derived = derive_games(synthetic_games, weights=w)
+    assert _export_weights(derived, derived["features"]) == w
+    with pytest.raises(ValueError, match="does not equal"):
+        _export_weights({**derived, "weights": {"elo": 3.0, "season_record": 1.0}}, derived["features"])
+    with pytest.raises(ValueError, match="lacks"):
+        _export_weights({**derived, "weights": {**w, "last16": 1.0}}, derived["features"])
+    with pytest.raises(ValueError, match="not in the weights"):
+        _export_weights({**derived, "weights": {"elo": 2.0}}, derived["features"])

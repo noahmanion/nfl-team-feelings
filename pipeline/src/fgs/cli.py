@@ -19,20 +19,22 @@ from fgs.snapshots import build_grid
 
 def derive_games(
     games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
-) -> dict[str, pl.DataFrame]:
+) -> dict:
     """Pure (apart from reading weights.yaml when weights is None): normalized games ->
-    games (with Elo), team_games, snapshots (the Elo grid) and features (factors + composite)."""
+    games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
+    the exact weights dict that produced the contributions (export reports these, not a re-read)."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
     feats = features.build_features(snapshots, team_games)
-    feats = score.composite(feats, score.load_weights() if weights is None else weights)
-    return {"games": games, "team_games": team_games, "snapshots": snapshots, "features": feats}
+    w = dict(score.load_weights() if weights is None else weights)
+    feats = score.composite(feats, w)
+    return {"games": games, "team_games": team_games, "snapshots": snapshots, "features": feats, "weights": w}
 
 
 def derive(
     raw: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None
-) -> dict[str, pl.DataFrame]:
+) -> dict:
     """Raw schedules -> derive_games(build_games(raw)). No file I/O beyond the weights file."""
     return derive_games(build_games(raw), params, weights)
 

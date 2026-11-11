@@ -64,14 +64,33 @@ def _row(r: dict, factor_keys: list[str]) -> dict:
     }
 
 
-def build_export(derived: dict[str, pl.DataFrame], teams_df: pl.DataFrame, generated_at: str) -> dict[str, object]:
+def _export_weights(derived: dict, scored: pl.DataFrame) -> dict[str, float]:
+    """The weights that produced contrib_*: derived["weights"] when present (derive_games sets
+    it), else weights.yaml. Either way, check contrib_f == w_f * z_f so meta.factors can never
+    disagree with the shipped contributions (raises ValueError, not assert: survives python -O)."""
+    weights = derived.get("weights")
+    if weights is None:
+        weights = score.load_weights()
+    weights = dict(weights)
+    missing = [c for k in weights for c in (f"z_{k}", f"contrib_{k}") if c not in scored.columns]
+    if missing:
+        raise ValueError(f"features frame lacks {missing}; it was not derived with these weights")
+    extra = sorted(c for c in scored.columns if c.startswith("contrib_") and c.removeprefix("contrib_") not in weights)
+    if extra:
+        raise ValueError(f"features frame has contributions {extra} for factors not in the weights")
+    for k, w in weights.items():
+        err = scored.select((pl.col(f"contrib_{k}") - w * pl.col(f"z_{k}")).abs().max()).item()
+        if err is not None and err > 1e-9:
+            raise ValueError(f"contrib_{k} does not equal {w} * z_{k} (max diff {err:.3g}); weights mismatch")
+    return weights
+
+
+def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> dict[str, object]:
     games = derived["games"]
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
-    weights = score.load_weights()
+    weights = _export_weights(derived, scored)
     factor_keys = list(weights)
-    missing = [c for c in score.contrib_columns(weights) if c not in scored.columns]
-    assert not missing, f"features frame lacks {missing}; derive with the same weights.yaml"
     factors = [
         {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
         for k, w in weights.items()
