@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barRows, findTeamRow, recentGames, seasonSeries, signed, sparkDomain } from './team'
+import { barRows, findTeamRow, playoffText, recentGames, seasonSeries, signed, sparkDomain } from './team'
 import type { FactorMeta, GamesFile, Row, SeasonFile } from './types'
 
 type G = [week: number, asof: number, home: string, away: string, hs: number | null, as: number | null, day: string, neutral?: boolean]
@@ -154,5 +154,17 @@ describe('sparkDomain', () => {
   })
   it('handles a flat series', () => {
     expect(sparkDomain([{ score: 50 }, { score: 50 }]).domain).toEqual([47, 53])
+  })
+})
+
+describe('playoffText', () => {
+  it('formats integer odds', () => {
+    expect(playoffText(87)).toBe('Playoff odds 87%')
+    expect(playoffText(0)).toBe('Playoff odds 0%')
+    expect(playoffText(100)).toBe('Playoff odds 100%')
+  })
+  it('returns null when unknown', () => {
+    expect(playoffText(null)).toBeNull()
+    expect(playoffText(undefined)).toBeNull()
   })
 })

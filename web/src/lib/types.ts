@@ -10,7 +10,9 @@ export interface Meta { version: number; score_kind: string; generated_at: strin
 export interface Row { franchise: string; rank: number; score: number; elo: number | null; band: number; label: string; emoji: string;
   wins: number; losses: number; ties: number; score_delta: number | null; rank_delta: number | null; contribs?: Record<string, number>;
   /** Integer points per factor; baseline + Σpoints === score (04-01). */
-  points?: Record<string, number>; blurb?: string }
+  points?: Record<string, number>; blurb?: string;
+  /** Simulated playoff odds, integer 0–100 (actual result 100/0 once the regular season is over); null without sims (05-05). */
+  playoff_prob?: number | null; expectation_source?: 'vegas' | 'model' | null; qb?: string | null }
 export interface WeekFile { season: number; week: number; rows: Row[] }
 export interface SeasonFile { season: number; weeks: Record<string, Row[]> }
 export interface HistoryFile { keys: string[]; teams: Record<string, (number | null)[]> }

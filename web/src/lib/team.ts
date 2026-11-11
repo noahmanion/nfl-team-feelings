@@ -101,3 +101,9 @@ export function sparkDomain(series: { score: number }[]): { lo: number; hi: numb
   const pad = Math.max(3, (hi - lo) * 0.15)
   return { lo, hi, domain: [Math.max(0, lo - pad), Math.min(100, hi + pad)] }
 }
+
+/** Team-page stat for the row's playoff odds (already an integer 0–100); null when unknown. */
+export function playoffText(p: number | null | undefined): string | null {
+  if (typeof p !== 'number' || !Number.isFinite(p)) return null
+  return `Playoff odds ${Math.round(p)}%`
+}

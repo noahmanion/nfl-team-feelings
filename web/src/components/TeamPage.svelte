@@ -9,7 +9,7 @@
   import { findSeason, loadGames, loadSeason } from '../lib/data'
   import { formatRecord, weekLabel } from '../lib/format'
   import { historyHash, teamHash } from '../lib/router'
-  import { findTeamRow, recentGames, seasonSeries } from '../lib/team'
+  import { findTeamRow, playoffText, recentGames, seasonSeries } from '../lib/team'
   import type { GamesFile, Meta, SeasonFile } from '../lib/types'
 
   let { meta, team, season, week, latest }: { meta: Meta; team: string; season: number; week: number; latest: boolean } =
@@ -87,6 +87,8 @@
     row && ok(row.wins) && ok(row.losses) ? formatRecord(row.wins, row.losses, ok(row.ties) ? row.ties : 0) : '–',
   )
   const baseline = $derived(meta.baseline ?? 50)
+  const odds = $derived(row ? playoffText(row.playoff_prob) : null)
+  const qb = $derived(row?.qb ? `QB ${row.qb}` : null)
 </script>
 
 <article class="team-page" aria-labelledby="team-heading">
@@ -116,6 +118,11 @@
           {when}{#if !latest}<span class="sep" aria-hidden="true">·</span><a href={teamHash(team)}>Now</a>{/if}
         </p>
         <p class="sub"><span>{record}</span><span class="sep" aria-hidden="true">·</span><span>Rank #{row.rank}</span></p>
+        {#if odds || qb}
+          <p class="sub">
+            {#if odds}<span>{odds}</span>{/if}{#if odds && qb}<span class="sep" aria-hidden="true">·</span>{/if}{#if qb}<span>{qb}</span>{/if}
+          </p>
+        {/if}
       </div>
       <div class="score-cell">
         <span class="score"><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
