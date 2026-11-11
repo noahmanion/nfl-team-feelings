@@ -80,3 +80,5 @@ Add play-by-play efficiency data and four more factors — efficiency trajectory
 - `epa_traj` kept as CONTEXT defines it even though Δ≈0 (data decides weight); flag in log + methodology.
 - Flag for Phase 6: `vs_exp` signal is Vegas-dependent (2003–2020); 2021+ uses model expectation — holdout will measure the cost.
 </research_revisions>
+
+- Post-review decision (2026-11-11): wildcard tiebreak chain = win% → h2h (only if all tied teams met) → conference win% → random (adds the NFL conference-record step; field accuracy 0.9787). Accepted by orchestrator.
