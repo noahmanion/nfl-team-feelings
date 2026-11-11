@@ -230,8 +230,13 @@ def _simulate_one_season(sg, ss, n_sims, sigma, seed) -> pl.DataFrame:
     for w in sorted(ss["week"].unique().to_list()):
         sw = ss.filter(pl.col("week") == w)
         elo = dict(zip(sw["franchise_id"].to_list(), sw["elo"].to_list()))
-        extra = set(elo) - (set(sg["home_id"].to_list()) | set(sg["away_id"].to_list()))
+        scheduled = set(sg["home_id"].to_list()) | set(sg["away_id"].to_list())
+        extra = set(elo) - scheduled
         assert not extra, f"{season} wk{w}: snapshot teams without REG games: {sorted(extra)}"
+        # IN-03: name the season/week instead of a bare KeyError deep in simulate_season
+        no_elo = scheduled - set(elo)
+        if no_elo:
+            raise ValueError(f"{season} wk{w}: REG teams without an as-of Elo snapshot: {sorted(no_elo)}")
         teams, pp, ew = simulate_season(sg, elo, int(w), n_sims=n_sims, seed=seed, sigma=sigma)
         n = len(teams)
         recs["season"] += [season] * n

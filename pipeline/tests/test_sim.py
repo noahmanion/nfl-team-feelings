@@ -165,6 +165,14 @@ def test_wildcard_h2h_only_when_all_tied_teams_met(monkeypatch):
     assert p2["A"] == 1.0 and p2["B"] == 0.0 and p2["C"] == 0.0
 
 
+def test_missing_elo_team_names_season_and_week():
+    """IN-03: a scheduled team with no as-of Elo fails with the season/week in the message."""
+    g = _g([("g1", 1, "A", "B", 20, 10)])
+    ss = pl.DataFrame({"week": [0], "franchise_id": ["A"], "elo": [1500.0]})
+    with pytest.raises(ValueError, match=r"2023 wk0: REG teams without an as-of Elo snapshot: \['B'\]"):
+        sim._simulate_one_season(g, ss, 10, 0.0, 1)
+
+
 # --- model_version + cache ---
 
 
