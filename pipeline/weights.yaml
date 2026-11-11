@@ -41,13 +41,17 @@
 # games are mostly coin flips, so a team winning lots of them is due to give some back.
 #
 # epa_traj (opponent-adjusted EPA/play: EWMA over ~4 games minus this season's mean) is slightly
-# negative (-0.20; last walk-forward fold 2021: -0.16) and adds ≈0 to the backtest.
+# negative (-0.23 with qb_trend in, -0.20 without; last walk-forward fold 2021: -0.20) and adds ≈0 to the backtest.
+#
+# qb_trend: current starting QB's recent EPA/dropback; positive (+0.63). Given everything else,
+# a QB playing well predicts better future margins (0 for a QB with under 2 starts / week 0).
 weights:
-  elo: 3.76
-  season_record: 0.72
-  last16: -0.48
-  mov: 1.31
-  sow: -1.03
-  streak: -0.09
-  luck: -0.31
-  epa_traj: -0.20
+  elo: 3.50
+  season_record: 0.59
+  last16: -0.41
+  mov: 1.19
+  sow: -0.94
+  streak: -0.15
+  luck: -0.28
+  epa_traj: -0.23
+  qb_trend: 0.63
