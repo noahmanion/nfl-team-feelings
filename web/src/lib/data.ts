@@ -1,4 +1,4 @@
-import type { GamesFile, HistoryFile, Meta, Methodology, SeasonFile, SeasonMeta, WeekFile } from './types'
+import type { Callout, GamesFile, HistoryFile, Meta, Methodology, SeasonFile, SeasonMeta, WeekFile } from './types'
 
 export const dataUrl = (path: string): string => `${import.meta.env.BASE_URL}data/${path}`
 
@@ -10,6 +10,8 @@ async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const loadMeta = (): Promise<Meta> => getJson<Meta>('meta.json', { cache: 'no-store' })
 export const loadLatest = (): Promise<WeekFile> => getJson<WeekFile>('latest.json', { cache: 'no-store' })
+/** callouts.json: the latest week's callouts (same freshness rule as latest.json). */
+export const loadCallouts = (): Promise<Callout[]> => getJson<Callout[]>('callouts.json', { cache: 'no-store' })
 
 // Session cache of season files. Rejected fetches are evicted so "Try again" refetches.
 const seasonCache = new Map<number, Promise<SeasonFile>>()

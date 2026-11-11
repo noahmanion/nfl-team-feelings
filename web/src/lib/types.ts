@@ -33,7 +33,13 @@ export interface Row { franchise: string; rank: number; score: number; elo: numb
   /** Week-0 rows only; null when not derivable (e.g. 1999) (07-04). */
   draft?: DraftInfo | null }
 export interface WeekFile { season: number; week: number; rows: Row[] }
-export interface SeasonFile { season: number; weeks: Record<string, Row[]> }
+/** Callout card / mover (08-01; pipeline/src/fgs/export.py). */
+export type CalloutType = 'worried' | 'hopeful' | 'mover_up' | 'mover_down' | 'misery' | 'joy'
+export interface Callout { type: CalloutType; season: number; week: number; franchise: string;
+  headline: string; detail: string; evidence: string | null; stat: number; start: string | null; band: number }
+export interface SeasonFile { season: number; weeks: Record<string, Row[]>
+  /** Per-week callouts (08-01); optional so older cached files still type-check. */
+  callouts?: Record<string, Callout[]> }
 export interface HistoryFile { keys: string[]; teams: Record<string, (number | null)[]> }
 /** games/{season}.json, columnar (04-01). asof_week = first snapshot week that includes the result. */
 export interface GamesFile { season: number; week: number[]; asof_week: number[]; home: string[]; away: string[];
