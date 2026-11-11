@@ -1,6 +1,6 @@
 # feel-good-score
 
-How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is a weighted, backtested blend of seven factors, shown as a mood board, a mood-over-time chart and a page per team in a small local site.
+How should NFL fans *actually* feel about their team? This project builds a momentum-weighted, Elo-like "feel-good score" for every team since 1999 and backtests it against future results. It's a reality check for fanbases that think their team is worse (or better) than it is. Right now the score is a weighted, backtested blend of eleven factors (results, efficiency, QB play, preseason expectations and playoff odds), shown as a mood board, a mood-over-time chart and a page per team in a small local site.
 
 ## Run it
 
@@ -26,7 +26,8 @@ The generated JSON in `web/public/data/` is committed, so the site runs without 
 
 ```bash
 cd pipeline
-uv run fgs build                         # download (once) + derive games, team_games, elo_snapshots, features
+uv run fgs build                         # download (once) + derive games, team_games, elo_snapshots, sims, features
+                                         # first run also downloads nflverse play-by-play 1999+ (~26 s)
 uv run fgs check                         # data-trust checks; exit 1 on failure
 uv run fgs elo                           # ranked Elo + W-L-T for the latest played week, with a "data through" date
 uv run fgs elo --season 2008 --week 5    # as of any (season, week); week 0 = preseason (regressed) ratings
@@ -43,18 +44,24 @@ uv run fgs backtest --propose-weights    # also print ridge weights fit on 1999�
 ## How the score works today
 
 - The score is an integer from 0 to 100. Each factor is z-scored across all teams in the same week, multiplied by its weight in `pipeline/weights.yaml`, and the products are summed. The score is that sum's percentile.
-- Factors and current weights (points of future adjusted margin per standard deviation, interim until Phase 6):
-  - **Elo** (`elo`) 3.75: game-by-game strength rating.
-  - **Season record** (`season_record`) 0.90: this season's regular-season win %, ties count half.
-  - **Last 16 games** (`last16`) −0.56: win % over the last 16 games, across seasons, playoffs included.
-  - **Margin of victory** (`mov`) 1.34: average point margin over the last 8 games, each capped at 24.
-  - **Quality of results** (`sow`) −1.07: results over the last 8 games vs what an average team would do against the same opponents.
-  - **Streak** (`streak`) −0.14: current win or loss streak, ties end it, capped at 8.
-  - **Close-game luck** (`luck`) −0.30: one-score wins minus one-score losses (8 points or fewer) over the last 16 games.
-- Four weights are negative on purpose. Once Elo and margins are known, a record that runs ahead of them (hot last 16, results beating margins, a long streak, lots of coin-flip wins) tends to regress, so it predicts slightly *worse* future margins. An 8-2 team that won six one-score games should feel a little worried. Each factor's backtest gain and fitted sign are logged in `pipeline/BACKTEST_LOG.md`.
+- Factors and current weights (points of future adjusted margin per standard deviation, interim until Phase 6, fit on 1999–2021 with the holdout sealed):
+  - **Elo** (`elo`) 2.59: game-by-game strength rating.
+  - **Season record** (`season_record`) 1.83: this season's regular-season win %, ties count half.
+  - **Last 16 games** (`last16`) −0.20: win % over the last 16 games, across seasons, playoffs included.
+  - **Margin of victory** (`mov`) 1.24: average point margin over the last 8 games, each capped at 24.
+  - **Quality of results** (`sow`) −0.56: results over the last 8 games vs what an average team would do against the same opponents.
+  - **Streak** (`streak`) −0.05: current win or loss streak, ties end it, capped at 8.
+  - **Close-game luck** (`luck`) −0.35: one-score wins minus one-score losses (8 points or fewer) over the last 16 games.
+  - **Efficiency trend** (`epa_traj`) −0.33: recent opponent-adjusted EPA per play (weighted to the last ~4 games) minus this season's average. Honest verdict: it adds about nothing to the backtest and its sign is negative (an efficiency upswing slightly fades once everything else is known). It stays in so its weight is on record.
+  - **QB play** (`qb_trend`) 0.63: the current starter's EPA per dropback over his recent starts, on any team. The biggest Phase 5 gain (+0.0028 Spearman). 0 for a QB with fewer than 2 starts.
+  - **Vs preseason expectations** (`vs_exp`) −1.23: win % so far minus the preseason expectation's pace. Read it together with season record (they correlate 0.92): beating expectations tends to fade. Caveat: the expectation is the Vegas win total for 2003–2020 and the model's own preseason projection otherwise, so the signal is learned mostly on Vegas years while 2021+ is always model-sourced. On model-only inputs it is slightly negative; Phase 6 checks this on the holdout.
+  - **Playoff odds trend** (`po_trend`) −0.01: change in simulated playoff odds over the last 3 weeks. ≈0: it mostly repeats the 3-week Elo change (correlation 0.70). Kept so its weight is reported.
+- Several weights are negative on purpose. Once Elo and margins are known, a record that runs ahead of them (hot last 16, results beating margins, a long streak, lots of coin-flip wins) tends to regress, so it predicts slightly *worse* future margins. An 8-2 team that won six one-score games should feel a little worried. Each factor's backtest gain and fitted sign are logged in `pipeline/BACKTEST_LOG.md`.
+- The efficiency and QB factors use nflverse play-by-play since 1999. The 1999–2000 seasons are flagged low-confidence (thinner data, a few games missing).
+- **Playoff odds.** Each week, 2,000 simulations play out the rest of the season from Elo, with per-simulation rating noise (σ = 100 Elo points) so a team's strength is uncertain too. Era rules apply (6 playoff teams per conference through 2019, 7 from 2020; 16 or 17 games). Tiebreakers are simplified (win % → head-to-head → division record → coin flip), so the simulated field differs from the real one about one spot every three seasons. The model's preseason expected wins correlate 0.86 with Vegas win totals (2003–2020). Once the regular season is over, the team page shows the actual result (100% or 0%) instead of a simulation.
 - Percentiles compare against every preseason and regular-season team-week from 1999–2021. That reference is fixed, so a historical score never shifts after a refresh. A test checks that future games can't move a past score.
 - Seven mood bands turn the score into a label. A team's label only changes once its score is 2 points into the new band, going up or down. For the 60 edge, a team rises to the higher label at 61 and drops to the lower one at 58. Scores of 59 and 60 keep whatever label it already had, so labels don't flicker.
-- **Team page.** Click any row on the board (or open `#/team/{ABBR}`, e.g. `#/team/BUF`) to see why a team's score is what it is. The bars are score points: they start at "Average team {baseline}" and add up to the team's score. A one-line blurb names the biggest reasons (e.g. a skid, or coin-flip luck that tends to even out), with recent games and a score sparkline below.
+- **Team page.** Click any row on the board (or open `#/team/{ABBR}`, e.g. `#/team/BUF`) to see why a team's score is what it is. The bars are score points: they start at "Average team {baseline}" and add up to the team's score. The header also shows the playoff odds as a whole percent and the current starting QB. A one-line blurb names the biggest reasons (e.g. a skid, or coin-flip luck that tends to even out), with recent games and a score sparkline below.
 - A partially played week (e.g. Monday night still to come) is flagged. Teams that haven't played yet keep last week's Elo.
 
 ## Backtest target
@@ -68,4 +75,4 @@ This target was written down before any score weights were fit. Weights get tune
 - **Walk-forward by season.** Anything fit for test season S uses only earlier seasons. The first test season is 2003.
 - **Sealed holdout.** Seasons 2022–2025 are a holdout that `fgs backtest` only touches with `--include-holdout`. The 2026 season in progress is never a test season.
 
-**Status:** Phase 4 is done: game-result factors (margin, quality of results, streak, close-game luck) and team pages. Next is Phase 5: efficiency, QB trend and a season simulator.
+**Status:** Phase 5 is done: efficiency trend, QB play, preseason expectations, playoff odds and a season simulator. Next is Phase 6: weight freeze, holdout, methodology page.
