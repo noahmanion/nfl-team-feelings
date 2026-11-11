@@ -58,3 +58,11 @@ Freeze the final in-season weights (all 11 factors from Phases 3–5), evaluate 
 - Factor pruning / model selection (would need a fresh holdout), hand-entered 2021+ Vegas totals (v2).
 
 </deferred>
+
+<research_revisions>
+## Accepted research revisions (06-RESEARCH, autonomous approval 2026-11-11)
+- A1: "walk-forward CV" for final alpha = the existing leave-one-season-out alpha selection in `propose_weights` on 1999–2021; pre-registration states this verbatim.
+- A3: report BOTH season-block and team-season-cluster bootstrap CIs (2,000 reps, paired composite−Elo) plus "won k of 4 seasons"; pre-registered verdict wording ("Yes" / "Slightly" / "Not on 2022–25") keys off the WIDER CI; BACK-06 pass/fail = point estimate of paired Δ > 0.
+- A6: pre-register a diagnostic "composite with vs_exp zeroed" holdout metric (vs_exp switches Vegas→model at the holdout boundary); diagnostic only, does not change the frozen model.
+- Committed result artifacts: `pipeline/HOLDOUT_RESULT.md` + `HOLDOUT_RESULT.json`, `pipeline/FREEZE_RESULT.json` (data/ is gitignored). methodology.json built inside `build_export`. Guards per research.
+</research_revisions>
