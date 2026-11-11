@@ -174,7 +174,7 @@ def test_backtest_not_imported_upstream():
     # backtest plus the Phase 6 dev-only modules built on it (freeze, holdout)
     imp = re.compile(r"^\s*(from|import)\s+[\w., ]*(backtest|freeze|holdout|bootstrap)", re.M)
     for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py",
-                 "sim.py", "expectation.py", "methodology.py", "draft.py", "insights.py"):
+                 "sim.py", "expectation.py", "methodology.py", "draft.py", "insights.py", "records.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())
         assert not imp.search(code), f"{name} imports the backtest harness"
 
@@ -183,6 +183,6 @@ def test_evidence_not_imported_by_export_or_insights():
     """Phase 8: fgs.evidence is dev-only (it imports backtest); the export reads only its committed JSON."""
     src = Path(fgs.__file__).parent
     imp = re.compile(r"^\s*(from|import)\s+[\w., ]*evidence", re.M)
-    for name in ("export.py", "insights.py"):
+    for name in ("export.py", "insights.py", "records.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())
         assert not imp.search(code), f"{name} imports fgs.evidence"
