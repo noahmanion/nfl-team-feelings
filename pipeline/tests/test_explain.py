@@ -110,7 +110,23 @@ def test_blurb_and_vs_but():
         "The Bills are one of the best teams in football, and have been blowing teams out."
     r = _row(z_elo=1.5, pts_elo=30, z_sow=1.0, pts_sow=-12)
     out = blurb(r, FACTORS7, "Bills", 9)
-    assert ", but have a record that runs ahead of their margins (that tends to fade)." in out
+    assert ", but have been winning more than their schedule would predict (that tends to fade)." in out
+
+
+def test_sow_phrases_never_talk_about_margins():
+    # sow measures results vs schedule, not record vs margins: a "margins" phrase would contradict mov
+    for d in ("hi", "lo"):
+        for text in PHRASES[("sow", d)]:
+            assert "margin" not in text and ("schedule" in text or "opponents" in text), text
+
+
+@pytest.mark.parametrize("mov_d", ["hi", "lo"])
+@pytest.mark.parametrize("sow_d", ["hi", "lo"])
+@pytest.mark.parametrize("sow_pts", [-12, -3, 3, 12])
+def test_mov_and_sow_blurbs_do_not_contradict(mov_d, sow_d, sow_pts):
+    zm, zs = (1.0 if mov_d == "hi" else -1.0), (1.0 if sow_d == "hi" else -1.0)
+    out = blurb(_row(z_mov=zm, pts_mov=20 * int(zm), z_sow=zs, pts_sow=sow_pts), FACTORS7, "Bears", 9)
+    assert out.count("margin") <= 1, out  # only mov may speak about margins
 
 
 def test_blurb_week0_lead_and_record_skipped():

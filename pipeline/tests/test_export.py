@@ -11,6 +11,7 @@ import yaml
 import fgs.cli as cli
 from fgs.asof import week_progress
 from fgs.cli import derive
+from fgs.explain import PHRASES
 from fgs.export import build_export, team_meta, write_export
 from fgs.franchises import CANONICAL, normalize_code
 from fgs.ingest import load_schedules, load_teams
@@ -324,6 +325,18 @@ def test_blurbs(real_files):
         else:
             assert b.startswith("The ") and not b.startswith(lead0), b
         assert "0 straight" not in b and "1 straight" not in b, b
+
+
+def test_blurbs_mov_and_sow_never_contradict(real_files):
+    # CR-01: sow describes results vs schedule; it must never claim margins lag (or lead) the record
+    _, files = real_files
+    mov_hi = PHRASES[("mov", "hi")]
+    for season, week, r in _all_rows(files):
+        b = r["blurb"]
+        assert "ahead of their margins" not in b and "behind their margins" not in b, b
+        assert "lags behind" not in b, b
+        if any(t in b for t in mov_hi):
+            assert b.count("margin") <= 1, (season, week, r["franchise"], b)
 
 
 def test_games_files(real_files):

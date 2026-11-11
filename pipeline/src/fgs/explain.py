@@ -115,8 +115,10 @@ PHRASES: dict[tuple[str, str], tuple[str, str]] = {
     ("last16", "lo"): ("have lost a lot over their last 16 games", "have a losing last 16 games"),
     ("mov", "hi"): ("have been blowing teams out", "have been winning by comfortable margins"),
     ("mov", "lo"): ("have been getting blown out", "have been losing by wide margins"),
-    ("sow", "hi"): ("have a record that runs ahead of their margins", "have results a bit ahead of their margins"),
-    ("sow", "lo"): ("have a record that lags behind their margins", "have results a bit behind their margins"),
+    # sow = results vs what a league-average team would get against the same opponents. It says
+    # nothing about margins, so its phrases must not either (they would contradict mov).
+    ("sow", "hi"): ("have been winning more than their schedule would predict", "have results a bit better than their schedule"),
+    ("sow", "lo"): ("have come up short against beatable opponents", "have results a bit worse than their schedule"),
     ("streak", "hi"): ("have won {k} straight", "have won {k} straight"),
     ("streak", "lo"): ("are stuck in a {k}-game skid", "have lost {k} straight"),
     ("luck", "hi"): ("have won a lot of coin-flip games", "have won more than their share of close games"),
