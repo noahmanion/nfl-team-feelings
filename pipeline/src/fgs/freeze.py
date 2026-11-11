@@ -19,7 +19,7 @@ import numpy as np
 import polars as pl
 import yaml
 
-from fgs import backtest, bootstrap
+from fgs import backtest, bootstrap, season_config
 
 VERSION = 1
 TARGET_NAME = "adjusted_margin_n8"
@@ -320,7 +320,7 @@ def render_weights_yaml(freeze: dict) -> str:
         "# The 2022-2025 holdout was never read.",
         "#",
         "# Per factor: weight, unrounded fit, sign, and how many of the walk-forward folds",
-        f"# (test seasons 2003-{hi}, each refit on earlier seasons) agree with the final sign:",
+        f"# (test seasons {season_config.FIRST_TEST_SEASON}-{hi}, each refit on earlier seasons) agree with the final sign:",
     ]
     for f, d in factors.items():
         k, nf = d["fold_sign"]
