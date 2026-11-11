@@ -15,7 +15,7 @@ Build the evaluation harness (target, baselines, walk-forward, leakage test) and
 ## Implementation Decisions
 
 ### Backtest target (BACK-01) — written into README BEFORE any tuning
-- Primary target per (season, week, franchise) snapshot: mean **adjusted margin** over the team's next N games within the same season (regular season + playoffs), N ∈ {4, 8} (N=8 is the headline; 4 reported too). Adjusted margin for a game = actual point margin − expected margin, where expected margin = (pre-game Elo diff incl. HFA) / 25 (538 points-per-Elo convention). Snapshots with fewer than 2 remaining games are excluded from that N's evaluation.
+- Primary target per (season, week, franchise) snapshot: mean **adjusted margin** over the team's next N games within the same season (regular season + playoffs), N ∈ {4, 8} (N=8 is the headline; 4 reported too). Adjusted margin for a game = actual point margin + (opponent pre-game Elo − 1505)/25 − (signed HFA Elo)/25, i.e. adjusted ONLY for opponent strength and home field (NOT the team's own rating — that would be circular). [Revised per 03-RESEARCH A1: own-Elo version made plain Elo Spearman ≈0.02.] Snapshots with fewer than 2 remaining games are excluded from that N's evaluation.
 - Primary metric: Spearman rank correlation and R² of the candidate score vs target, pooled over test seasons, plus per-season values. Secondary: next-game Brier score from a logistic map of score difference (fit on training seasons only).
 - Reporting buckets: early (wk 1–6), mid (7–12), late (13+), and week 0 (across-offseason) separately.
 
@@ -32,6 +32,8 @@ Build the evaluation harness (target, baselines, walk-forward, leakage test) and
 
 ### Additive score (MODEL-14) + first factors (MODEL-03, MODEL-04)
 - New `features.py` builds per-snapshot raw factor values as-of each (season, week) using only games with asof_week ≤ week: `elo` (rating), `season_record` (REG win% with ties 0.5; week 0 → 0.5), `last16` (win% over the last 16 played games including prior season(s), REG+playoffs, ties 0.5).
+- Percentile reference for the 0–100 score is FIXED to snapshots from seasons 1999–2021 (wk0+REG), so future games can never change past scores (leakage) and historical scores stop drifting on refresh. Board rank = composite order. [Revised per 03-RESEARCH A2.]
+- Zero-variance guard: if a factor has zero spread in a snapshot (e.g. season_record at week 0), its z = 0 for all teams.
 - `score.py`: z-score each factor across the teams in that (season, week) snapshot; composite = Σ w_f · z_f; store per-factor `contrib_f = w_f · z_f` columns; composite feeds the existing percentile → 0–100 score → mood bands pipeline (mood.py unchanged in behavior; the percentile reference is now the composite).
 - Interim weights live in `pipeline/weights.yaml` (committed): fit by walk-forward Ridge (standardized inputs, alpha via CV within training seasons) on 1999–2021 against the N=8 target, then rounded to 2 decimals by hand-rule (code proposes, file is the source of truth). Phase 6 refits/freezes after all factors exist. Each factor addition records its backtest delta (vs the composite without it) in `pipeline/BACKTEST_LOG.md` (append-only table: date, factor, ΔSpearman N=8, ΔR², fitted sign).
 - JSON contract additions (backwards-compatible): `meta.score_kind = "composite"`, `meta.factors` = [{key, label, weight, description}]; season rows get `contribs: {factor_key: number rounded 2dp}`; history.json unchanged shape (score is now composite-based).
