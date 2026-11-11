@@ -153,7 +153,8 @@ def test_synthetic_leakage(monkeypatch):
 
 def test_backtest_not_imported_upstream():
     src = Path(fgs.__file__).parent
-    imp = re.compile(r"^\s*(from|import)\s+[\w., ]*backtest", re.M)
+    # backtest plus the Phase 6 dev-only modules built on it (freeze, holdout)
+    imp = re.compile(r"^\s*(from|import)\s+[\w., ]*(backtest|freeze|holdout)", re.M)
     for name in ("features.py", "score.py", "mood.py", "export.py", "explain.py", "efficiency.py", "pbp.py",
                  "sim.py", "expectation.py"):
         code = "\n".join(line.split("#", 1)[0] for line in (src / name).read_text().splitlines())

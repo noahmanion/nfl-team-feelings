@@ -426,3 +426,31 @@ def test_playoff_display_override(real_files):
     total = sum(r["playoff_prob"] for r in latest)
     assert abs(total - 100 * playoff_teams(meta["latest"]["season"])) <= 32
     assert {r["expectation_source"] for r in latest} == {"model"}
+
+
+# --- Phase 6 (BACK-04): export/refresh never refit the weights ------------------------------
+
+def test_export_never_refits(synthetic_games, monkeypatch):
+    """With every fitting entry point patched to raise, the score path (synthetic league) and the
+    full build_export (cached data, as test_latest_partial_week_synthetic) still succeed."""
+    import fgs.backtest
+    from fgs import explain, mood
+    from fgs.cli import derive_games
+
+    def boom(*a, **k):
+        raise AssertionError("export path refit the weights")
+
+    for name in ("ridge_fit", "propose_weights", "choose_alpha"):
+        monkeypatch.setattr(fgs.backtest, name, boom)
+
+    with monkeypatch.context() as m:
+        m.setattr(season_config, "REF_SEASONS", (2023, 2023))  # synthetic league seasons
+        derived = derive_games(synthetic_games)  # weights read from weights.yaml, never fit
+        assert derived["weights"] == load_weights()
+        feats = derived["features"]
+        explain.add_points(mood.score_frame(feats), list(derived["weights"]), mood.reference_values(feats))
+
+    if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
+        pytest.skip("no cached schedules/teams for the full build_export check")
+    files = build_export(derive(load_schedules(), **derive_inputs()), load_teams(), generated_at=GEN)
+    assert {f["key"] for f in files["meta.json"]["factors"]} == set(load_weights())

@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest."""
+"""`fgs` command line: ingest, build, elo, check, export, refresh, backtest, freeze."""
 
 import argparse
 import json
@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, export, features, score, sim
+from fgs import checks, export, features, freeze, paths, score, sim
 from fgs.backtest import format_proposal, format_report, propose_weights, run_backtest
 from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
@@ -371,7 +371,29 @@ def _cmd_export(args) -> int:
     return 0
 
 
+FROZEN_MSG = "weights are frozen (fit 1999–2021); run `fgs freeze --unfreeze` to refit"
+POST_HOLDOUT_MSG = ("refitting after the holdout breaks the pre-registration (pipeline/PREREGISTRATION.md); "
+                    "a new holdout would be needed")
+SEALED_MSG = "the 2022–2025 holdout is sealed until the one-time `fgs holdout` result exists"
+
+
+def _weights_frozen() -> bool:
+    """score.is_frozen() on paths.WEIGHTS_PATH; a missing/unreadable file is not frozen."""
+    try:
+        return score.is_frozen()
+    except ValueError:
+        return False
+
+
 def _cmd_backtest(args) -> int:
+    # Refusal guards run before any data load (Phase 6): no refit proposal once frozen, and no
+    # look at 2022-2025 before the one-time holdout result exists.
+    if args.propose_weights and _weights_frozen():
+        print(f"error: {FROZEN_MSG}", file=sys.stderr)
+        return 1
+    if args.include_holdout and not paths.HOLDOUT_MD_PATH.exists():
+        print(f"error: {SEALED_MSG}", file=sys.stderr)
+        return 1
     incomplete = _incomplete_refresh_msg()
     if incomplete:
         print(f"warning: {incomplete}", file=sys.stderr)
@@ -390,6 +412,51 @@ def _cmd_backtest(args) -> int:
         today = datetime.now(timezone.utc).date().isoformat()
         print("\nproposed weights (paste into pipeline/weights.yaml; points of N=8 adjusted margin per SD):\n")
         print(format_proposal(prop, today))
+    return 0
+
+
+def _fmt_ci(ci) -> str:
+    return "—" if not ci else f"[{ci[0]:+.4f}, {ci[1]:+.4f}]"
+
+
+def _cmd_freeze(args) -> int:
+    """Fit the final weights on 1999-2021 once and freeze weights.yaml + FREEZE_RESULT.json."""
+    # Guards first, before any data load.
+    if paths.HOLDOUT_MD_PATH.exists():
+        print(f"error: {POST_HOLDOUT_MSG}", file=sys.stderr)
+        return 1
+    if _weights_frozen() and not args.unfreeze:
+        print(f"error: {FROZEN_MSG}", file=sys.stderr)
+        return 1
+    derived = derive(load_schedules(), scored=False, **cached_inputs(), sim_cache_dir=sim_cache_dir())
+    log_path = paths.PIPELINE_ROOT / "BACKTEST_LOG.md"
+    log_text = log_path.read_text() if log_path.exists() else None
+    result = freeze.build_freeze(derived, log_text=log_text)
+    text = freeze.render_weights_yaml(result)
+    body = json.dumps(result, allow_nan=False, indent=1) + "\n"
+    paths.WEIGHTS_PATH.write_text(text)
+    paths.FREEZE_RESULT_PATH.write_text(body)
+
+    print(f"froze {len(result['factors'])} weights (fit {result['fit_seasons'][0]}–{result['fit_seasons'][1]}, "
+          f"alpha {result['alpha']:g}*n, n {result['n']}) on {result['fitted_at']}")
+    print(f"{'factor':<14}{'weight':>8}{'sign':>6}{'folds':>8}{'ΔSp N8':>10}")
+    for f, d in result["factors"].items():
+        delta = d.get("delta_spearman_n8")
+        dtxt = f"{delta:+.4f}" if delta is not None else f"({d.get('baseline_spearman_n8') or 0:.4f})"
+        print(f"{f:<14}{freeze.format_weight(d['weight']):>8}{d['sign']:>6}"
+              f"{d['fold_sign'][0]:>5}/{d['fold_sign'][1]:<2}{dtxt:>10}")
+    wf = result.get("walk_forward") or {}
+    sp = wf.get("spearman_n8") or {}
+    diff = (wf.get("diff") or {}).get("spearman_n8") or {}
+    if sp:
+        print(f"\nwalk-forward {wf['seasons'][0]}–{wf['seasons'][1]} Spearman N=8: composite "
+              f"{sp['composite']['value']:.4f}, elo {sp['elo']['value']:.4f}")
+    if diff:
+        print(f"composite − elo {diff['value']:+.4f}; season-block CI {_fmt_ci(diff.get('ci_season'))}, "
+              f"team-season CI {_fmt_ci(diff.get('ci_cluster'))}; won {diff.get('seasons_won')}/{diff.get('of')} seasons")
+    for w in (result.get("log_crosscheck") or {}).get("warnings", []):
+        print(f"warning (BACKTEST_LOG cross-check): {w}", file=sys.stderr)
+    print(f"\nwrote {paths.WEIGHTS_PATH}\nwrote {paths.FREEZE_RESULT_PATH}")
     return 0
 
 
@@ -444,10 +511,17 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(func=_cmd_refresh)
 
     p = sub.add_parser("backtest", help="walk-forward backtest vs baselines; writes data/derived/backtest.json")
-    p.add_argument("--include-holdout", action="store_true", help="Phase 6 only: also test 2022–2025")
+    p.add_argument("--include-holdout", action="store_true",
+                   help="also test 2022–2025; refused until the one-time `fgs holdout` result (HOLDOUT_RESULT.md) exists")
     p.add_argument("--propose-weights", action="store_true",
                    help="also print ridge weights fit on 1999–2021 (N=8) as a weights.yaml block")
     p.set_defaults(func=_cmd_backtest)
+
+    p = sub.add_parser("freeze", help="fit the final weights on 1999–2021 and freeze weights.yaml "
+                                      "(refuses once frozen or after the holdout)")
+    p.add_argument("--unfreeze", action="store_true",
+                   help="refit even though weights.yaml is frozen (still refused once HOLDOUT_RESULT.md exists)")
+    p.set_defaults(func=_cmd_freeze)
 
     args = parser.parse_args(argv)
     return args.func(args)
