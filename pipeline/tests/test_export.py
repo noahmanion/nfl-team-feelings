@@ -33,10 +33,13 @@ GEN = "2026-11-11T18:40:00+00:00"
 CALLOUT_KEYS = {"type", "season", "week", "franchise", "headline", "detail", "evidence", "stat", "start", "band"}
 
 
-def _matching_evidence(weights: dict, cfg: dict) -> dict:
-    """The committed callout_evidence.json, re-fingerprinted for synthetic weights (tests only)."""
+def _matching_evidence(weights: dict, cfg: dict, derived: dict) -> dict:
+    """The committed callout_evidence.json, re-fingerprinted for synthetic weights and data (tests only)."""
+    from fgs import fingerprint
+    from fgs.mood import score_frame
     ev = json.loads(paths.CALLOUT_EVIDENCE_PATH.read_text())
-    return {**ev, "weights_fingerprint": insights.weights_fingerprint(insights.fingerprint_weights(weights, cfg))}
+    wfp = insights.weights_fingerprint(insights.fingerprint_weights(weights, cfg))
+    return {**ev, **fingerprint.evidence_fingerprints(wfp, score_frame(derived["features"]), derived["team_games"])}
 
 
 def _fake_teams() -> pl.DataFrame:
@@ -573,8 +576,8 @@ def _draft_export(monkeypatch, cfg):
                        "surplus": [50.0, -30.0, 0.2, 5.0], "draft_z": [1.2, -1.5, 0.0, 0.3]})
     feats = score.apply_offseason(feats, dz, cfg)
     values = np.concatenate([[np.nan], np.linspace(60.0, 0.5, 262)])
-    files = build_export({**derived, "features": feats, "offseason": cfg, "draft_values": values},
-                         _fake_teams(), generated_at=GEN, evidence=_matching_evidence(weights, cfg))
+    d2 = {**derived, "features": feats, "offseason": cfg, "draft_values": values}
+    files = build_export(d2, _fake_teams(), generated_at=GEN, evidence=_matching_evidence(weights, cfg, d2))
     return files, dict(zip(dz["franchise_id"], dz["draft_z"]))
 
 
@@ -697,7 +700,9 @@ def test_export_refuses_stale_evidence(real_files):
     derived, _ = real_files
     ev = json.loads(paths.CALLOUT_EVIDENCE_PATH.read_text())
     for bad in ({"weights_fingerprint": "000000000000"}, {"threshold": 9}, {"first_week": 3},
-                {"train_seasons": [1999, 2022]}):
+                {"train_seasons": [1999, 2022]}, {"elo_fingerprint": "000000000000"},
+                {"code_fingerprint": "000000000000"}, {"data_fingerprint": "000000000000"},
+                {"data_fingerprint": None}):
         with pytest.raises(ValueError, match="stale") as e:
             build_export(derived, load_teams(), generated_at=GEN, evidence={**ev, **bad})
         assert "fgs evidence" in str(e.value)

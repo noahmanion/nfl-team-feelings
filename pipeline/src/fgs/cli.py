@@ -502,7 +502,7 @@ def _cmd_evidence(args) -> int:
     """Dev-only: recompute the perception-gap base rates on 1999–2021 and write
     paths.CALLOUT_EVIDENCE_PATH (commit it). fgs.evidence imports the backtest, so it is loaded
     lazily here and never by the export."""
-    from fgs import evidence, insights, mood
+    from fgs import evidence, fingerprint, insights, mood
 
     incomplete = _incomplete_refresh_msg()
     if incomplete:
@@ -511,8 +511,10 @@ def _cmd_evidence(args) -> int:
     derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())
     scored = mood.score_frame(derived["features"])
     fp = insights.weights_fingerprint(insights.fingerprint_weights(derived["weights"], derived["offseason"]))
+    # WR-02: also stamp the Elo params, code version and 1999-2021 data hash the export re-checks
+    fps = fingerprint.evidence_fingerprints(fp, scored, derived["team_games"])
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    ev = evidence.compute_evidence(scored, derived["team_games"], fp, generated_at)
+    ev = evidence.compute_evidence(scored, derived["team_games"], fps, generated_at)
     out = paths.CALLOUT_EVIDENCE_PATH  # read at call time so tests can monkeypatch it
     out.write_text(json.dumps(ev, indent=1, ensure_ascii=False, allow_nan=False) + "\n", encoding="utf-8")
     lo, hi = ev["train_seasons"]
@@ -523,7 +525,7 @@ def _cmd_evidence(args) -> int:
             continue
         print(f"{f:8s} n={e['n']}  d_margin={e['d_margin']:+.2f}  next-8 win {e['team_win']:.1%} vs peers "
               f"{e['peer_win']:.1%}  ({lo}–{hi}, |gap| >= {ev['threshold']}, weeks {ev['first_week']}+)")
-    print(f"wrote {out} (weights fingerprint {fp}); commit it")
+    print(f"wrote {out} ({', '.join(f'{k} {v}' for k, v in fps.items())}); commit it")
     return 0
 
 

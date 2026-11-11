@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo
 
 import polars as pl
 
-from fgs import asof, draft, explain, insights, methodology, mood, paths, records, score, season_config
+from fgs import asof, draft, explain, fingerprint, insights, methodology, mood, paths, records, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 from fgs.season_config import SEEDS
@@ -209,10 +209,15 @@ def _export_weights(derived: dict, scored: pl.DataFrame) -> dict[str, float]:
     return weights
 
 
-def _load_evidence(fp_weights: dict[str, float], evidence: dict | None = None) -> dict:
+def _load_evidence(
+    fp_weights: dict[str, float], evidence: dict | None = None, *, scored: pl.DataFrame, team_games: pl.DataFrame,
+) -> dict:
     """The committed perception-gap base rates (pipeline/callout_evidence.json, read at call time via
-    paths.CALLOUT_EVIDENCE_PATH unless passed in), checked against the current config and weights so
-    stale numbers can never ship (ValueError, not assert: survives python -O). Only reads JSON:
+    paths.CALLOUT_EVIDENCE_PATH unless passed in), checked against the current config so stale
+    numbers can never ship (ValueError, not assert: survives python -O). WR-02: besides threshold,
+    window and training seasons, the check covers every input that moves 1999-2021 score ranks
+    (fgs.fingerprint): the weights, the Elo hyperparameters, the code version and a hash of the
+    1999-2021 data (scored + team_games, so pass the frames the export ships). Only reads JSON:
     the export never imports fgs.evidence (it imports the backtest). A flavor with no usable cases
     (n=0, null rates) is accepted: insights.evidence_text then omits its evidence line (WR-03)."""
     if evidence is None:
@@ -224,7 +229,7 @@ def _load_evidence(fp_weights: dict[str, float], evidence: dict | None = None) -
         "threshold": season_config.GAP_THRESHOLD,
         "first_week": season_config.GAP_FIRST_WEEK,
         "train_seasons": [1999, season_config.TRAIN_LAST_SEASON],
-        "weights_fingerprint": insights.weights_fingerprint(fp_weights),
+        **fingerprint.evidence_fingerprints(insights.weights_fingerprint(fp_weights), scored, team_games),
     }
     bad = {k: (evidence.get(k), v) for k, v in want.items() if evidence.get(k) != v}
     if bad:
@@ -250,7 +255,8 @@ def build_export(
     derived: dict, teams_df: pl.DataFrame, generated_at: str, *, evidence: dict | None = None,
 ) -> dict[str, object]:
     """evidence: the perception-gap base rates; None loads paths.CALLOUT_EVIDENCE_PATH. Either way it
-    is validated against the current threshold, window, training seasons and weights fingerprint."""
+    is validated against the current threshold, window, training seasons and the fgs.fingerprint
+    hashes (weights, Elo params, code, 1999-2021 data)."""
     games = derived["games"]
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
@@ -267,7 +273,8 @@ def build_export(
         # restore the snapshot sort: the joins in _playoff_display may reorder rows
         scored = _playoff_display(scored, games).sort(["season", "week", "rank"])
     nicks = {abbr: t["nick"] for abbr, t in teams.items()}
-    ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence)
+    ev = _load_evidence(insights.fingerprint_weights(weights, cfg), evidence, scored=scored,
+                        team_games=derived["team_games"])
     as_of = as_of_date(generated_at)  # active streaks count through the export date (US Eastern)
     latest = asof.latest_played(games)
     assert latest is not None, "no played games"

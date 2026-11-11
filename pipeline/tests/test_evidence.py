@@ -9,7 +9,8 @@ import pytest
 from fgs import evidence, paths, season_config
 from fgs.paths import CACHE_DIR
 
-KEYS = {"threshold", "first_week", "train_seasons", "weights_fingerprint", "generated_at", "note", "hopeful", "worried"}
+KEYS = {"threshold", "first_week", "train_seasons", "weights_fingerprint", "elo_fingerprint", "code_fingerprint",
+        "data_fingerprint", "generated_at", "note", "hopeful", "worried"}
 
 
 def _cases(rows: list[tuple]) -> pl.DataFrame:
@@ -94,7 +95,10 @@ def test_next_n_win_null_pattern_matches_targets(real_scored):
 
 def test_holdout_seal(real_scored):
     scored, tg = real_scored
-    base = evidence.compute_evidence(scored, tg, "abc123abc123", "2026-01-01T00:00:00+00:00")
+    from fgs import fingerprint
+
+    fps = fingerprint.evidence_fingerprints("abc123abc123", scored, tg)
+    base = evidence.compute_evidence(scored, tg, fps, "2026-01-01T00:00:00+00:00")
     assert set(base) == KEYS and base["train_seasons"] == [1999, 2021]
     assert base["threshold"] == season_config.GAP_THRESHOLD and base["first_week"] == season_config.GAP_FIRST_WEEK
     future = pl.col("season") > season_config.TRAIN_LAST_SEASON
@@ -107,7 +111,8 @@ def test_holdout_seal(real_scored):
     sc2 = scored.with_columns(
         pl.when(future).then(nmax + 1 - pl.col("rank")).otherwise(pl.col("rank")).cast(scored["rank"].dtype).alias("rank"))
     assert not sc2.equals(scored) and not tg2.equals(tg)
-    assert evidence.compute_evidence(sc2, tg2, "abc123abc123", "2026-01-01T00:00:00+00:00") == base
+    assert fingerprint.evidence_fingerprints("abc123abc123", sc2, tg2) == fps
+    assert evidence.compute_evidence(sc2, tg2, fps, "2026-01-01T00:00:00+00:00") == base
     for f in ("hopeful", "worried"):
         assert base[f]["n"] > 100 and np.isfinite(base[f]["d_margin"])
 
@@ -121,5 +126,60 @@ def test_cli_evidence_writes_json(tmp_path, monkeypatch, real_scored):
     text = out.read_text()
     assert text.endswith("\n")
     d = json.loads(text)
-    assert set(d) == KEYS and d["train_seasons"] == [1999, 2021] and len(d["weights_fingerprint"]) == 12
+    assert set(d) == KEYS and d["train_seasons"] == [1999, 2021]
+    assert all(len(d[k]) == 12 for k in ("weights_fingerprint", "elo_fingerprint", "code_fingerprint",
+                                          "data_fingerprint"))
     json.dumps(d, allow_nan=False)
+
+
+# --- WR-02: staleness fingerprints ---------------------------------------------------------------
+
+def test_data_fingerprint_seals_holdout_and_tracks_training_data(real_scored):
+    from fgs import fingerprint
+
+    scored, tg = real_scored
+    base = fingerprint.data_fingerprint(scored, tg)
+    future = pl.col("season") > season_config.TRAIN_LAST_SEASON
+    sc_future = scored.with_columns(pl.when(future).then(0).otherwise(pl.col("score")).cast(scored["score"].dtype)
+                                    .alias("score"))
+    assert fingerprint.data_fingerprint(sc_future, tg) == base  # 2022+ never moves it
+    past = (pl.col("season") == 2010) & (pl.col("week") == 5)
+    sc_past = scored.with_columns(pl.when(past).then(pl.col("rank").reverse().over("season", "week"))
+                                  .otherwise(pl.col("rank")).cast(scored["rank"].dtype).alias("rank"))
+    assert fingerprint.data_fingerprint(sc_past, tg) != base
+    tg_past = tg.with_columns(pl.when(pl.col("season") == 2005).then(pl.col("points_for") + 1)
+                              .otherwise(pl.col("points_for")).cast(tg["points_for"].dtype).alias("points_for"))
+    assert fingerprint.data_fingerprint(scored, tg_past) != base
+
+
+def test_elo_fingerprint_tracks_hyperparameters(monkeypatch):
+    from fgs import fingerprint
+    from fgs.elo import EloParams
+
+    base = fingerprint.elo_fingerprint()
+    assert fingerprint.elo_fingerprint(EloParams(k=21.0)) != base
+    assert fingerprint.elo_fingerprint(EloParams(revert=0.25)) != base
+    monkeypatch.setattr(season_config, "HFA_BY_ERA", ((1999, 9999, 50.0),))
+    assert fingerprint.elo_fingerprint() != base
+
+
+def test_code_fingerprint_ignores_docs_but_tracks_code(tmp_path):
+    import shutil
+
+    from fgs import fingerprint
+
+    src = fingerprint._SRC
+    for name in {*fingerprint.CODE_FILES, *(n for n, _ in fingerprint.CODE_FUNCS)}:
+        shutil.copy(src / name, tmp_path / name)
+    base = fingerprint.code_fingerprint(tmp_path)
+    assert base == fingerprint.code_fingerprint()
+    elo = tmp_path / "elo.py"
+    text = elo.read_text()
+    elo.write_text(text.replace('"""538-style', '"""Docs only: 538-style', 1) + "\n# a comment\n")
+    assert fingerprint.code_fingerprint(tmp_path) == base
+    elo.write_text(text.replace("k: float = 20.0", "k: float = 21.0", 1))
+    assert fingerprint.code_fingerprint(tmp_path) != base
+    elo.write_text(text)
+    ins = tmp_path / "insights.py"
+    ins.write_text(ins.read_text().replace("fans have been miserable", "fans have been sad", 1))
+    assert fingerprint.code_fingerprint(tmp_path) == base  # callout copy is not an evidence input

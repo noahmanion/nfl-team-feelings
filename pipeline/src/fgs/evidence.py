@@ -96,7 +96,12 @@ def peer_stats(cases: pl.DataFrame) -> dict:
     return out
 
 
-def compute_evidence(scored: pl.DataFrame, team_games: pl.DataFrame, fingerprint: str, generated_at: str) -> dict:
+def compute_evidence(
+    scored: pl.DataFrame, team_games: pl.DataFrame, fingerprint: str | dict[str, str], generated_at: str,
+) -> dict:
+    """fingerprint: fgs.fingerprint.evidence_fingerprints(...) (every staleness key the export checks),
+    or just the weights fingerprint string."""
+    fps = {"weights_fingerprint": fingerprint} if isinstance(fingerprint, str) else dict(fingerprint)
     last = season_config.TRAIN_LAST_SEASON  # read at call time
     # SEAL: drop every season after the training window before anything else runs.
     scored = scored.filter(pl.col("season") <= last)
@@ -117,7 +122,7 @@ def compute_evidence(scored: pl.DataFrame, team_games: pl.DataFrame, fingerprint
         "threshold": season_config.GAP_THRESHOLD,
         "first_week": season_config.GAP_FIRST_WEEK,
         "train_seasons": [first, last],
-        "weights_fingerprint": fingerprint,
+        **fps,
         "generated_at": generated_at,
         "note": NOTE,
         "hopeful": stats["hopeful"],
