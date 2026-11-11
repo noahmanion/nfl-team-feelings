@@ -48,7 +48,7 @@
 - [x] **INSIGHT-01**: Every score maps to a playful mood label from historical percentile bands, with hysteresis so labels don't flicker week to week
 - [x] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
 - [x] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
-- [ ] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
+- [x] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
 - [x] **INSIGHT-05**: Each team gets an auto-generated plain-English one-liner explaining its biggest score drivers
 - [x] **INSIGHT-06**: Week-over-week biggest movers are computed
 
@@ -137,7 +137,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INSIGHT-01 | Phase 2 | Complete |
 | INSIGHT-02 | Phase 8 | Complete |
 | INSIGHT-03 | Phase 8 | Complete |
-| INSIGHT-04 | Phase 8 | Pending (computed + RECORDS_CHECK.md generated; manual top-10 sanity check not yet signed off) |
+| INSIGHT-04 | Phase 8 | Complete (top-10 lists hand-checked against NFL history; see 08-VERIFICATION.md) |
 | INSIGHT-05 | Phase 4 | Complete |
 | INSIGHT-06 | Phase 8 | Complete |
 | SITE-01 | Phase 2 | Complete |
