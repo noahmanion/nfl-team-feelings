@@ -178,7 +178,7 @@
         latest: target.latest,
       }
   })
-  // 08-05 replaces null with the pinned team.
+  // The pinned team's cards come first (orderCallouts).
   const shownCards = $derived(shown ? orderCallouts(cardCallouts(shown.callouts), validMyTeam(myTeam.abbr, meta?.teams)) : [])
   const shownMovers = $derived(shown ? moverCallouts(shown.callouts) : { up: [], down: [] })
 
