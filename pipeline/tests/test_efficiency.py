@@ -47,6 +47,9 @@ def _tge(net=NET) -> pl.DataFrame:
         [{"game_id": g, "season": 2020 if g in ("g1", "g2", "g3") else 2021,
           "franchise_id": t, "net_epa": v} for (g, t), v in net.items()],
         schema={"game_id": pl.String, "season": pl.Int32, "franchise_id": pl.String, "net_epa": pl.Float64},
+    ).with_columns(  # no QB info in the epa fixture
+        pl.lit(None, pl.String).alias("qb_id"), pl.lit(None, pl.String).alias("qb_name"),
+        pl.lit(None, pl.Float64).alias("qb_epa"), pl.lit(None, pl.Int64).alias("dropbacks"),
     )
 
 
@@ -110,3 +113,77 @@ def test_epa_traj_game_without_pbp_is_absent():
 def test_epa_traj_zero_without_pbp():
     feats = derive_games(make_games(ROWS), weights={"elo": 1.0})["features"]
     assert "epa_traj" in feats.columns and (feats["epa_traj"] == 0.0).all()
+
+
+# --- qb_trend ------------------------------------------------------------------------------
+
+QB_ROWS = [
+    ("q1", 2020, 1, "REG", "2020-09-13", "A", "B", 20, 10, False),
+    ("q2", 2020, 2, "REG", "2020-09-20", "A", "C", 20, 10, False),
+    ("q3", 2021, 1, "REG", "2021-09-12", "B", "C", 20, 10, False),  # A on bye
+    ("q4", 2021, 2, "REG", "2021-09-19", "A", "B", 20, 10, False),
+    ("q5", 2021, 3, "REG", "2021-09-26", "A", "C", 20, 10, False),
+]
+# (game, team) -> (qb_id, qb_epa, dropbacks). Q1 starts twice for A in 2020, then once for B in 2021;
+# A switches to Q2 in 2021.
+QB = {
+    ("q1", "A"): ("Q1", 0.3, 40), ("q1", "B"): ("QB_B", 0.0, 30),
+    ("q2", "A"): ("Q1", 0.1, 10), ("q2", "C"): ("QB_C", 0.0, 30),
+    ("q3", "B"): ("QB_B", 0.0, 30), ("q3", "C"): ("QB_C", 0.0, 30),
+    ("q4", "A"): ("Q2", -0.2, 35), ("q4", "B"): ("Q1", 0.2, 30),
+    ("q5", "A"): ("Q2", 0.5, 25), ("q5", "C"): ("QB_C", 0.0, 30),
+}
+NAMES = {"Q1": "Q. One", "Q2": "Q. Two", "QB_B": "B. Passer", "QB_C": "C. Passer"}
+
+
+def _qb_tge() -> pl.DataFrame:
+    return pl.DataFrame(
+        [{"game_id": g, "season": 2020 if g in ("q1", "q2") else 2021, "franchise_id": t, "net_epa": 0.0,
+          "qb_id": q, "qb_name": NAMES[q], "qb_epa": e, "dropbacks": d} for (g, t), (q, e, d) in QB.items()],
+        schema={"game_id": pl.String, "season": pl.Int32, "franchise_id": pl.String, "net_epa": pl.Float64,
+                "qb_id": pl.String, "qb_name": pl.String, "qb_epa": pl.Float64, "dropbacks": pl.Int64},
+    )
+
+
+def _qb_feats(weeks):
+    return efficiency.epa_factors(_snap(weeks), _team_games(QB_ROWS), _qb_tge())
+
+
+def test_qb_new_then_form():
+    f = _qb_feats([(2020, 1), (2020, 2)])
+    assert _val(f, 2020, 1, "A", "qb_trend") == 0.0 and _val(f, 2020, 1, "A", "qb_new") is True
+    assert _val(f, 2020, 1, "A", "qb_name") == "Q. One"
+    assert _val(f, 2020, 2, "A", "qb_trend") == pytest.approx(wewm([0.3, 0.1], [40, 10]))
+    assert _val(f, 2020, 2, "A", "qb_new") is False
+
+
+def test_qb_dropback_weighting():
+    form = _val(_qb_feats([(2020, 2)]), 2020, 2, "A", "qb_trend")
+    by_hand = (R * 0.3 * 40 + 0.1 * 10) / (R * 40 + 10)
+    assert form == pytest.approx(by_hand)
+    assert form > ewm([0.3, 0.1])  # the 40-dropback game pulls harder than the 10-dropback one
+
+
+def test_qb_form_follows_qb_across_teams_and_seasons():
+    f = _qb_feats([(2021, 2)])
+    assert _val(f, 2021, 2, "B", "qb_trend") == pytest.approx(wewm([0.3, 0.1, 0.2], [40, 10, 30]))
+    assert _val(f, 2021, 2, "B", "qb_name") == "Q. One" and _val(f, 2021, 2, "B", "qb_new") is False
+
+
+def test_qb_change_resets_team():
+    f = _qb_feats([(2021, 1), (2021, 2), (2021, 3)])
+    assert _val(f, 2021, 2, "A", "qb_trend") == 0.0  # Q2's first start; Q1's history no longer drives A
+    assert _val(f, 2021, 2, "A", "qb_new") is True and _val(f, 2021, 2, "A", "qb_name") == "Q. Two"
+    assert _val(f, 2021, 3, "A", "qb_trend") == pytest.approx(wewm([-0.2, 0.5], [35, 25]))
+    assert _val(f, 2021, 1, "A", "qb_trend") == pytest.approx(wewm([0.3, 0.1], [40, 10]))  # bye: Q1 carried
+
+
+def test_qb_week0_zero():
+    f = _qb_feats([(2021, 0)])
+    assert f["qb_trend"].to_list() == [0.0] * 3
+    assert f["qb_name"].to_list() == [None] * 3 and f["qb_new"].to_list() == [False] * 3
+
+
+def test_qb_without_pbp():
+    feats = derive_games(make_games(QB_ROWS), weights={"elo": 1.0})["features"]
+    assert (feats["qb_trend"] == 0.0).all() and not feats["qb_new"].any() and feats["qb_name"].null_count() == feats.height

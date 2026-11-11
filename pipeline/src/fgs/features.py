@@ -22,6 +22,12 @@ the dev-only evaluation harness (leakage firewall).
 - epa_traj:      opponent-adjusted net EPA/play trajectory: EWMA (half-life 4 games, crossing
                  seasons) minus this season's mean (fgs.efficiency); 0.0 with no game yet this
                  season or without pbp_games
+- qb_trend:      the current starting QB's form level (research revision A1): dropback-weighted
+                 EWMA (half-life 4) of his EPA/dropback over his own starts on any team, any
+                 season; 0.0 for a QB with < 2 starts, at week 0, or without pbp_games. CONTEXT's
+                 literal "QB form minus team season-to-date" was measured and logged (worse).
+- qb_name, qb_new: display columns (not factors): the current QB's name (null at week 0 / no
+                 pbp) and whether he has fewer than 2 starts (False without pbp)
 """
 
 import numpy as np
@@ -30,7 +36,7 @@ import polars as pl
 from fgs import efficiency
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend"]
 GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
@@ -198,7 +204,10 @@ def build_features(
     snap = _pd_pg(snap, team_games)
     snap = _game_factors(snap, team_games)
     if pbp_games is None:
-        snap = snap.with_columns(pl.lit(0.0).alias("epa_traj"))
+        snap = snap.with_columns(
+            pl.lit(0.0).alias("epa_traj"), pl.lit(0.0).alias("qb_trend"),
+            pl.lit(None, pl.String).alias("qb_name"), pl.lit(False).alias("qb_new"),
+        )
     else:
         snap = efficiency.epa_factors(snap, team_games, pbp_games)
     return snap.sort("season", "week", "franchise_id")

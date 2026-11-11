@@ -208,8 +208,8 @@ def test_propose_weights_holdout_sealed(real_report):
 
 
 RIDGE_NAMES = ("ridge:elo", "ridge:+season_record", "ridge:+last16", "ridge:+mov", "ridge:+sow", "ridge:+streak", "ridge:+luck",
-               "ridge:+epa_traj")
-FINAL_KEYS = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj"]
+               "ridge:+epa_traj", "ridge:+qb_trend")
+FINAL_KEYS = ["elo", "season_record", "last16", "mov", "sow", "streak", "luck", "epa_traj", "qb_trend"]
 
 
 def test_ridge_composites_in_report(real_report):
@@ -224,6 +224,7 @@ def test_ridge_composites_in_report(real_report):
     assert 0.5208 <= c["ridge:+streak"]["N8"]["all"]["spearman"] <= 0.5248
     assert 0.519 <= c["ridge:+luck"]["N8"]["all"]["spearman"] <= 0.525
     assert 0.5199 <= c["ridge:+epa_traj"]["N8"]["all"]["spearman"] <= 0.5239
+    assert 0.5226 <= c["ridge:+qb_trend"]["N8"]["all"]["spearman"] <= 0.5266
     prop = propose_weights(cli.derive(raw, **cli.cached_inputs()))
     assert set(prop["weights"]) == set(FINAL_KEYS)
     assert all(math.isfinite(v) for v in prop["weights"].values())

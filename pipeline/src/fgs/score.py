@@ -52,6 +52,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "description": "Recent opponent-adjusted EPA per play (weighted toward the last ~4 games) minus this season's average; "
         "given the other factors, an efficiency upswing tends to fade, so it slightly lowers the score",
     },
+    "qb_trend": {
+        "label": "QB play (recent starts)",
+        "description": "Current starting QB's EPA per dropback over his recent starts, on any team; "
+        "0 for a QB with under 2 starts or before week 1",
+    },
 }
 
 SNAPSHOT = ("season", "week")
