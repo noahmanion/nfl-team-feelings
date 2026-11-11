@@ -346,6 +346,13 @@ def is_even(surplus: float) -> bool:
     return abs(float(surplus)) < EVEN
 
 
+BEYOND_TOP = 1.1  # |surplus| above 1.1 x the #1 pick's value reads "more than a #1 overall pick"
+
+
+def beyond_top_pick(amount: float, values: np.ndarray) -> bool:
+    return abs(float(amount)) > float(values[1]) * BEYOND_TOP
+
+
 def equiv_pick(amount: float, values: np.ndarray) -> int:
     """Smallest overall pick whose chart value is <= |amount| (MAX_PICK when none)."""
     a = abs(amount)

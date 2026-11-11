@@ -249,6 +249,10 @@ def draft_text(surplus: float | None, values: np.ndarray, moves_score: bool) -> 
     if draft.is_even(s):
         return f"Draft haul: about even with their original slots{tail}"
     n = draft.round_half_away(s)  # >= 1 here, so never "+0" / "−0"
+    if draft.beyond_top_pick(s, values):  # "about one extra #1 overall pick" would understate it
+        if s > 0:
+            return f"Draft haul: +{n} over their original slots (more than a #1 overall pick){tail}"
+        return f"Draft haul: \u2212{n} under their original slots (more than a #1 overall pick given up){tail}"
     noun = draft.pick_noun(draft.equiv_pick(s, values))
     if s > 0:
         return f"Draft haul: +{n} over their original slots (about one extra {noun}){tail}"

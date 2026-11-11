@@ -252,6 +252,16 @@ def test_draft_text_half_rounds_away_from_zero():
     assert explain.draft_text(0.49, v, False).startswith("Draft haul: about even")
 
 
+def test_draft_text_beyond_a_top_pick():
+    """IN-02: a haul bigger than the #1 pick (60 here) doesn't read "about one extra #1 overall pick"."""
+    v = _values()
+    assert explain.draft_text(80.0, v, False) == \
+        "Draft haul: +80 over their original slots (more than a #1 overall pick) — doesn't move the score."
+    assert explain.draft_text(-70.0, v, True) == \
+        "Draft haul: \u221270 under their original slots (more than a #1 overall pick given up)."
+    assert "about one extra #1 overall pick" in explain.draft_text(62.0, v, False)  # within 10%: still "about"
+
+
 def test_draft_text_mid_first_round_example():
     """The plan's example: +16 ~ one extra mid-first-round pick (chart value 16.2 at picks 16..24)."""
     from fgs import draft
