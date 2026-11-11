@@ -58,3 +58,8 @@ Ship the shareable "aha" layer: perception-gap callouts, biggest movers, calenda
 - OG share images (v2), accounts/sync (out of scope).
 
 </deferred>
+
+<research_revisions>
+## Accepted research revisions (08-RESEARCH, autonomous approval 2026-11-11)
+- ALL assumptions in 08-RESEARCH's Assumptions Log are accepted as recommended, including: expansion team-seasons (CLE 1999, HOU 2002) excluded from extremes and their seeded week-0 rows from streaks; |gap| ≥ 8 with cap 3 per flavor per week, REG weeks 4..second-to-last only; peers = same W-L-T at same week (1999–2021); evidence via dev-only `fgs evidence` → committed `pipeline/callout_evidence.json` (export reads it, fails if stale); hard-coded draft-date table for week-0 dates; tiebreak for extremes (min/max score → season-avg REG score → composite); past-week callouts in season files' `callouts` key, `callouts.json` = latest week; active-streak "as of" = export date.
+</research_revisions>
