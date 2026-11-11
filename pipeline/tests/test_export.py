@@ -142,6 +142,20 @@ def test_contract_written_files(real_files, tmp_path):
     assert len(list((tmp_path / "teams").iterdir())) == 32
 
 
+def test_write_export_failure_keeps_previous_export(tmp_path):
+    out = tmp_path / "data"
+    write_export({"meta.json": {"v": 1}, "teams/BUF.json": {"t": 1}}, out)
+    bad = {"meta.json": {"v": 2}, "teams/BUF.json": {"t": 2}, "zzz.json": {"x": object()}}  # fails mid-write
+    with pytest.raises(TypeError):
+        write_export(bad, out)
+    assert json.loads((out / "meta.json").read_text()) == {"v": 1}
+    assert json.loads((out / "teams" / "BUF.json").read_text()) == {"t": 1}
+    assert [p.name for p in tmp_path.iterdir()] == ["data"]  # no temp dirs left behind
+    write_export({"meta.json": {"v": 3}}, out)
+    assert sorted(p.name for p in out.iterdir()) == ["meta.json"]
+    assert [p.name for p in tmp_path.iterdir()] == ["data"]
+
+
 def test_latest_partial_week_synthetic():
     """Partial week can't be seen on today's data: un-play the last game of the latest week."""
     if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():

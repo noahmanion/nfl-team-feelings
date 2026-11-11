@@ -4,8 +4,10 @@ build_export is pure ({relative path: object}); write_export does the I/O.
 """
 
 import json
+import os
 import re
 import shutil
+import tempfile
 from pathlib import Path
 
 import polars as pl
@@ -111,11 +113,34 @@ def build_export(derived: dict[str, pl.DataFrame], teams_df: pl.DataFrame, gener
 
 
 def write_export(files: dict[str, object], out_dir: Path) -> None:
+    """Replace out_dir with exactly `files`, all at once.
+
+    Everything is written to a sibling temp dir first, then swapped in with two renames, so a
+    crash mid-write never leaves a mix of old and new files (the old set stays in place). out_dir
+    is owned by the export: anything else in it is dropped.
+    """
     out_dir = Path(out_dir)
-    for sub in ("snapshots", "teams"):
-        if (out_dir / sub).exists():
-            shutil.rmtree(out_dir / sub)
-    for rel, obj in files.items():
-        path = out_dir / rel
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    out_dir.parent.mkdir(parents=True, exist_ok=True)
+    new = Path(tempfile.mkdtemp(dir=out_dir.parent, prefix=f".{out_dir.name}.new-"))
+    new.chmod(0o755)  # mkdtemp makes it 0700; the swapped-in dir should look like a normal one
+    try:
+        for rel, obj in files.items():
+            path = new / rel
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+    except BaseException:
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+
+    if not out_dir.exists():
+        os.replace(new, out_dir)
+        return
+    old = Path(tempfile.mkdtemp(dir=out_dir.parent, prefix=f".{out_dir.name}.old-"))
+    os.replace(out_dir, old)  # POSIX: renaming a dir onto an empty dir replaces it
+    try:
+        os.replace(new, out_dir)
+    except BaseException:
+        os.replace(old, out_dir)  # put the previous export back
+        shutil.rmtree(new, ignore_errors=True)
+        raise
+    shutil.rmtree(old, ignore_errors=True)
