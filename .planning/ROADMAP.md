@@ -207,8 +207,8 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 06-03-PLAN.md — Holdout evaluator + guarded `fgs holdout`, tested only on the 2018–2021 stand-in and mocks
-- [ ] 06-04-PLAN.md — methodology.json (holdout: null) + `#/methodology` page, nav link, dot-and-whisker charts
+- [x] 06-03-PLAN.md — Holdout evaluator + guarded `fgs holdout`, tested only on the 2018–2021 stand-in and mocks
+- [x] 06-04-PLAN.md — methodology.json (holdout: null) + `#/methodology` page, nav link, dot-and-whisker charts
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -292,6 +292,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Backtest Harness & Additive Score | 4/4 | Complete    | 2026-11-11 |
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
-| 6. Weight Freeze & Methodology | 2/5 | In Progress|  |
+| 6. Weight Freeze & Methodology | 4/5 | In Progress|  |
 | 7. Draft-Aware Offseason | 0/TBD | Not started | - |
 | 8. Callouts, Records & My Team | 0/5 | Planned | - |
