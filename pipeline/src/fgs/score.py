@@ -42,6 +42,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "description": "Current win or loss streak (ties end it), up to 8, carried across seasons; "
         "given the other factors a hot streak tends to fade, so it slightly lowers the score",
     },
+    "luck": {
+        "label": "Close-game luck",
+        "description": "One-score wins minus one-score losses (8 points or fewer) over the last 16 games; "
+        "close-game luck evens out, so a lucky record lowers the score",
+    },
 }
 
 SNAPSHOT = ("season", "week")

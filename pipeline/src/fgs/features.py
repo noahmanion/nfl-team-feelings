@@ -17,6 +17,8 @@ the dev-only evaluation harness (leakage firewall).
                  pre-game Elo) at that venue; 0.0 with no games
 - streak:        signed current streak (+k after k straight wins, -k after k straight losses),
                  a tie resets it to 0, capped at +/-8, carried across seasons; 0.0 with no games
+- luck:          one-score wins minus one-score losses (|margin| <= 8, ties excluded) over the
+                 last 16 played games (REG + playoffs, crossing seasons); 0.0 with no games
 """
 
 import numpy as np
@@ -24,12 +26,13 @@ import polars as pl
 
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak"]
-GAME_FACTORS = ["mov", "sow", "streak"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow", "streak", "luck"]
+GAME_FACTORS = ["mov", "sow", "streak", "luck"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
 SOW_N = 8
 STREAK_CAP = 8
+LUCK_N, ONE_SCORE = 16, 8
 
 
 def _last16(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
@@ -109,7 +112,11 @@ def _per_game(team_games: pl.DataFrame) -> pl.DataFrame:
             pl.col("margin").clip(-MOV_CAP, MOV_CAP).alias("m_cap"),
             (1.0 / (1.0 + 10 ** (-(MEAN_ELO - pl.col("opp_elo_pre") + pl.col("hfa_s")) / 400))).alias("p_avg"),
         )
-        .with_columns((pl.col("outcome").cast(pl.Float64) - pl.col("p_avg")).alias("sow_g"))
+        .with_columns(
+            (pl.col("outcome").cast(pl.Float64) - pl.col("p_avg")).alias("sow_g"),
+            ((pl.col("margin") > 0) & (pl.col("margin") <= ONE_SCORE)).cast(pl.Float64).alias("cw"),
+            ((pl.col("margin") < 0) & (pl.col("margin") >= -ONE_SCORE)).cast(pl.Float64).alias("cl"),
+        )
         .sort("franchise_id", "key", "game_id")
     )
 
@@ -167,6 +174,7 @@ def _game_factors(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
     g = g.with_columns(
         (_win("m_cap", MOV_N) / _cnt(MOV_N)).alias("mov"),
         (_win("sow_g", SOW_N) / _cnt(SOW_N)).alias("sow"),
+        (_win("cw", LUCK_N) - _win("cl", LUCK_N)).alias("luck"),
     )
     return _asof(snap, g, GAME_FACTORS)
 

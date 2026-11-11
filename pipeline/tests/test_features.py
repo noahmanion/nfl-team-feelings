@@ -165,3 +165,29 @@ def test_streak_caps_and_resets():
     assert _v(f, 2023, 11, "A", "streak") == -1
     assert _v(f, 2023, 11, "B", "streak") == 1
     assert _v(f, 2023, 12, "A", "streak") == 0
+
+
+def test_luck_hand_computed(synthetic_games):
+    f = _feats(synthetic_games)
+    assert _v(f, 2024, 1, "BUF", "luck") == 3
+    assert _v(f, 2024, 2, "MIA", "luck") == -3
+    assert _v(f, 2023, 1, "NE", "luck") == 0  # tie excluded
+    assert _v(f, 2023, 2, "NE", "luck") == -1
+    assert _v(f, 2024, 1, "NE", "luck") == 0
+    for team in ("BUF", "MIA", "NE", "NYJ"):
+        assert _v(f, 2023, 0, team, "luck") == 0.0
+
+
+def test_luck_boundary_and_window():
+    # week 1: A wins by 8 (counts); week 2: A wins by 9 (does not); weeks 3-18: A wins by 3.
+    rows = [("g1", 2023, 1, "REG", "2023-09-01", "A", "B", 18, 10, False),
+            ("g2", 2023, 2, "REG", "2023-09-02", "A", "B", 19, 10, False)]
+    for w in range(3, 19):
+        rows.append((f"g{w}", 2023, w, "REG", f"2023-09-{w:02d}", "A", "B", 13, 10, False))
+    f = _feats(make_games(rows))
+    assert _v(f, 2023, 1, "A", "luck") == 1
+    assert _v(f, 2023, 1, "B", "luck") == -1
+    assert _v(f, 2023, 2, "A", "luck") == 1
+    # 17 one-score wins by week 18 (g1 + g3..g18); window holds g3..g18 -> 16
+    assert _v(f, 2023, 18, "A", "luck") == 16
+    assert _v(f, 2023, 18, "B", "luck") == -16
