@@ -14,7 +14,8 @@
 #   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
 #   then rounded to 2 decimals by hand. Code proposes; this file decides.
 #
-# INTERIM: these weights stand until the Phase 6 freeze. The weekly refresh never refits
+# INTERIM: these 11 weights stand until the Phase 6 freeze (final interim fit, all Phase 5
+# factors in, ridge:+po_trend, N=8 Spearman 0.5262). The weekly refresh never refits
 # them (BACK-04). Phase 6 refits once all factors exist.
 #
 # Negative weights, one line each (no positivity constraint is applied):
@@ -25,6 +26,7 @@
 #   epa_traj - given the rest, an efficiency upswing slightly fades; trajectory has ≈0 backtest
 #              gain; kept per CONTEXT; the data sets its weight
 #   vs_exp  - ≈ season_record minus preseason expectation; read the pair together (corr 0.92)
+#   po_trend - ≈0; kept per CONTEXT so the weight is reported
 #
 # last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
 # record tends to run ahead of real strength, so it predicts slightly worse future margins.
@@ -54,14 +56,19 @@
 # expectations gets a big + season_record bar and a moderate - vs_exp bar. Beating
 # expectations tends to fade (expectations usually catch up).
 # vs_exp's signal is Vegas-driven (2003–2020); 2021+ rows are model-sourced; Phase 6 holdout measures the cost
+#
+# po_trend (3-week change in simulated playoff odds, same season) is ≈0 (-0.01): it correlates
+# 0.70 with the 3-week Elo change, so Elo already carries it. Adding it moved last16 -0.19 -> -0.20
+# and vs_exp -1.24 -> -1.23 at 2 dp. Kept per CONTEXT so its weight is on record.
 weights:
   elo: 2.59
   season_record: 1.83
-  last16: -0.19
+  last16: -0.20
   mov: 1.24
   sow: -0.56
   streak: -0.05
   luck: -0.35
   epa_traj: -0.33
   qb_trend: 0.63
-  vs_exp: -1.24
+  vs_exp: -1.23
+  po_trend: -0.01
