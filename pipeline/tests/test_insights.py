@@ -11,7 +11,7 @@ NICKS = {f: f"{f}nick" for f in ("AAA", "BBB", "CCC", "DDD", "EEE", "FFF", "GGG"
 EV = {
     "train_seasons": [1999, 2021],
     "hopeful": {"n": 504, "d_margin": 3.64, "team_win": 0.547, "peer_win": 0.448},
-    "worried": {"n": 556, "d_margin": -3.15, "team_win": 0.465, "peer_win": 0.543},
+    "worried": {"n": 556, "d_margin": -3.15, "team_win": 0.4654, "peer_win": 0.543},
 }
 
 
