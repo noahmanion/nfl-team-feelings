@@ -12,7 +12,7 @@
 #   target:  mean adjusted margin over the team's next 8 games (README "Backtest target")
 #   then rounded to 2 decimals by hand. Code proposes; this file decides.
 #
-# INTERIM: these 7 weights stand until the Phase 6 freeze. The weekly refresh never refits
+# INTERIM: these weights stand until the Phase 6 freeze. The weekly refresh never refits
 # them (BACK-04). Phase 6 refits once all factors exist.
 #
 # Negative weights, one line each (no positivity constraint is applied):
@@ -20,6 +20,8 @@
 #   sow     - given Elo and margins, results running ahead of margins regress
 #   streak  - given the rest, a hot streak slightly fades (~0 backtest gain, kept)
 #   luck    - close-game wins and losses are mostly coin flips, so they even out
+#   epa_traj - given the rest, an efficiency upswing slightly fades; trajectory has ≈0 backtest
+#              gain; kept per CONTEXT; the data sets its weight
 #
 # last16 is negative on purpose: that is the backtest's verdict. Given Elo, a hot recent
 # record tends to run ahead of real strength, so it predicts slightly worse future margins.
@@ -37,11 +39,15 @@
 #
 # luck (one-score wins minus one-score losses, last 16 games) is negative, as expected: close
 # games are mostly coin flips, so a team winning lots of them is due to give some back.
+#
+# epa_traj (opponent-adjusted EPA/play: EWMA over ~4 games minus this season's mean) is slightly
+# negative (-0.20; last walk-forward fold 2021: -0.16) and adds ≈0 to the backtest.
 weights:
-  elo: 3.75
-  season_record: 0.90
-  last16: -0.56
-  mov: 1.34
-  sow: -1.07
-  streak: -0.14
-  luck: -0.30
+  elo: 3.76
+  season_record: 0.72
+  last16: -0.48
+  mov: 1.31
+  sow: -1.03
+  streak: -0.09
+  luck: -0.31
+  epa_traj: -0.20
