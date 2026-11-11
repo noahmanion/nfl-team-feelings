@@ -6,7 +6,12 @@
   import { bandIndex, moodToken } from '../lib/format'
   import type { Band, Callout, TeamMeta } from '../lib/types'
 
-  let { callout, team, bands }: { callout: Callout; team: TeamMeta | undefined; bands: Band[] } = $props()
+  let {
+    callout,
+    team,
+    bands,
+    level = 3,
+  }: { callout: Callout; team: TeamMeta | undefined; bands: Band[]; level?: number } = $props()
 
   const name = $derived(team?.name ?? callout.franchise)
   const href = $derived(calloutHref(callout))
@@ -40,7 +45,11 @@
     <TeamChip primary={team?.primary} secondary={team?.secondary} />
     <span class="name">{name}</span>
   </p>
-  <h3 class="headline">{callout.headline}</h3>
+  <!-- the team is part of the accessible heading: headlines like "5-4, but better days are coming"
+       repeat across teams (WR-07) -->
+  <svelte:element this={`h${level}`} class="headline"
+    ><span class="visually-hidden">{name}: </span>{callout.headline}</svelte:element
+  >
   <p class="detail">{callout.detail}</p>
   {#if callout.evidence}<p class="evidence">{callout.evidence}</p>{/if}
   <div class="actions">

@@ -180,7 +180,7 @@
     {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
     {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
 
-    <CalloutCards callouts={teamCallouts} {meta} heading="Callouts" />
+    <CalloutCards callouts={teamCallouts} {meta} heading="Callouts" level={3} />
 
     <div class="columns">
       <section class="block" aria-labelledby="why-heading">
