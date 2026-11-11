@@ -6,6 +6,7 @@ import {
   formatDelta,
   formatRecord,
   moodToken,
+  tickLabel,
   weekLabel,
 } from './format'
 import type { Band, SeasonMeta } from './types'
@@ -64,5 +65,24 @@ describe('bands', () => {
   })
   it('moodToken spreads other counts over 0..6', () => {
     expect([0, 1, 2, 3, 4].map((i) => moodToken(i, 5))).toEqual([0, 2, 3, 5, 6])
+  })
+})
+
+describe('tickLabel', () => {
+  it('2020 (17 regular-season weeks)', () => {
+    const s = season(2020, 17)
+    expect(tickLabel(0, s)).toBe('Pre')
+    expect(tickLabel(1, s)).toBe('Wk 1')
+    expect(tickLabel(17, s)).toBe('Wk 17')
+    expect(tickLabel(18, s)).toBe('WC')
+    expect(tickLabel(19, s)).toBe('Div')
+    expect(tickLabel(20, s)).toBe('Conf')
+    expect(tickLabel(21, s)).toBe('SB')
+  })
+  it('2021 (18 regular-season weeks)', () => {
+    const s = season(2021, 18)
+    expect(tickLabel(18, s)).toBe('Wk 18')
+    expect(tickLabel(19, s)).toBe('WC')
+    expect(tickLabel(22, s)).toBe('SB')
   })
 })
