@@ -344,3 +344,24 @@ def test_derive_carries_pbp_games(synthetic_games, monkeypatch):
     ).with_columns(pl.col("season").cast(pl.Int32), pl.col("qb_id").cast(pl.String), pl.col("qb_name").cast(pl.String))
     assert cli.derive_games(synthetic_games, scored=False, pbp_games=tge)["team_game_epa"] is tge
     assert cli.derive_games(synthetic_games, None, None, pbp_games=tge)["team_game_epa"] is tge
+
+
+# --- Phase 7 review fixes: winsor caps (IN-05, IN-06) ------------------------------------------
+
+def _sur_frame():
+    import polars as pl
+
+    rows = [(2005, f"T{i}", float(i)) for i in range(101)]
+    return pl.DataFrame(rows, schema={"season": pl.Int32, "franchise_id": pl.String, "surplus": pl.Float64},
+                        orient="row")
+
+
+def test_draft_winsor_uses_frozen_caps(capsys):
+    assert cli.draft_winsor(_sur_frame(), {"winsor": (-1.0, 2.0)}) == (-1.0, 2.0)
+    assert capsys.readouterr().err == ""
+
+
+def test_draft_winsor_missing_warns_and_recomputes(capsys):
+    """IN-06: no offseason.draft.winsor no longer drops the draft display data silently."""
+    assert cli.draft_winsor(_sur_frame(), {"winsor": None}) == (5.0, 95.0)
+    assert "no offseason.draft.winsor" in capsys.readouterr().err

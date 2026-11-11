@@ -67,10 +67,22 @@ def derive_games(
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
     cfg = score.load_offseason() if offseason is None else offseason
-    dz = (draft.draft_z(base["draft"], cfg["winsor"])
-          if base["draft"] is not None and cfg.get("winsor") is not None else None)
+    dz = (draft.draft_z(base["draft"], draft_winsor(base["draft"], cfg))
+          if base["draft"] is not None else None)
     feats = score.apply_offseason(feats, dz, cfg)
     return {**base, "features": feats, "weights": w, "offseason": cfg}
+
+
+def draft_winsor(surplus: pl.DataFrame, cfg: dict | None = None) -> tuple[float, float]:
+    """The frozen weights.yaml offseason.draft.winsor caps. Without them, recompute from the
+    2000-2021 surplus and warn on stderr (instead of silently dropping all draft display data)."""
+    cfg = score.load_offseason() if cfg is None else cfg
+    if cfg.get("winsor") is not None:
+        return tuple(cfg["winsor"])
+    b = draft.winsor_bounds(surplus)
+    print(f"warning: weights.yaml has no offseason.draft.winsor; using caps recomputed from "
+          f"2000-2021 surplus [{b[0]:+.2f}, {b[1]:+.2f}]", file=sys.stderr)
+    return b
 
 
 def derive(
