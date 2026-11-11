@@ -8,6 +8,7 @@ How should NFL fans *actually* feel about their team? A momentum-weighted, Elo-l
 cd pipeline
 uv run fgs build                                # download (once) + derive games, team_games, elo_snapshots
 uv run fgs elo --season 2026 --week 9 --top 10  # ranked Elo + W-L-T as of that week
+uv run fgs check                                # data-trust checks (team counts, games, codes, continuity, Elo); exit 1 on failure
 ```
 
 - Data is cached in `pipeline/data/` (gitignored). Re-runs read the cache; `uv run fgs ingest --refresh` re-downloads.
