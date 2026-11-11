@@ -12,7 +12,7 @@ from pathlib import Path
 
 import polars as pl
 
-from fgs import asof, season_config
+from fgs import asof, score, season_config
 from fgs.franchises import CANONICAL
 from fgs.mood import HYSTERESIS, bands_meta, score_frame
 
@@ -53,13 +53,14 @@ def _season_meta(season: int, snaps: pl.DataFrame, games: pl.DataFrame) -> dict:
     }
 
 
-def _row(r: dict) -> dict:
+def _row(r: dict, factor_keys: list[str]) -> dict:
     return {
         "franchise": r["franchise_id"], "rank": int(r["rank"]), "score": int(r["score"]),
         "elo": int(round(r["elo"])), "band": int(r["band"]), "label": r["label"], "emoji": r["emoji"],
         "wins": int(r["wins"]), "losses": int(r["losses"]), "ties": int(r["ties"]),
         "score_delta": None if r["score_delta"] is None else int(r["score_delta"]),
         "rank_delta": None if r["rank_delta"] is None else int(r["rank_delta"]),
+        "contribs": {k: round(float(r[f"contrib_{k}"]), 2) for k in factor_keys},
     }
 
 
@@ -67,6 +68,14 @@ def build_export(derived: dict[str, pl.DataFrame], teams_df: pl.DataFrame, gener
     games = derived["games"]
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
+    weights = score.load_weights()
+    factor_keys = list(weights)
+    missing = [c for c in score.contrib_columns(weights) if c not in scored.columns]
+    assert not missing, f"features frame lacks {missing}; derive with the same weights.yaml"
+    factors = [
+        {"key": k, "label": score.FACTORS[k]["label"], "weight": w, "description": score.FACTORS[k]["description"]}
+        for k, w in weights.items()
+    ]
 
     latest = asof.latest_played(games)
     assert latest is not None, "no played games"
@@ -79,14 +88,14 @@ def build_export(derived: dict[str, pl.DataFrame], teams_df: pl.DataFrame, gener
         seasons_meta.append(_season_meta(int(season), snaps, games))
         weeks: dict[str, list] = {}
         for r in snaps.iter_rows(named=True):
-            weeks.setdefault(str(r["week"]), []).append(_row(r))
+            weeks.setdefault(str(r["week"]), []).append(_row(r, factor_keys))
         files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks}
 
     s, w = latest
     files["latest.json"] = {"season": s, "week": w, "rows": files[f"snapshots/{s}.json"]["weeks"][str(w)]}
 
     files["meta.json"] = {
-        "version": 1, "score_kind": "elo", "generated_at": generated_at,
+        "version": 1, "score_kind": "composite", "factors": factors, "generated_at": generated_at,
         "data_through": asof.data_through(games, s, w),
         "latest": {"season": s, "week": w}, "partial_week": played < total,
         "seasons": seasons_meta, "bands": bands_meta(), "hysteresis": HYSTERESIS, "teams": teams,
@@ -127,7 +136,7 @@ def write_export(files: dict[str, object], out_dir: Path) -> None:
         for rel, obj in files.items():
             path = new / rel
             path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False), encoding="utf-8")
+            path.write_text(json.dumps(obj, separators=(",", ":"), ensure_ascii=False, allow_nan=False), encoding="utf-8")
     except BaseException:
         shutil.rmtree(new, ignore_errors=True)
         raise

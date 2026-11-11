@@ -1,9 +1,11 @@
 """JSON contract written by `fgs export` (D-06, D-07, D-17). Real-cache tests skip when caches are missing."""
 
 import json
+import math
 
 import polars as pl
 import pytest
+import yaml
 
 import fgs.cli as cli
 from fgs.asof import week_progress
@@ -12,13 +14,14 @@ from fgs.export import build_export, team_meta, write_export
 from fgs.franchises import CANONICAL, normalize_code
 from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
-from fgs.paths import CACHE_DIR
+from fgs.paths import CACHE_DIR, WEIGHTS_PATH
+from fgs.score import load_weights
 from fgs.season_config import n_teams
 
 ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
-            "wins", "losses", "ties", "score_delta", "rank_delta"}
+            "wins", "losses", "ties", "score_delta", "rank_delta", "contribs"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
-             "seasons", "bands", "hysteresis", "teams"}
+             "seasons", "bands", "hysteresis", "teams", "factors"}
 GEN = "2026-11-11T18:40:00+00:00"
 
 
@@ -71,9 +74,15 @@ def test_contract_meta(real_files):
     _, files = real_files
     meta = files["meta.json"]
     assert set(meta) == META_KEYS
-    assert meta["score_kind"] == "elo" and meta["version"] == 1 and meta["generated_at"] == GEN
+    assert meta["score_kind"] == "composite" and meta["version"] == 1 and meta["generated_at"] == GEN
     assert meta["hysteresis"] == 2 and len(meta["bands"]) == 7 and len(meta["teams"]) == 32
     assert [b["label"] for b in meta["bands"]] == [b["label"] for b in BANDS]
+    weights = load_weights()
+    yaml_weights = yaml.safe_load(WEIGHTS_PATH.read_text())["weights"]
+    assert [f["key"] for f in meta["factors"]] == list(weights) == list(yaml_weights)
+    for f in meta["factors"]:
+        assert set(f) == {"key", "label", "weight", "description"}
+        assert f["weight"] == yaml_weights[f["key"]] and f["label"] and f["description"]
     for s in meta["seasons"]:
         assert set(s) == {"season", "max_week", "reg_weeks", "n_teams", "week_labels"}
         assert set(s["week_labels"]) == {str(w) for w in range(s["max_week"] + 1)}
@@ -90,10 +99,14 @@ def test_contract_meta(real_files):
 def test_contract_rows(real_files):
     _, files = real_files
     meta = files["meta.json"]
+    factor_keys = [f["key"] for f in meta["factors"]]
     by_week: dict[tuple[int, int], list] = {}
     for season, week, r in _all_rows(files):
         assert set(r) == ROW_KEYS
-        for k in ROW_KEYS - {"franchise", "label", "emoji"}:
+        assert list(r["contribs"]) == factor_keys
+        for v in r["contribs"].values():
+            assert type(v) in (int, float) and math.isfinite(v) and round(v, 2) == v
+        for k in ROW_KEYS - {"franchise", "label", "emoji", "contribs"}:
             assert r[k] is None or type(r[k]) is int, (season, week, k, r[k])
         assert 0 <= r["score"] <= 100
         assert r["label"] == meta["bands"][r["band"]]["label"]
@@ -113,6 +126,17 @@ def test_contract_latest(real_files):
     assert latest["rows"] == files[f"snapshots/{s}.json"]["weeks"][str(w)]
     scores = [r["score"] for r in latest["rows"]]
     assert scores[0] >= 90 and scores[-1] <= 10
+
+
+def test_latest_rank_follows_contrib_sum(real_files):
+    """Board rank = composite order; rounded contribs sum to it within rounding."""
+    _, files = real_files
+    rows = files["latest.json"]["rows"]
+    sums = [round(sum(r["contribs"].values()), 2) for r in rows]
+    n = len(rows[0]["contribs"])
+    for a, b in zip(sums, sums[1:]):
+        assert a >= b - n * 0.005 - 1e-9, (a, b)  # tolerance: each 2dp contrib rounds by <= 0.005
+    assert [r["rank"] for r in rows] == list(range(1, len(rows) + 1))
 
 
 def test_contract_history_and_teams(real_files):
