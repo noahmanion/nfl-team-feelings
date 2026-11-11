@@ -210,16 +210,17 @@ def test_propose_weights_holdout_sealed(real_report):
 def test_ridge_composites_in_report(real_report):
     raw, report = real_report
     c = report["candidates"]
-    for name in ("ridge:elo", "ridge:+season_record", "ridge:+last16", "ridge:+mov"):
+    for name in ("ridge:elo", "ridge:+season_record", "ridge:+last16", "ridge:+mov", "ridge:+sow"):
         assert name in c and c[name]["N8"]["all"]["spearman"] is not None
         assert c[name]["last_fold_weights"]["season"] == 2021
     assert c["ridge:+last16"]["N8"]["all"]["spearman"] >= c["ridge:elo"]["N8"]["all"]["spearman"] - 0.005
     assert 0.516 <= c["ridge:+mov"]["N8"]["all"]["spearman"] <= 0.520
+    assert 0.5208 <= c["ridge:+sow"]["N8"]["all"]["spearman"] <= 0.5248
     prop = propose_weights(cli.derive(raw))
-    assert set(prop["weights"]) == {"elo", "season_record", "last16", "mov"}
+    assert set(prop["weights"]) == {"elo", "season_record", "last16", "mov", "sow"}
     assert all(math.isfinite(v) for v in prop["weights"].values())
 
 
 def test_weights_yaml_loads():
     w = load_weights(WEIGHTS_PATH)
-    assert list(w) == ["elo", "season_record", "last16", "mov"]
+    assert list(w) == ["elo", "season_record", "last16", "mov", "sow"]

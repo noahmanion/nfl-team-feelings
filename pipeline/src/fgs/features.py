@@ -12,16 +12,20 @@ the dev-only evaluation harness (leakage firewall).
                  (a baseline only, not a score factor)
 - mov:           mean point margin over the last 8 played games (REG + playoffs, crossing
                  seasons), each game's margin capped at +/-24 before averaging; 0.0 with no games
+- sow:           mean over the last 8 played games of (result - p_avg), result 1/0.5/0 and
+                 p_avg the chance a league-average (MEAN_ELO) team beats that opponent (its
+                 pre-game Elo) at that venue; 0.0 with no games
 """
 
 import polars as pl
 
 from fgs.season_config import MEAN_ELO, hfa_for
 
-FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov"]
-GAME_FACTORS = ["mov"]
+FEATURE_COLUMNS = ["elo", "season_record", "last16", "pd_pg", "mov", "sow"]
+GAME_FACTORS = ["mov", "sow"]
 LAST_N = 16
 MOV_N, MOV_CAP = 8, 24
+SOW_N = 8
 
 
 def _last16(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
@@ -136,6 +140,7 @@ def _asof(snap: pl.DataFrame, per_key: pl.DataFrame, cols: list[str]) -> pl.Data
 def _game_factors(snap: pl.DataFrame, team_games: pl.DataFrame) -> pl.DataFrame:
     g = _per_game(team_games).with_columns(
         (_win("m_cap", MOV_N) / _cnt(MOV_N)).alias("mov"),
+        (_win("sow_g", SOW_N) / _cnt(SOW_N)).alias("sow"),
     )
     return _asof(snap, g, GAME_FACTORS)
 

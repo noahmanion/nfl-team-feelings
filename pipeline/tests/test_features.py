@@ -5,6 +5,7 @@ from conftest import make_games
 from fgs.elo import replay
 from fgs.features import FEATURE_COLUMNS, build_features
 from fgs.games import build_team_games
+from fgs.season_config import MEAN_ELO, hfa_for
 from fgs.snapshots import SNAPSHOT_COLUMNS, build_grid
 
 
@@ -116,3 +117,26 @@ def test_mov_caps_each_game_and_uses_last_8():
     assert _v(f, 2023, 2, "A", "mov") == pytest.approx((24 + 10) / 2)
     assert _v(f, 2023, 8, "A", "mov") == pytest.approx((24 + 7 * 10) / 8)
     assert _v(f, 2023, 9, "A", "mov") == pytest.approx(10.0)  # week-1 game has left the window
+
+
+def _p_avg(tg, game_id, team, hfa_s):
+    opp = tg.filter((pl.col("game_id") == game_id) & (pl.col("franchise_id") != team))["elo_pre"].item()
+    return 1.0 / (1.0 + 10 ** (-(MEAN_ELO - opp + hfa_s) / 400))
+
+
+def test_sow_hand_computed(synthetic_games):
+    g, sparse = replay(synthetic_games)
+    tg = build_team_games(g)
+    f = build_features(build_grid(g, tg, sparse), tg)
+    h = hfa_for(2023)
+    for team in ("BUF", "MIA", "NE", "NYJ"):
+        assert _v(f, 2023, 0, team, "sow") == 0.0
+    b1 = 1.0 - _p_avg(tg, "2023_01_MIA_BUF", "BUF", +h)   # BUF home win
+    b2 = 1.0 - _p_avg(tg, "2023_02_BUF_NYJ", "BUF", 0.0)  # neutral win
+    assert _v(f, 2023, 1, "BUF", "sow") == pytest.approx(b1)
+    assert _v(f, 2023, 2, "BUF", "sow") == pytest.approx((b1 + b2) / 2)
+    n1 = 0.5 - _p_avg(tg, "2023_01_NYJ_NE", "NE", +h)     # tie at home
+    n2 = 0.0 - _p_avg(tg, "2023_02_NE_MIA", "NE", -h)     # away loss
+    assert _v(f, 2023, 1, "NE", "sow") == pytest.approx(n1)
+    assert _v(f, 2023, 2, "NE", "sow") == pytest.approx((n1 + n2) / 2)
+    assert _v(f, 2023, 3, "NE", "sow") == pytest.approx((n1 + n2) / 2)  # bye carries

@@ -32,6 +32,11 @@ FACTORS: dict[str, dict[str, str]] = {
         "label": "Margin of victory",
         "description": "Average point margin over the last 8 games (each capped at 24), including last season and playoffs",
     },
+    "sow": {
+        "label": "Quality of results",
+        "description": "Results over the last 8 games compared with what an average team would do against the same opponents; "
+        "given Elo and margins, results running ahead of margins tend to fade, so a high value lowers the score",
+    },
 }
 
 SNAPSHOT = ("season", "week")
