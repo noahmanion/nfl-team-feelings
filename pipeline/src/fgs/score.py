@@ -195,8 +195,22 @@ def load_offseason(path=None) -> dict:
     disp = block.get("display_only", float(w) == 0.0)
     if not isinstance(disp, bool):
         raise ValueError(f"offseason.draft.display_only must be true/false, got {disp!r}")
-    return {"weight": float(w), "display_only": disp, "chart": str(block.get("chart", draft.CHART)),
-            "winsor": win, "decay": decay}
+    cfg = {"weight": float(w), "display_only": disp, "chart": str(block.get("chart", draft.CHART)),
+           "winsor": win, "decay": decay}
+    offseason_live(cfg)  # raises when display_only and weight disagree
+    return cfg
+
+
+def offseason_live(cfg: dict) -> bool:
+    """The single source of truth for "the draft term moves the score": weight != 0. Used by
+    apply_offseason, the export and the methodology note. Raises ValueError unless display_only is
+    true exactly when the weight is 0 (a missing display_only follows the weight)."""
+    w = float(cfg.get("weight", 0.0))
+    disp = cfg.get("display_only", w == 0.0)
+    if bool(disp) != (w == 0.0):
+        raise ValueError(f"offseason.draft: display_only {disp!r} contradicts weight {w!r} "
+                         "(display_only must be true exactly when weight is 0)")
+    return w != 0.0
 
 
 def apply_offseason(feats: pl.DataFrame, draft_frame: pl.DataFrame | None, cfg: dict) -> pl.DataFrame:
@@ -215,9 +229,9 @@ def apply_offseason(feats: pl.DataFrame, draft_frame: pl.DataFrame | None, cfg: 
         out = out.with_columns(pl.lit(None, dtype=pl.Float64).alias("draft_surplus"),
                                pl.lit(None, dtype=pl.Float64).alias("draft_z"))
     out = out.with_columns(pl.col("draft_z").fill_null(0.0))
-    w = float(cfg.get("weight", 0.0))
-    if w == 0.0:
+    if not offseason_live(cfg):
         return out
+    w = float(cfg["weight"])
     dec = pl.max_horizontal(pl.lit(0.0), 1.0 - pl.col("week").cast(pl.Float64) / draft.DECAY_WEEKS)
     return out.with_columns((pl.lit(w) * pl.col("draft_z") * dec).alias("contrib_draft")).with_columns(
         (pl.col("composite_inseason") + pl.col("contrib_draft")).alias("composite")

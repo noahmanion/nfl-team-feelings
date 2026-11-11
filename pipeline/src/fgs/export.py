@@ -212,7 +212,9 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
     teams = team_meta(teams_df)
     weights = _export_weights(derived, scored)
     cfg = derived.get("offseason") or score.load_offseason()
-    draft_live = cfg["weight"] != 0 and "contrib_draft" in scored.columns
+    draft_live = score.offseason_live(cfg)  # raises on a display_only / weight mismatch
+    if draft_live and "contrib_draft" not in scored.columns:
+        raise ValueError("offseason.draft weight is nonzero but the features carry no contrib_draft")
     factor_keys = list(weights) + (["draft"] if draft_live else [])
     ref = mood.reference_values(derived["features"])  # the same frozen reference score_frame used
     baseline = explain.baseline(ref)
@@ -230,7 +232,7 @@ def build_export(derived: dict, teams_df: pl.DataFrame, generated_at: str) -> di
         factors.append({"key": "draft", "label": od["label"], "weight": cfg["weight"], "description": od["description"]})
     values = derived.get("draft_values")
     draft_ctx = {
-        "values": values, "moves_score": cfg["weight"] != 0, "ranks": _draft_ranks(scored),
+        "values": values, "moves_score": draft_live, "ranks": _draft_ranks(scored),
         # the week-0 lead may mention draft capital only when the score carries it (CR-03); with
         # weight 0 the draft is shown only in its own "doesn't move the score" line
         "threshold": None if values is None or not draft_live else float(values[64]),

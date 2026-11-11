@@ -319,6 +319,12 @@ def test_draft_gate_needs_positive_delta():
     assert g["weight"] == 0.0 and g["display_only"] is True
 
 
+def test_draft_gate_rounds_to_zero_is_a_fail():
+    """WR-01: a fit in (0, 0.005) would ship as weight 0.00 with display_only false."""
+    g = draft_gate([0.004] * 19, final_w=0.004, d_wk0=0.01)
+    assert g["weight"] == 0.0 and g["display_only"] is True
+
+
 def test_draft_gate_needs_60pct_folds():
     g = draft_gate([0.2] * 11 + [-0.2] * 8, final_w=0.2, d_wk0=0.01)
     assert g["weight"] == 0.0 and g["display_only"] is True

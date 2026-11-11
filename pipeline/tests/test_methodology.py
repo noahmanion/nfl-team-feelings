@@ -246,6 +246,17 @@ def test_draft_note_positive_weight_and_factor():
     assert f["fold_sign"] == {"k": 15, "of": 19} and f["sign"] == "+"
 
 
+def test_draft_live_matches_export_rule():
+    """WR-01: methodology and export share score.offseason_live: a tiny nonzero weight is live (a
+    factor, not "didn't pass the gate"), and a display_only/weight mismatch raises."""
+    off = {**OFF0, "weight": 0.004, "display_only": False}
+    m = build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": off}}, FREEZE, None, live=2026)
+    assert m["factors"][-1]["key"] == "draft"
+    assert "didn’t pass the gate" not in next(n for n in m["notes"] if n["key"] == "draft")["text"]
+    with pytest.raises(ValueError, match="display_only"):
+        build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": {**OFF0, "weight": 0.3}}}, FREEZE, None, live=2026)
+
+
 def test_no_draft_note_without_offseason_block():
     m = build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)
     assert "draft" not in {n["key"] for n in m["notes"]}

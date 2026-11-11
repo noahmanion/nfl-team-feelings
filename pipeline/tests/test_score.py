@@ -145,6 +145,27 @@ def test_load_offseason_invalid(tmp_path, bad):
         load_offseason(_w(tmp_path, BASE_YAML + OFF_YAML.replace(*bad)))
 
 
+@pytest.mark.parametrize("w,disp", [("0.30", "true"), ("0.00", "false"), ("0.004", "true")])
+def test_load_offseason_display_only_must_match_weight(tmp_path, w, disp):
+    """WR-01: display_only must be true exactly when weight is 0, or the score could move while
+    the metadata says "display only"."""
+    text = OFF_YAML.replace("weight: 0.00", f"weight: {w}").replace("display_only: true", f"display_only: {disp}")
+    with pytest.raises(ValueError, match="display_only"):
+        load_offseason(_w(tmp_path, BASE_YAML + text))
+
+
+def test_offseason_live_single_source():
+    from fgs.score import offseason_live
+
+    assert offseason_live({"weight": 0.0, "display_only": True}) is False
+    assert offseason_live({"weight": 0.004, "display_only": False}) is True
+    assert offseason_live({"weight": 0.0}) is False
+    with pytest.raises(ValueError):
+        offseason_live({"weight": 0.3, "display_only": True})
+    with pytest.raises(ValueError):
+        apply_offseason(_off_frame(), DRAFT_Z, {"weight": 0.3, "display_only": True})
+
+
 def _off_frame():
     rows = [(2020, wk, t, float(i) + 0.1 * wk) for wk in range(6) for i, t in enumerate(["A", "B", "C"])]
     return pl.DataFrame(rows, schema=["season", "week", "franchise_id", "composite"], orient="row")

@@ -178,7 +178,7 @@ def _draft_note(block: dict) -> dict:
         parts.append(f"the week-0 change in Spearman was {fmt_delta(delta)}")
     evidence = (", ".join(parts[:-1]) + ", and " + parts[-1]) if len(parts) > 1 else "".join(parts)
     text = "Draft capital over original slots was tested as an offseason term on top of the frozen score."
-    if round(w, 2) == 0:
+    if not score.offseason_live(block):  # same test the export uses for "moves the score"
         verdict = "it didn’t pass the gate and the draft doesn’t move the score (it’s shown as text only)"
     else:
         verdict = (f"it passed the gate: it adds {fmt_weight(w)} × the capped draft z to scores at week 0, "
@@ -402,7 +402,7 @@ def build_methodology(weights: dict[str, float], doc: dict | None, freeze: dict 
         })
 
     od = _offseason_draft(doc)
-    if od is not None and round(float(od.get("weight", 0.0)), 2) != 0:
+    if od is not None and score.offseason_live(od):
         # a live offseason term is a real score input: list it (never at weight 0, display only)
         w = float(od["weight"])
         rw = round(w, 2) + 0.0

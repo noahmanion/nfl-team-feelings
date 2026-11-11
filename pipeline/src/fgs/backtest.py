@@ -698,7 +698,10 @@ def draft_gate(fold_ws: list[float], final_w: float, d_wk0: float | None) -> dic
     n = len(fold_ws)
     k = sum(1 for w in fold_ws if np.sign(w) == np.sign(final_w))
     same = k / n if n else 0.0
-    ok = d_wk0 is not None and d_wk0 > 0 and same >= DRAFT_GATE_FOLDS and final_w > 0
+    # round(final_w, 2) > 0: the shipped weight is 2 dp, so a fit in (0, 0.005) would ship as
+    # "weight 0.00, display_only false" (WR-01); that is a failure
+    ok = (d_wk0 is not None and d_wk0 > 0 and same >= DRAFT_GATE_FOLDS and final_w > 0
+          and round(float(final_w), 2) > 0)
     return {"weight": round(float(final_w), 2) if ok else 0.0, "fitted": float(final_w), "delta_wk0": d_wk0,
             "fold_sign_consistency": same, "k": k, "n": n, "display_only": not ok}
 

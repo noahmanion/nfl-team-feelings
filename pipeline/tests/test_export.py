@@ -544,7 +544,7 @@ def _draft_export(monkeypatch, cfg):
     monkeypatch.setattr(season_config, "REF_SEASONS", (2023, 2023))
 
     weights = {"elo": 2.0, "season_record": 1.0}
-    derived = derive_games(games, weights=weights, offseason={**cfg, "weight": 0.0})
+    derived = derive_games(games, weights=weights, offseason={**cfg, "weight": 0.0, "display_only": True})
     feats = derived["features"].drop("composite_inseason", "draft_surplus", "draft_z")
     dz = pl.DataFrame({"season": [2024] * 4, "franchise_id": teams,
                        "surplus": [50.0, -30.0, 0.2, 5.0], "draft_z": [1.2, -1.5, 0.0, 0.3]})
