@@ -43,8 +43,11 @@
     const i = meta.bands.findIndex((b) => score >= b.min && score <= b.max)
     return i < 0 ? 'var(--border)' : `var(--mood-${moodToken(i, meta.bands.length)})`
   }
-  const streakStripe = (kind: 'misery' | 'joy') =>
-    meta.bands.length ? `var(--mood-${kind === 'misery' ? 0 : 6})` : 'var(--border)'
+  // lowest band for misery, highest for joy, mapped through moodToken like scoreStripe (IN-03)
+  const streakStripe = (kind: 'misery' | 'joy') => {
+    const n = meta.bands.length
+    return n ? `var(--mood-${moodToken(kind === 'misery' ? 0 : n - 1, n)})` : 'var(--border)'
+  }
 
   function whenLabel(e: ExtremeEntry): string {
     const s = findSeason(meta, e.season)
