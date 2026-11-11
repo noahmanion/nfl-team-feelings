@@ -45,10 +45,18 @@ export function seasonStarts(h: HistoryFile, xs: number[]): SeasonStart[] {
   return out
 }
 
-/** Season ticks: every 2nd season at >= 500px wide, every 5th below; always the first. */
+/**
+ * Season ticks: every 2nd season at >= 500px wide, every 5th below. The first season
+ * is added only when it is at least `every` seasons before the next tick, so no two
+ * ticks are ever closer than the step (1999 and 2000 would otherwise overlap).
+ */
 export function tickSeasons(starts: SeasonStart[], width: number): SeasonStart[] {
+  if (!starts.length) return []
   const every = width >= 500 ? 2 : 5
-  return starts.filter((d, i) => i === 0 || d.season % every === 0)
+  const picked = starts.filter((d) => d.season % every === 0)
+  const first = starts[0]
+  if (!picked.length || (picked[0] !== first && picked[0].season - first.season >= every)) picked.unshift(first)
+  return picked
 }
 
 // ---- colour contrast (WCAG 2.x) ----

@@ -49,14 +49,25 @@ describe('seasonStarts / tickSeasons', () => {
       { season: 2001, x: 4 },
     ])
   })
-  it('thins ticks on narrow screens, always keeping the first season', () => {
+  it('thins ticks on narrow screens and never places two ticks closer than the step', () => {
     const starts = Array.from({ length: 28 }, (_, i) => ({ season: 1999 + i, x: i * 10 }))
     const wide = tickSeasons(starts, 960).map((d) => d.season)
     const narrow = tickSeasons(starts, 343).map((d) => d.season)
-    expect(wide[0]).toBe(1999)
-    expect(wide.slice(1).every((s) => s % 2 === 0)).toBe(true)
-    expect(narrow).toEqual([1999, 2000, 2005, 2010, 2015, 2020, 2025])
+    // 1999 is dropped: 2000 is only one season after it
+    expect(wide[0]).toBe(2000)
+    expect(wide.every((s) => s % 2 === 0)).toBe(true)
+    expect(narrow).toEqual([2000, 2005, 2010, 2015, 2020, 2025])
     expect(narrow.length).toBeLessThan(wide.length)
+    for (const [ticks, step] of [[wide, 2], [narrow, 5]] as const) {
+      for (let i = 1; i < ticks.length; i++) expect(ticks[i] - ticks[i - 1]).toBeGreaterThanOrEqual(step)
+    }
+  })
+  it('keeps the first season only when no tick lands within a step of it', () => {
+    const starts = Array.from({ length: 12 }, (_, i) => ({ season: 2002 + i, x: i * 10 }))
+    expect(tickSeasons(starts, 343).map((d) => d.season)).toEqual([2005, 2010])
+    const odd = Array.from({ length: 6 }, (_, i) => ({ season: 1997 + i, x: i * 10 }))
+    expect(tickSeasons(odd, 960).map((d) => d.season)).toEqual([1998, 2000, 2002])
+    expect(tickSeasons([{ season: 2001, x: 0 }], 960).map((d) => d.season)).toEqual([2001])
   })
 })
 
