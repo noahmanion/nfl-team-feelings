@@ -20,7 +20,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 5: Efficiency, QB Trend & Season Simulator** - PBP-based efficiency and QB trajectory factors, Monte Carlo simulator, expectations and playoff-odds factors (completed 2026-11-11)
 - [x] **Phase 6: Weight Freeze & Methodology** - Ridge-fit, human-rounded weights, one-time 2022–2025 holdout, beats plain Elo, methodology page (completed 2026-11-11)
 - [x] **Phase 7: Draft-Aware Offseason** - Between seasons the score reacts to draft surplus over slot expectation, without rewarding tanking (completed 2026-11-11)
-- [ ] **Phase 8: Callouts, Records & My Team** - Perception-gap callouts, calendar-day misery/joy streaks, historical extremes, movers strip, records page, "my team" pin
+- [x] **Phase 8: Callouts, Records & My Team** - Perception-gap callouts, calendar-day misery/joy streaks, historical extremes, movers strip, records page, "my team" pin (completed 2026-11-11)
 
 ## Phase Details
 
@@ -275,7 +275,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 08-05-PLAN.md — Web: "my team" pin (localStorage) highlighted on board, chart, records and callouts
+- [x] 08-05-PLAN.md — Web: "my team" pin (localStorage) highlighted on board, chart, records and callouts
 
 **UI hint**: yes
 **Research**: Needed. Perception-gap baseline (record-implied rank, threshold, base-rate evidence line).
@@ -294,4 +294,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 5/5 | Complete    | 2026-11-11 |
 | 7. Draft-Aware Offseason | 4/4 | Complete    | 2026-11-11 |
-| 8. Callouts, Records & My Team | 4/5 | In Progress|  |
+| 8. Callouts, Records & My Team | 5/5 | Complete   | 2026-11-11 |
