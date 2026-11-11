@@ -1,0 +1,116 @@
+# Requirements: Feel-Good Score
+
+**Defined:** 2026-11-11
+**Core Value:** A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
+
+## v1 Requirements
+
+### Data Foundation
+
+- [ ] **DATA-01**: Pipeline loads all games 1999→present (schedules, scores, spreads, starting QBs) from nflverse via nflreadpy and caches them locally
+- [ ] **DATA-02**: Every team maps to a stable franchise ID so relocated teams (OAK→LV, SD→LAC, STL→LA) and renames (Washington) have one unbroken history
+- [ ] **DATA-03**: A season-config table encodes era rules (31 teams 1999–2001, HOU from 2002, 16→17 games in 2021, 12→14 playoff teams in 2020, divisions)
+- [ ] **DATA-04**: Ties (0.5), neutral sites, and cancelled games (BUF–CIN 2022) are handled without crashes or miscounts
+- [ ] **DATA-05**: Per-team-game play-by-play aggregates (EPA/play, garbage-time filtered; QB EPA/dropback + success rate) are computed for 1999→present, with 1999–2000 flagged low-confidence
+- [ ] **DATA-06**: Draft picks and a draft-value chart are loaded for every season
+- [ ] **DATA-07**: Data checks assert franchise counts per season, games per team-season, and no unmatched team abbreviations
+
+### Rating Model
+
+- [ ] **MODEL-01**: A base Elo rating (margin-of-victory, era-aware home-field advantage, offseason regression to mean) is computed chronologically for every team after every game
+- [ ] **MODEL-02**: A (season, week, franchise) snapshot grid holds every team's as-of state each week, including bye weeks and a week-0 preseason snapshot
+- [ ] **MODEL-03**: Factor: current-season record
+- [ ] **MODEL-04**: Factor: rolling last-16-games record across season boundaries
+- [ ] **MODEL-05**: Factor: efficiency trajectory (EWMA of opponent-adjusted EPA vs season-to-date level) as the "WAR improvement" proxy
+- [ ] **MODEL-06**: Factor: strength of win — margin of victory, as its own input
+- [ ] **MODEL-07**: Factor: opponent quality — opponent's pre-game rating, as its own input
+- [ ] **MODEL-08**: Factor: performance vs preseason expectation (model-derived expected wins; Vegas win totals override where available, with source tagged)
+- [ ] **MODEL-09**: Factor: current win/loss streak
+- [ ] **MODEL-10**: Factor: close-game luck (one-score game results)
+- [ ] **MODEL-11**: Factor: QB play trend for the current starting QB
+- [ ] **MODEL-12**: Factor: playoff-odds trend
+- [ ] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
+- [ ] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
+- [ ] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
+- [ ] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
+
+### Backtest & Tuning
+
+- [ ] **BACK-01**: The primary target (opponent- and HFA-adjusted average margin over the next 4–8 games) is documented in the README before any tuning
+- [ ] **BACK-02**: A walk-forward-by-season backtest compares the score against baselines: plain Elo, season win %, last-16 win %, point differential, and the Vegas spread as a ceiling
+- [ ] **BACK-03**: A leakage test (appending fake future games changes no past score) passes
+- [ ] **BACK-04**: Weights are fit with Ridge on standardized inputs, rounded by a human, and committed to `weights.yaml`; the weekly refresh never refits
+- [ ] **BACK-05**: 2022–2025 is held out and evaluated once after weights are frozen, with season-level bootstrap confidence intervals and the fitted sign of every factor reported
+- [ ] **BACK-06**: The final score beats the plain-Elo baseline out of sample
+
+### Insights
+
+- [ ] **INSIGHT-01**: Every score maps to a playful mood label from historical percentile bands, with hysteresis so labels don't flicker week to week
+- [ ] **INSIGHT-02**: Perception-gap callouts flag teams whose record-implied rank differs sharply from their score rank ("8-2 but you should feel worried")
+- [ ] **INSIGHT-03**: Misery and joy streaks are measured in calendar days ("miserable for 600 straight days")
+- [ ] **INSIGHT-04**: Historical extremes (saddest and happiest fanbases ever) are computed and the top 10 of each are manually sanity-checked
+- [ ] **INSIGHT-05**: Each team gets an auto-generated plain-English one-liner explaining its biggest score drivers
+- [ ] **INSIGHT-06**: Week-over-week biggest movers are computed
+
+### Site
+
+- [ ] **SITE-01**: User sees a league-wide mood board of all 32 teams ranked by feel-good score, with record, mood label, and weekly change
+- [ ] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
+- [ ] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
+- [ ] **SITE-04**: User can scrub the mood board to any season/week since 1999
+- [ ] **SITE-05**: User sees a biggest-movers strip for the current week
+- [ ] **SITE-06**: User can browse a records page of historical extremes and longest misery/joy streaks
+- [ ] **SITE-07**: User can read a methodology page explaining the factors, fitted weights and signs, and a backtest chart vs baselines
+- [ ] **SITE-08**: User can pin "my team" and see it highlighted across views (remembered locally)
+- [ ] **SITE-09**: Shareable callouts are surfaced on the board and team pages
+- [ ] **SITE-10**: Site works on mobile and shows a "last updated" stamp; every view has a hash deep link
+
+### Pipeline
+
+- [ ] **PIPE-01**: One command refreshes data and regenerates all JSON after each week's games (full replay), tested on a partial week
+- [ ] **PIPE-02**: The JSON contract (meta, latest, snapshots, teams, history, callouts) is the only interface between the pipeline and the site
+- [ ] **PIPE-03**: The site runs locally with a single command, and the README documents what the idea is, how to run it, and where it stands
+
+## v2 Requirements
+
+### Model
+
+- **MODEL-V2-01**: "Good loss" / deserved-to-win luck modeling
+- **MODEL-V2-02**: Offseason reaction to free agency
+- **MODEL-V2-03**: Hand-entered 2021+ Vegas win totals (~192 values) to override the model-derived expectation
+
+### Site
+
+- **SITE-V2-01**: Auto-generated share images (OG cards) for callouts
+- **SITE-V2-02**: EPA scatter / additional exploratory charts
+- **SITE-V2-03**: Deploy to Vercel as a static site
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| Fan sentiment inputs (Reddit, Trends, polls) | The point is to correct fan perception, not mirror it |
+| Tanking "hope" bump | Never reward tanking |
+| User-tunable weight sliders | Fixed, backtested weights are the product |
+| Betting picks / against-the-spread recommendations | Not a gambling tool |
+| Live / in-game updates | Weekly refresh is enough |
+| Accounts / logins | Local "my team" pin is sufficient |
+| Paid data (PFF WAR, etc.) | Free data only |
+| Decimal-precision scores in the UI | False precision |
+| NFL logos on a public deploy | Licensing; use team color chips |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+
+**Coverage:**
+- v1 requirements: 48 total
+- Mapped to phases: 0
+- Unmapped: 48 ⚠️
+
+---
+*Requirements defined: 2026-11-11*
+*Last updated: 2026-11-11 after initial definition*
