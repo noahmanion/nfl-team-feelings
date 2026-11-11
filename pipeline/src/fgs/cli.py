@@ -518,6 +518,9 @@ def _cmd_evidence(args) -> int:
     lo, hi = ev["train_seasons"]
     for f in ("hopeful", "worried"):
         e = ev[f]
+        if not e["n"]:  # WR-03: an empty flavor ships no evidence line (insights.evidence_text)
+            print(f"{f:8s} n=0  no cases ({lo}–{hi}, |gap| >= {ev['threshold']}); its callouts get no evidence line")
+            continue
         print(f"{f:8s} n={e['n']}  d_margin={e['d_margin']:+.2f}  next-8 win {e['team_win']:.1%} vs peers "
               f"{e['peer_win']:.1%}  ({lo}–{hi}, |gap| >= {ev['threshold']}, weeks {ev['first_week']}+)")
     print(f"wrote {out} (weights fingerprint {fp}); commit it")

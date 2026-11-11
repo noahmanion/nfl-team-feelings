@@ -213,7 +213,8 @@ def _load_evidence(fp_weights: dict[str, float], evidence: dict | None = None) -
     """The committed perception-gap base rates (pipeline/callout_evidence.json, read at call time via
     paths.CALLOUT_EVIDENCE_PATH unless passed in), checked against the current config and weights so
     stale numbers can never ship (ValueError, not assert: survives python -O). Only reads JSON:
-    the export never imports fgs.evidence (it imports the backtest)."""
+    the export never imports fgs.evidence (it imports the backtest). A flavor with no usable cases
+    (n=0, null rates) is accepted: insights.evidence_text then omits its evidence line (WR-03)."""
     if evidence is None:
         path = paths.CALLOUT_EVIDENCE_PATH
         if not path.exists():

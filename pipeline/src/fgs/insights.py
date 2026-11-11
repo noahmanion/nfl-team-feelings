@@ -44,11 +44,23 @@ def ordinal_best(n: int) -> str:
     return f"{n}{suffix}-best"
 
 
+def _rate(x: object) -> bool:
+    return isinstance(x, (int, float)) and not isinstance(x, bool) and 0.0 <= float(x) <= 1.0
+
+
 def evidence_text(flavor: str, ev: dict | None) -> str | None:
+    """The base-rate line for one flavor, or None (no evidence line) when there is no evidence or
+    the flavor has no usable cases (WR-03: fgs evidence writes n=0 with null rates when a threshold
+    change leaves a flavor empty; a missing or malformed entry is treated the same way)."""
     if ev is None:
         return None
-    e = ev[flavor]
-    lo, hi = ev["train_seasons"]
+    e = ev.get(flavor)
+    seasons = ev.get("train_seasons")
+    if (not isinstance(e, dict) or not isinstance(e.get("n"), int) or isinstance(e.get("n"), bool) or e["n"] <= 0
+            or not _rate(e.get("team_win")) or not _rate(e.get("peer_win"))
+            or not isinstance(seasons, (list, tuple)) or len(seasons) != 2):
+        return None
+    lo, hi = seasons
     return (f"Teams with a gap this big won {round(100 * e['team_win'])}% of their next 8 games; "
             f"teams with the same record won {round(100 * e['peer_win'])}% ({e['n']} cases, {lo}–{hi}).")
 

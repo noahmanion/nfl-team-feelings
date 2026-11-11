@@ -186,6 +186,31 @@ def test_copy_evidence_text():
     assert insights.evidence_text("hopeful", None) is None
 
 
+@pytest.mark.parametrize("entry", [
+    {"n": 0, "d_margin": None, "team_win": None, "peer_win": None},  # what peer_stats writes for no cases
+    {"n": 5, "team_win": None, "peer_win": 0.4},
+    {"n": 5, "team_win": "0.5", "peer_win": 0.4},
+    None,  # flavor key missing
+])
+def test_copy_evidence_text_zero_or_bad_cases_gives_no_line(entry):
+    """WR-03: no evidence line (and no crash) for an empty or malformed flavor."""
+    ev = {"train_seasons": [1999, 2021], "worried": {"n": 9, "team_win": 0.4, "peer_win": 0.5}}
+    if entry is not None:
+        ev["hopeful"] = entry
+    assert insights.evidence_text("hopeful", ev) is None
+    assert insights.evidence_text("worried", ev) is not None
+
+
+def test_gap_callouts_with_zero_case_evidence_do_not_crash():
+    """WR-03: gap callouts still ship (evidence None) when a flavor has no cases."""
+    ev = {"train_seasons": [1999, 2021], "hopeful": {"n": 0, "d_margin": None, "team_win": None, "peer_win": None},
+          "worried": {"n": 0, "d_margin": None, "team_win": None, "peer_win": None}}
+    rows = [{"franchise_id": "AAA", "wins": 3, "losses": 1, "record_rank": 2, "rank": 13},
+            {"franchise_id": "BBB", "wins": 1, "losses": 3, "record_rank": 21, "rank": 1}]
+    out = insights.gap_callouts(_ranked(rows), NICKS, ev)
+    assert {c["type"] for c in out} == {"hopeful", "worried"} and all(c["evidence"] is None for c in out)
+
+
 # --- movers ---------------------------------------------------------------------------------------
 
 def _mover_frame(deltas: dict[str, tuple[int | None, int | None, int]], week: int = 5) -> pl.DataFrame:
