@@ -753,6 +753,9 @@ def format_draft_report(res: dict, gate: dict, date: str) -> str:
         f" -> weight {gate['weight']:.2f}" + (", display only" if gate["display_only"] else ""))
     p = res["partial_wk0"]
     seasons = res["fold_seasons"]
+    if not seasons:  # no fold could be tested: nothing to report
+        return ("offseason draft term: no walk-forward folds were produced (no training drafts before "
+                f"the test seasons?); {verdict}")
     lines = [
         "offseason draft term on the FROZEN composite: training-only walk-forward (holdout consumed by Phase 6)",
         f"surplus {draft.FIRST_DRAFT}-{TRAIN_LAST_SEASON}, test seasons {seasons[0]}-{seasons[-1]}, "

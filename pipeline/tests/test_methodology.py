@@ -257,6 +257,15 @@ def test_draft_live_matches_export_rule():
         build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": {**OFF0, "weight": 0.3}}}, FREEZE, None, live=2026)
 
 
+def test_draft_note_templates_seasons_and_tolerates_bad_fold_sign():
+    """IN-07: the season range comes from the recorded test_seasons; a malformed fold_sign is skipped."""
+    off = {**OFF0, "test_seasons": "2005-2021", "fold_sign": "8 of 19"}
+    m = build_methodology(WEIGHTS, {**DOC, "offseason": {"draft": off}}, FREEZE, None, live=2026)
+    note = next(n for n in m["notes"] if n["key"] == "draft")
+    assert "training-only walk-forward (2005–2021)" in note["text"]
+    assert "fold_sign_k" not in note["values"] and "folds agreed" not in note["text"]
+
+
 def test_no_draft_note_without_offseason_block():
     m = build_methodology(WEIGHTS, DOC, FREEZE, None, live=2026)
     assert "draft" not in {n["key"] for n in m["notes"]}

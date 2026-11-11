@@ -151,12 +151,28 @@ def _offseason_draft(doc: dict | None) -> dict | None:
 
 
 def _fold_pair(fs) -> tuple[int, int] | None:
-    """Recorded fold-sign agreement "k/n" (or [k, n]) -> (k, n)."""
-    if isinstance(fs, str) and "/" in fs:
-        k, n = fs.split("/", 1)
-        return int(k), int(n)
-    if isinstance(fs, (list, tuple)) and len(fs) == 2:
-        return int(fs[0]), int(fs[1])
+    """Recorded fold-sign agreement "k/n" (or [k, n]) -> (k, n); None when missing or malformed."""
+    try:
+        if isinstance(fs, str) and "/" in fs:
+            k, n = fs.split("/", 1)
+            return int(k), int(n)
+        if isinstance(fs, (list, tuple)) and len(fs) == 2:
+            return int(fs[0]), int(fs[1])
+    except (TypeError, ValueError):
+        return None
+    return None
+
+
+def _season_range(v) -> tuple[int, int] | None:
+    """Recorded "2003-2021" (or [2003, 2021]) -> (2003, 2021); None when missing or malformed."""
+    try:
+        if isinstance(v, str) and "-" in v:
+            a, b = v.split("-", 1)
+            return int(a), int(b)
+        if isinstance(v, (list, tuple)) and len(v) == 2:
+            return int(v[0]), int(v[1])
+    except (TypeError, ValueError):
+        return None
     return None
 
 
@@ -184,7 +200,10 @@ def _draft_note(block: dict) -> dict:
         verdict = (f"it passed the gate: it adds {fmt_weight(w)} × the capped draft z to scores at week 0, "
                    "fading to nothing by week 4")
     text += f" {evidence}, so {verdict}." if evidence else f" So {verdict}."
-    text += (" This evidence is training-only walk-forward (2003–2021); the 2022–2025 holdout was already used "
+    t0, t1 = (_season_range(block.get("test_seasons"))
+              or (season_config.FIRST_TEST_SEASON, season_config.TRAIN_LAST_SEASON))
+    h0, h1 = season_config.HOLDOUT_SEASONS
+    text += (f" This evidence is training-only walk-forward ({t0}–{t1}); the {h0}–{h1} holdout was already used "
              "to judge the in-season score.")
     return {"key": "draft", "text": text, "values": values}
 

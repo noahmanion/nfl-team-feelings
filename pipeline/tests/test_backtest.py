@@ -396,6 +396,15 @@ def test_draft_report_contains_block():
     assert "| 2026-11-11 | draft |" in txt
 
 
+def test_draft_report_without_folds():
+    """IN-07: no folds (e.g. too few drafts) must not raise IndexError."""
+    res = {"winsor": [-1.0, 1.0], "fold_seasons": [], "fold_weights": [], "final": 0.0, "delta_wk0": None,
+           "delta_wk0_3": None, "seasons_pos": "0/0", "partial_wk0": {"coef": None, "t": None}, "n_rows": 0}
+    g = draft_gate([], 0.0, None)
+    txt = format_draft_report(res, g, "2026-11-11")
+    assert "no walk-forward folds" in txt and "display only" in txt
+
+
 def test_draft_walk_forward_never_sees_holdout(real_derived, monkeypatch):
     import fgs.backtest as bt
     import fgs.draft as dr
