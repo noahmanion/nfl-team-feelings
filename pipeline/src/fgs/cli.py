@@ -1,15 +1,17 @@
-"""`fgs` command line: ingest, build, elo, check."""
+"""`fgs` command line: ingest, build, elo, check, export."""
 
 import argparse
 import sys
+from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks
+from fgs import checks, export
+from fgs.asof import data_through, latest_played
 from fgs.elo import EloParams, replay
 from fgs.games import build_games, build_team_games
-from fgs.ingest import load_schedules
-from fgs.paths import DERIVED_DIR
+from fgs.ingest import load_schedules, load_teams
+from fgs.paths import DERIVED_DIR, WEB_DATA_DIR
 from fgs.snapshots import build_grid
 
 
@@ -37,24 +39,9 @@ def build_all(refresh: bool = False) -> dict[str, pl.DataFrame]:
     return {"raw": raw, **out}
 
 
-def _latest_played(games: pl.DataFrame, season: int | None = None) -> tuple[int, int] | None:
-    """(season, week) of the latest played game, from cached data only (D-24)."""
-    played = games.filter(pl.col("played"))
-    if season is not None:
-        played = played.filter(pl.col("season") == season)
-    if played.is_empty():
-        return None
-    s = played["season"].max() if season is None else season
-    return int(s), int(played.filter(pl.col("season") == s)["week"].max())
-
-
-def _data_through(games: pl.DataFrame, season: int, week: int) -> str:
-    """Max gameday among played games at or before (season, week)."""
-    played = games.filter(
-        pl.col("played")
-        & ((pl.col("season") < season) | ((pl.col("season") == season) & (pl.col("week") <= week)))
-    )
-    return str(played["gameday"].max()) if not played.is_empty() else "n/a"
+# Kept under the old names so existing callers/tests keep working.
+_latest_played = latest_played
+_data_through = data_through
 
 
 def _cmd_ingest(args) -> int:
@@ -141,6 +128,21 @@ def _cmd_check(args) -> int:
     return 1 if failed else 0
 
 
+def _cmd_export(args) -> int:
+    derived = derive(load_schedules())  # cache only (downloads once if missing)
+    teams = load_teams()
+    generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    files = export.build_export(derived, teams, generated_at=generated_at)
+    out_dir = WEB_DATA_DIR  # module global read at call time so tests can monkeypatch it
+    export.write_export(files, out_dir)
+    meta = files["meta.json"]
+    print(
+        f"exported {len(files)} files to {out_dir}; latest {meta['latest']['season']} "
+        f"week {meta['latest']['week']} (partial={meta['partial_week']})"
+    )
+    return 0
+
+
 def _report(name: str, fails: list[str]) -> bool:
     print(f"{'FAIL' if fails else 'ok':<4}  {name}")
     for msg in fails:
@@ -170,6 +172,9 @@ def main(argv: list[str] | None = None) -> int:
 
     p = sub.add_parser("check", help="run all data-trust checks; exit 1 on any failure")
     p.set_defaults(func=_cmd_check)
+
+    p = sub.add_parser("export", help="write the site JSON contract to web/public/data from cached data; no network")
+    p.set_defaults(func=_cmd_export)
 
     args = parser.parse_args(argv)
     return args.func(args)
