@@ -19,8 +19,8 @@
 
 - [x] **MODEL-01**: A base Elo rating (margin-of-victory, era-aware home-field advantage, offseason regression to mean) is computed chronologically for every team after every game
 - [x] **MODEL-02**: A (season, week, franchise) snapshot grid holds every team's as-of state each week, including bye weeks and a week-0 preseason snapshot
-- [ ] **MODEL-03**: Factor: current-season record
-- [ ] **MODEL-04**: Factor: rolling last-16-games record across season boundaries
+- [x] **MODEL-03**: Factor: current-season record
+- [x] **MODEL-04**: Factor: rolling last-16-games record across season boundaries
 - [ ] **MODEL-05**: Factor: efficiency trajectory (EWMA of opponent-adjusted EPA vs season-to-date level) as the "WAR improvement" proxy
 - [ ] **MODEL-06**: Factor: strength of win — margin of victory, as its own input
 - [ ] **MODEL-07**: Factor: opponent quality — opponent's pre-game rating, as its own input
@@ -30,15 +30,15 @@
 - [ ] **MODEL-11**: Factor: QB play trend for the current starting QB
 - [ ] **MODEL-12**: Factor: playoff-odds trend
 - [ ] **MODEL-13**: A Monte Carlo season simulator with era rules and simplified tiebreakers produces weekly playoff odds and preseason expected wins, cached per (season, week, model version)
-- [ ] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
+- [x] **MODEL-14**: The feel-good score is a strictly additive sum of weight × per-snapshot z-score, with each factor's contribution stored
 - [ ] **MODEL-15**: Single score — the backtest decides every weight and sign (streak and luck included, even if negative or ~0)
 - [ ] **MODEL-16**: Between seasons, the score reacts to the draft via draft value *above* what the team's original slot would yield (capped), so tanking is never rewarded
 
 ### Backtest & Tuning
 
-- [ ] **BACK-01**: The primary target (opponent- and HFA-adjusted average margin over the next 4–8 games) is documented in the README before any tuning
-- [ ] **BACK-02**: A walk-forward-by-season backtest compares the score against baselines: plain Elo, season win %, last-16 win %, point differential, and the Vegas spread as a ceiling
-- [ ] **BACK-03**: A leakage test (appending fake future games changes no past score) passes
+- [x] **BACK-01**: The primary target (opponent- and HFA-adjusted average margin over the next 4–8 games) is documented in the README before any tuning
+- [x] **BACK-02**: A walk-forward-by-season backtest compares the score against baselines: plain Elo, season win %, last-16 win %, point differential, and the Vegas spread as a ceiling
+- [x] **BACK-03**: A leakage test (appending fake future games changes no past score) passes
 - [ ] **BACK-04**: Weights are fit with Ridge on standardized inputs, rounded by a human, and committed to `weights.yaml`; the weekly refresh never refits
 - [ ] **BACK-05**: 2022–2025 is held out and evaluated once after weights are frozen, with season-level bootstrap confidence intervals and the fitted sign of every factor reported
 - [ ] **BACK-06**: The final score beats the plain-Elo baseline out of sample
@@ -56,7 +56,7 @@
 
 - [x] **SITE-01**: User sees a league-wide mood board of all 32 teams ranked by feel-good score, with record, mood label, and weekly change
 - [ ] **SITE-02**: User can click a team for a deep-dive: score, mood label, one-liner, factor breakdown (diverging bars summing to the score), and recent games
-- [ ] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
+- [x] **SITE-03**: User can view a mood-over-time chart of every team from 1999→present, with one team highlighted, a fixed y-axis, and breaks at season boundaries
 - [x] **SITE-04**: User can scrub the mood board to any season/week since 1999
 - [ ] **SITE-05**: User sees a biggest-movers strip for the current week
 - [ ] **SITE-06**: User can browse a records page of historical extremes and longest misery/joy streaks
@@ -114,8 +114,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DATA-07 | Phase 1 | Complete |
 | MODEL-01 | Phase 1 | Complete |
 | MODEL-02 | Phase 1 | Complete |
-| MODEL-03 | Phase 3 | Pending |
-| MODEL-04 | Phase 3 | Pending |
+| MODEL-03 | Phase 3 | Complete |
+| MODEL-04 | Phase 3 | Complete |
 | MODEL-05 | Phase 5 | Pending |
 | MODEL-06 | Phase 4 | Pending |
 | MODEL-07 | Phase 4 | Pending |
@@ -125,12 +125,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MODEL-11 | Phase 5 | Pending |
 | MODEL-12 | Phase 5 | Pending |
 | MODEL-13 | Phase 5 | Pending |
-| MODEL-14 | Phase 3 | Pending |
+| MODEL-14 | Phase 3 | Complete |
 | MODEL-15 | Phase 6 | Pending |
 | MODEL-16 | Phase 7 | Pending |
-| BACK-01 | Phase 3 | Pending |
-| BACK-02 | Phase 3 | Pending |
-| BACK-03 | Phase 3 | Pending |
+| BACK-01 | Phase 3 | Complete |
+| BACK-02 | Phase 3 | Complete |
+| BACK-03 | Phase 3 | Complete |
 | BACK-04 | Phase 6 | Pending |
 | BACK-05 | Phase 6 | Pending |
 | BACK-06 | Phase 6 | Pending |
@@ -142,7 +142,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | INSIGHT-06 | Phase 8 | Pending |
 | SITE-01 | Phase 2 | Complete |
 | SITE-02 | Phase 4 | Pending |
-| SITE-03 | Phase 3 | Pending |
+| SITE-03 | Phase 3 | Complete |
 | SITE-04 | Phase 2 | Complete |
 | SITE-05 | Phase 8 | Pending |
 | SITE-06 | Phase 8 | Pending |
