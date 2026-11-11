@@ -29,7 +29,7 @@ def derive_games(
     games: pl.DataFrame, params: EloParams | None = None, weights: dict[str, float] | None = None,
     scored: bool = True, *, pbp_games: pl.DataFrame | None = None, vegas: pl.DataFrame | None = None,
     sim_cache_dir=None, sim_write_cache: bool = True, draft_picks: pl.DataFrame | None = None,
-    draft_values=None,
+    draft_values=None, offseason: dict | None = None,
 ) -> dict:
     """Pure (apart from reading weights.yaml when weights is None and the sim cache): normalized games ->
     games (with Elo), team_games, snapshots (the Elo grid), features (factors + composite) and
@@ -45,7 +45,11 @@ def derive_games(
     frame, or None) is carried through as derived["vegas"]. With draft_picks (draft.normalize_picks
     frame) and draft_values (draft.value_table array) both given, derived["draft"] is the
     draft.surplus_table frame (else None; also when scored=False, the backtest needs it), and
-    derived["draft_values"] carries the value array for pick-equivalent text."""
+    derived["draft_values"] carries the value array for pick-equivalent text.
+
+    Scored: score.apply_offseason adds the draft display columns (draft_surplus, draft_z,
+    composite_inseason) and, only for a nonzero weights.yaml offseason.draft weight, contrib_draft.
+    offseason overrides score.load_offseason() (tests); derived["offseason"] is the config used."""
     games, sparse = replay(games, params)
     team_games = build_team_games(games)
     snapshots = build_grid(games, team_games, sparse)
@@ -62,7 +66,11 @@ def derive_games(
     feats = features.build_features(snapshots, team_games, pbp_games=pbp_games, sim=sim_frame, vegas=vegas)
     w = dict(score.load_weights() if weights is None else weights)
     feats = score.composite(feats, w)
-    return {**base, "features": feats, "weights": w}
+    cfg = score.load_offseason() if offseason is None else offseason
+    dz = (draft.draft_z(base["draft"], cfg["winsor"])
+          if base["draft"] is not None and cfg.get("winsor") is not None else None)
+    feats = score.apply_offseason(feats, dz, cfg)
+    return {**base, "features": feats, "weights": w, "offseason": cfg}
 
 
 def derive(

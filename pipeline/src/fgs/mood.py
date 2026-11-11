@@ -85,6 +85,10 @@ def reference_values(
     and week <= reg_weeks(season) (week 0 + REG). ref_seasons None -> season_config.REF_SEASONS,
     read at call time. Shared by score_frame and fgs.explain so they can never drift apart."""
     lo, hi = season_config.REF_SEASONS if ref_seasons is None else ref_seasons
+    # The reference is always the IN-SEASON composite (Phase 7): a nonzero offseason draft term
+    # must never move the reference, and so never move past scores of other weeks.
+    if value == "composite" and "composite_inseason" in df.columns:
+        value = "composite_inseason"
     rw = df["season"].map_elements(reg_weeks, return_dtype=pl.Int32)
     ref = df.filter(pl.col("season").is_between(lo, hi) & (pl.col("week") <= rw))[value].to_numpy()
     if ref.size == 0:

@@ -13,7 +13,7 @@ import math
 import polars as pl
 import yaml
 
-from fgs import paths
+from fgs import draft, paths
 
 FACTORS: dict[str, dict[str, str]] = {
     "elo": {
@@ -142,3 +142,83 @@ def composite(df: pl.DataFrame, weights: dict[str, float], by=SNAPSHOT) -> pl.Da
     df = zscore(df, list(weights), by=by)
     df = df.with_columns((pl.lit(float(w)) * pl.col(f"z_{f}")).alias(f"contrib_{f}") for f, w in weights.items())
     return df.with_columns(pl.sum_horizontal(contrib_columns(weights)).alias("composite"))
+
+
+# ---------------------------------------------------------------------------
+# Offseason draft term (Phase 7, MODEL-16)
+# ---------------------------------------------------------------------------
+# Kept OUT of FACTORS and the frozen `weights:` block (load_weights rejects unknown keys there and
+# the Phase 6 freeze owns it). Its weight lives in weights.yaml `offseason.draft`, decided by the
+# training-only gate in `fgs backtest --draft`.
+
+OFFSEASON_FACTORS: dict[str, dict[str, str]] = {
+    "draft": {
+        "label": "Draft capital over slot",
+        "description": "Draft-pick value gained or lost by trades vs the team's original slots (stuart chart, "
+        "capped); counts fully at week 0 and fades to nothing by week 4",
+    },
+}
+DECAY_NAME = "linear_to0_by_wk4"
+
+
+def _finite_number(v) -> bool:
+    return not isinstance(v, bool) and isinstance(v, (int, float)) and math.isfinite(v)
+
+
+def load_offseason(path=None) -> dict:
+    """weights.yaml `offseason.draft` -> {"weight", "display_only", "chart", "winsor", "decay"}.
+
+    A missing block means weight 0.0 / display only / no winsor. Invalid values raise ValueError;
+    unknown (evidence) keys are ignored."""
+    doc = load_weights_doc(path)
+    decay = [draft.decay(w) for w in range(draft.DECAY_WEEKS)]
+    off = doc.get("offseason")
+    if off is not None and not isinstance(off, dict):
+        raise ValueError("offseason must be a mapping")
+    block = None if off is None else off.get("draft")
+    if block is None:
+        return {"weight": 0.0, "display_only": True, "chart": draft.CHART, "winsor": None, "decay": decay}
+    if not isinstance(block, dict):
+        raise ValueError("offseason.draft must be a mapping")
+    w = block.get("weight", 0.0)
+    if not _finite_number(w):
+        raise ValueError(f"offseason.draft.weight must be a finite number, got {w!r}")
+    win = block.get("winsor")
+    if win is not None:
+        if (not isinstance(win, list) or len(win) != 2 or not all(_finite_number(v) for v in win)
+                or not win[0] < win[1]):
+            raise ValueError(f"offseason.draft.winsor must be [lo, hi] finite numbers with lo < hi, got {win!r}")
+        win = (float(win[0]), float(win[1]))
+    dname = block.get("decay", DECAY_NAME)
+    if dname != DECAY_NAME:
+        raise ValueError(f"offseason.draft.decay must be {DECAY_NAME!r}, got {dname!r}")
+    disp = block.get("display_only", float(w) == 0.0)
+    if not isinstance(disp, bool):
+        raise ValueError(f"offseason.draft.display_only must be true/false, got {disp!r}")
+    return {"weight": float(w), "display_only": disp, "chart": str(block.get("chart", draft.CHART)),
+            "winsor": win, "decay": decay}
+
+
+def apply_offseason(feats: pl.DataFrame, draft_frame: pl.DataFrame | None, cfg: dict) -> pl.DataFrame:
+    """Always add composite_inseason (= composite as given), draft_surplus (null without a draft row)
+    and draft_z (0.0 when null). Only a nonzero cfg["weight"] adds contrib_draft = w * draft_z *
+    decay(week) (weeks 0-3) and composite = composite_inseason + contrib_draft."""
+    out = feats.with_columns(pl.col("composite").alias("composite_inseason"))
+    if draft_frame is not None:
+        dz = draft_frame.select(
+            pl.col("season").cast(feats.schema["season"]), "franchise_id",
+            pl.col("surplus").cast(pl.Float64).alias("draft_surplus"),
+            pl.col("draft_z").cast(pl.Float64),
+        )
+        out = out.join(dz, on=["season", "franchise_id"], how="left")
+    else:
+        out = out.with_columns(pl.lit(None, dtype=pl.Float64).alias("draft_surplus"),
+                               pl.lit(None, dtype=pl.Float64).alias("draft_z"))
+    out = out.with_columns(pl.col("draft_z").fill_null(0.0))
+    w = float(cfg.get("weight", 0.0))
+    if w == 0.0:
+        return out
+    dec = pl.max_horizontal(pl.lit(0.0), 1.0 - pl.col("week").cast(pl.Float64) / draft.DECAY_WEEKS)
+    return out.with_columns((pl.lit(w) * pl.col("draft_z") * dec).alias("contrib_draft")).with_columns(
+        (pl.col("composite_inseason") + pl.col("contrib_draft")).alias("composite")
+    )
