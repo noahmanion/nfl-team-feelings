@@ -9,11 +9,11 @@
 
 - [x] **DATA-01**: Pipeline loads all games 1999→present (schedules, scores, spreads, starting QBs) from nflverse via nflreadpy and caches them locally
 - [x] **DATA-02**: Every team maps to a stable franchise ID so relocated teams (OAK→LV, SD→LAC, STL→LA) and renames (Washington) have one unbroken history
-- [ ] **DATA-03**: A season-config table encodes era rules (31 teams 1999–2001, HOU from 2002, 16→17 games in 2021, 12→14 playoff teams in 2020, divisions)
+- [x] **DATA-03**: A season-config table encodes era rules (31 teams 1999–2001, HOU from 2002, 16→17 games in 2021, 12→14 playoff teams in 2020, divisions)
 - [x] **DATA-04**: Ties (0.5), neutral sites, and cancelled games (BUF–CIN 2022) are handled without crashes or miscounts
 - [ ] **DATA-05**: Per-team-game play-by-play aggregates (EPA/play, garbage-time filtered; QB EPA/dropback + success rate) are computed for 1999→present, with 1999–2000 flagged low-confidence
 - [ ] **DATA-06**: Draft picks and a draft-value chart are loaded for every season
-- [ ] **DATA-07**: Data checks assert franchise counts per season, games per team-season, and no unmatched team abbreviations
+- [x] **DATA-07**: Data checks assert franchise counts per season, games per team-season, and no unmatched team abbreviations
 
 ### Rating Model
 
@@ -107,11 +107,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 |-------------|-------|--------|
 | DATA-01 | Phase 1 | Complete |
 | DATA-02 | Phase 1 | Complete |
-| DATA-03 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Complete |
 | DATA-04 | Phase 1 | Complete |
 | DATA-05 | Phase 5 | Pending |
 | DATA-06 | Phase 7 | Pending |
-| DATA-07 | Phase 1 | Pending |
+| DATA-07 | Phase 1 | Complete |
 | MODEL-01 | Phase 1 | Complete |
 | MODEL-02 | Phase 1 | Complete |
 | MODEL-03 | Phase 3 | Pending |

@@ -46,7 +46,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 01-02-PLAN.md — Era rules in season_config + `fgs check` data checks (counts, games/team, codes, continuity, divisions, zero-sum)
+- [x] 01-02-PLAN.md — Era rules in season_config + `fgs check` data checks (counts, games/team, codes, continuity, divisions, zero-sum)
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -172,7 +172,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Data Foundation & Elo Core | 1/3 | In Progress|  |
+| 1. Data Foundation & Elo Core | 2/3 | In Progress|  |
 | 2. Elo Mood Board | 0/TBD | Not started | - |
 | 3. Backtest Harness & Additive Score | 0/TBD | Not started | - |
 | 4. Game-Result Factors & Team Deep-Dive | 0/TBD | Not started | - |
