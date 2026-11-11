@@ -1,0 +1,25 @@
+[project]
+name = "fgs"
+version = "0.1.0"
+description = "Feel-good score pipeline: nflverse ingest, franchise normalization, 538-style Elo replay"
+requires-python = ">=3.13"
+dependencies = [
+    "nflreadpy==0.1.5",
+    "numpy>=2.5.4",
+    "polars>=2.1.0",
+]
+
+[project.scripts]
+fgs = "fgs.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.10.12,<0.11.0"]
+build-backend = "uv_build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
