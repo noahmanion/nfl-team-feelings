@@ -232,7 +232,7 @@ Plans:
 **Wave 1**
 
 - [ ] 07-01-PLAN.md — Draft data (picks + stuart chart) and surplus-over-original-slot engine, `fgs draft`, DATA-06 checks, derived['draft']
-- [ ] 07-02-PLAN.md — Web: dashed offseason connector, week-0 "vs end of last season", draft line on team page (contract-first)
+- [x] 07-02-PLAN.md — Web: dashed offseason connector, week-0 "vs end of last season", draft line on team page (contract-first)
 
 **Wave 2** *(blocked on 07-01)*
 
@@ -293,5 +293,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Game-Result Factors & Team Deep-Dive | 4/4 | Complete    | 2026-11-11 |
 | 5. Efficiency, QB Trend & Season Simulator | 5/5 | Complete    | 2026-11-11 |
 | 6. Weight Freeze & Methodology | 5/5 | Complete    | 2026-11-11 |
-| 7. Draft-Aware Offseason | 0/TBD | Not started | - |
+| 7. Draft-Aware Offseason | 1/4 | In Progress|  |
 | 8. Callouts, Records & My Team | 0/5 | Planned | - |
