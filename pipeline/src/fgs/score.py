@@ -103,6 +103,8 @@ def load_weights_doc(path=None) -> dict:
             doc = yaml.safe_load(fh)
     except FileNotFoundError:
         raise ValueError(f"weights file not found: {path}") from None
+    except yaml.YAMLError as e:
+        raise ValueError(f"weights file is not valid YAML: {path}: {e}") from None
     return doc if isinstance(doc, dict) else {}
 
 

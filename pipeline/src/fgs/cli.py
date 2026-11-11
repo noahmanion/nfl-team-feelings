@@ -406,10 +406,13 @@ def _write_atomic(pairs: list) -> None:
 
 
 def _weights_frozen() -> bool:
-    """score.is_frozen() on paths.WEIGHTS_PATH; a missing/unreadable file is not frozen."""
+    """score.is_frozen() on paths.WEIGHTS_PATH; a missing/unreadable file is not frozen.
+    A file that exists but can't be parsed is reported, so a guard's "not frozen" isn't misleading."""
     try:
         return score.is_frozen()
-    except ValueError:
+    except ValueError as e:
+        if paths.WEIGHTS_PATH.exists():
+            print(f"warning: {e}", file=sys.stderr)
         return False
 
 

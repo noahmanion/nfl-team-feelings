@@ -474,6 +474,14 @@ def test_holdout_guard_weights_missing(holdout_paths, capsys):
     assert "not frozen" in capsys.readouterr().err
 
 
+def test_holdout_guard_weights_malformed(holdout_paths, capsys):
+    # IN-07: a YAML error is a clear message, not a traceback
+    (holdout_paths / "weights.yaml").write_text("frozen: true\nweights: {elo: [1,\n")
+    assert cli.main(["holdout"]) == 1
+    err = capsys.readouterr().err
+    assert "not valid YAML" in err and "not frozen" in err
+
+
 def test_holdout_guard_prereg_missing(holdout_paths, capsys):
     (holdout_paths / "PREREGISTRATION.md").unlink()
     assert cli.main(["holdout"]) == 1
