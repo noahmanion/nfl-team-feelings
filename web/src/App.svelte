@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import HistoryPage from './components/HistoryPage.svelte'
   import BoardHeading from './components/BoardHeading.svelte'
   import MoodBoard from './components/MoodBoard.svelte'
   import Scrubber from './components/Scrubber.svelte'
@@ -133,7 +134,7 @@
 </script>
 
 <div class="page">
-  <SiteHeader />
+  <SiteHeader current={route.current.kind === 'history' ? 'history' : 'board'} />
 
   <main>
     {#if status === 'error'}
@@ -141,6 +142,8 @@
         The data files are missing or unreadable. If you’re running this locally, run <code>uv run fgs refresh</code>
         in <code>pipeline/</code>, then try again.
       </StatusPanel>
+    {:else if route.current.kind === 'history' && status === 'ready' && meta && latestFile}
+      <HistoryPage {meta} latestRows={latestFile.rows} team={route.current.team} />
     {:else}
       <Scrubber
         {meta}

@@ -1,7 +1,16 @@
+<script lang="ts">
+  let { current = 'board' }: { current?: 'board' | 'history' } = $props()
+</script>
+
 <header class="site-header">
   <p class="wordmark">Feel-Good Score</p>
   <h1>How should you feel about your team?</h1>
   <p class="subhead">Every NFL team, ranked by how good their fans should feel right now.</p>
+  <nav aria-label="Views">
+    <a href="#/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
+    <span class="sep" aria-hidden="true">·</span>
+    <a href="#/history" aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a>
+  </nav>
 </header>
 
 <style>
@@ -20,6 +29,37 @@
     font-weight: var(--weight-semibold);
   }
   .subhead {
+    color: var(--text-muted);
+  }
+  nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-sm);
+  }
+  nav a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: var(--tap-min);
+    color: var(--text);
+    font-size: var(--text-body);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+  }
+  nav a[aria-current='page'] {
+    border-bottom-color: var(--accent);
+  }
+  nav a:hover {
+    border-bottom-color: var(--border);
+  }
+  nav a[aria-current='page']:hover {
+    border-bottom-color: var(--accent);
+  }
+  nav a:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .sep {
     color: var(--text-muted);
   }
   @media (min-width: 1024px) {
