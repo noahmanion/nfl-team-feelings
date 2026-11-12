@@ -62,6 +62,27 @@
     }
   })
 
+  // D-11 (WR-04): only draw the line-end logo once its image has actually loaded. A 404 or blocked
+  // image would otherwise leave an empty disc, a gap before the label and a widened gutter.
+  const logoUrl = $derived(logosEnabled() ? logoSrc(team) : null)
+  let logoOk = $state<string | null>(null)
+  $effect(() => {
+    const s = logoUrl
+    if (!s) return
+    let live = true
+    const img = new Image()
+    img.onload = () => {
+      if (live) logoOk = s
+    }
+    img.onerror = () => {
+      if (live && logoOk === s) logoOk = null
+    }
+    img.src = s
+    return () => {
+      live = false
+    }
+  })
+
   // Rendered text width in px; canvas measure with the container's font, else a rough estimate.
   function textWidth(texts: string[], px: number, weight = 400): number {
     const font = container ? getComputedStyle(container).fontFamily : 'sans-serif'
@@ -90,8 +111,8 @@
     const GAP = 10
     // One small logo at the highlighted line's last point (D-10); the label sits just past it.
     const logoPx = width >= 900 ? 24 : LOGO_MARK_PX
-    const src = logosEnabled() ? logoSrc(team) : null
-    const drawLogo = !!src && last.length > 0
+    const src = logoUrl
+    const drawLogo = !!src && src === logoOk && last.length > 0
     const labelDx = drawLogo ? logoPx / 2 + 4 : TEAM_DX
     const teamCol = Math.ceil(TEAM_DX + textWidth([team, 'WWW'], TEAM_FONT_PX, 600) + (drawLogo ? logoPx + 4 : 0))
     const bandCol = showBandLabels ? Math.ceil(GAP + textWidth(bands.map((b) => b.label), BAND_FONT_PX) + 4) : 0
