@@ -296,4 +296,9 @@ describe('share page meta copy', () => {
     const m = calloutShareMeta(worried, realMeta)
     expect(m.title).toBe('Cleveland Browns: 5-4, but you should feel worried')
   })
+
+  it('calloutShareMeta ends an unpunctuated (mover) detail with a period before the week', () => {
+    const mover = { ...joy, type: 'mover_down' as const, franchise: 'MIN', headline: 'Vikings −17', detail: 'Buying the jersey → Cautiously smug' }
+    expect(calloutShareMeta(mover, realMeta).description).toBe('Buying the jersey → Cautiously smug. Week 9 · 2026, on the Feel-Good Score.')
+  })
 })

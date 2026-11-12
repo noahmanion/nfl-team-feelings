@@ -144,7 +144,8 @@ export function calloutShareMeta(
   const nick = eraNick(c.franchise, c.season, meta)
   return {
     title: headline.startsWith(nick) ? headline : `${name}: ${headline}`,
-    description: `${detail} ${wl} · ${c.season}, on the Feel-Good Score.`,
+    // UI review fix 1: mover details have no terminal period; add one so the week doesn't run on.
+    description: `${/[.?!]$/.test(detail) ? detail : `${detail}.`} ${wl} · ${c.season}, on the Feel-Good Score.`,
     imageAlt: `${name}: ${headline}. ${detail}`,
     linkName: name,
   }

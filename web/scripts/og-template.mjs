@@ -203,7 +203,11 @@ export function calloutCard(vm) {
     : h('div', { ...detailStyle, display: 'block', lineClamp: 2 }, clampText(detailText, 110))
   return frame(
     solidStripe(stripe),
-    body(
+    // UI review fix 2: the body grows and the claim block centers in the free space, so short
+    // claims (movers) don't leave a ~150px void above the footer.
+    h(
+      'div',
+      { display: 'flex', flexDirection: 'column', flexGrow: 1 },
       h(
         'div',
         { display: 'flex', flexDirection: 'row', justifyContent: kicker ? 'space-between' : 'flex-end', height: 32 },
@@ -220,9 +224,13 @@ export function calloutCard(vm) {
       gap(32),
       h(
         'div',
-        { display: 'flex', boxSizing: 'border-box', flexDirection: 'column', gap: 16, width: 1072, borderLeft: `${CARD.stripe}px solid ${stripe}`, paddingLeft: 24 },
-        h('div', { display: 'block', lineClamp: 2, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, clampText(vm.headline, 68)),
-        detail,
+        { display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'center' },
+        h(
+          'div',
+          { display: 'flex', boxSizing: 'border-box', flexDirection: 'column', gap: 16, width: 1072, borderLeft: `${CARD.stripe}px solid ${stripe}`, paddingLeft: 24 },
+          h('div', { display: 'block', lineClamp: 2, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, clampText(vm.headline, 68)),
+          detail,
+        ),
       ),
     ),
     footer(vm.host),
@@ -238,9 +246,10 @@ export function siteCard({ host }) {
     body(
       h('div', { ...meta24 }, 'Every NFL team · Every week'),
       gap(32),
-      h('div', { display: 'block', lineClamp: 2, width: 1072, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, 'How should you feel about your NFL team?'),
+      // UI review fix 3: explicit, balanced line breaks (no one-word widows).
+      h('div', { display: 'flex', flexDirection: 'column', width: 1072, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, h('div', {}, 'How should you feel'), h('div', {}, 'about your NFL team?')),
       gap(16),
-      h('div', { display: 'block', lineClamp: 2, width: 1072, fontWeight: 400, fontSize: 36, lineHeight: '44px', color: CARD.muted }, 'A momentum-weighted, backtested score from 0 to 100, with a mood label on top.'),
+      h('div', { display: 'flex', flexDirection: 'column', width: 1072, fontWeight: 400, fontSize: 36, lineHeight: '44px', color: CARD.muted }, h('div', {}, 'A momentum-weighted, backtested score from 0 to 100,'), h('div', {}, 'with a mood label on top.')),
       gap(32),
       h('div', { display: 'flex', width: 1072 }, scale(24)),
       gap(8),
