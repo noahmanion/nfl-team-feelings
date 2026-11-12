@@ -10,14 +10,16 @@
   import Sparkline from './Sparkline.svelte'
   import StatusPanel from './StatusPanel.svelte'
   import TeamLogo from './TeamLogo.svelte'
+  import WinTotals from './WinTotals.svelte'
   import { cardCallouts, forTeam, forWeek } from '../lib/callouts'
-  import { findSeason, loadGames, loadRecords, loadSeason } from '../lib/data'
+  import { findSeason, loadGames, loadRecords, loadSeason, loadTeam } from '../lib/data'
   import { bandIndex, formatRecord, moodToken, weekLabel } from '../lib/format'
   import { formatDate, streakLine } from '../lib/records'
   import { boardHash, historyHash, teamHash } from '../lib/router'
   import { findTeamRow, playoffText, recentGames, seasonSeries, stepWeek } from '../lib/team'
   import { eraName, eraText } from '../lib/teamNames'
-  import type { ActiveStreak, GamesFile, Meta, SeasonFile } from '../lib/types'
+  import type { ActiveStreak, GamesFile, Meta, SeasonFile, TeamFile } from '../lib/types'
+  import { winTotalsView } from '../lib/winTotals'
 
   let { meta, team, season, week, latest }: { meta: Meta; team: string; season: number; week: number; latest: boolean } =
     $props()
@@ -110,6 +112,26 @@
     }
   })
 
+  // ---- team file (preseason expectations, D-21): display-only extra, failure omits the section ----
+  let teamFile = $state<{ team: string; file: TeamFile | null; failed?: boolean } | null>(null)
+
+  $effect(() => {
+    const t = team
+    let live = true
+    loadTeam(meta, t).then(
+      (file) => {
+        if (live) teamFile = { team: t, file }
+      },
+      (err) => {
+        console.error(err)
+        if (live) teamFile = { team: t, file: null, failed: true }
+      },
+    )
+    return () => {
+      live = false
+    }
+  })
+
   const activeStreak = $derived(latest && streak?.team === team ? streak.active : null)
   const streakText = $derived(streakLine(activeStreak))
   const streakAsOf = $derived(latest && streak?.team === team ? streak.asOf : null)
@@ -132,6 +154,15 @@
 
   const when = $derived(`${season} · ${seasonMeta ? weekLabel(week, seasonMeta) : `Week ${week}`}`)
   const ok = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
+  const tf = $derived(teamFile?.team === team ? teamFile : null)
+  const expectLoading = $derived(!tf)
+  const viewRec = $derived(
+    row && ok(row.wins) && ok(row.losses) ? { wins: row.wins, losses: row.losses, ties: ok(row.ties) ? row.ties : 0 } : null,
+  )
+  // Omit on failure or when the season has neither a Vegas line nor an expectation (UI-SPEC states).
+  const showExpect = $derived(
+    !tf?.failed && (expectLoading || (!!tf?.file && winTotalsView(tf.file, season, viewRec) !== null)),
+  )
   const record = $derived(
     row && ok(row.wins) && ok(row.losses) ? formatRecord(row.wins, row.losses, ok(row.ties) ? row.ties : 0) : '–',
   )
@@ -233,27 +264,42 @@
         </ChartFrame>
       </section>
 
-      <section class="block" aria-labelledby="games-heading">
-        <h3 id="games-heading">Recent games</h3>
-        {#if gamesFailed}
-          <StatusPanel
-            variant="error"
-            title="Couldn’t load recent games"
-            body="The game list didn’t load."
-            actions={[{ label: 'Try again', onClick: () => gamesRetry++ }]}
-          />
-        {:else if games}
-          <RecentGames {games} {meta} currentSeason={season} />
-        {:else}
-          <p class="loading" role="status">Loading games…</p>
+      <div class="right">
+        {#if showExpect}
+          <section class="block" aria-labelledby="expect-heading">
+            <WinTotals
+              file={tf?.file ?? null}
+              loading={expectLoading}
+              {season}
+              rec={viewRec}
+              primary={teamMeta?.primary ?? ''}
+              secondary={teamMeta?.secondary ?? ''}
+            />
+          </section>
         {/if}
 
-        {#if series.length >= 2}
-          <h3 class="spark-heading">This season</h3>
-          <Sparkline {series} primary={teamMeta?.primary} secondary={teamMeta?.secondary} {baseline} />
-        {/if}
-        <a class="more" href={historyHash(team)}>Mood over time →</a>
-      </section>
+        <section class="block" aria-labelledby="games-heading">
+          <h3 id="games-heading">Recent games</h3>
+          {#if gamesFailed}
+            <StatusPanel
+              variant="error"
+              title="Couldn’t load recent games"
+              body="The game list didn’t load."
+              actions={[{ label: 'Try again', onClick: () => gamesRetry++ }]}
+            />
+          {:else if games}
+            <RecentGames {games} {meta} currentSeason={season} />
+          {:else}
+            <p class="loading" role="status">Loading games…</p>
+          {/if}
+
+          {#if series.length >= 2}
+            <h3 class="spark-heading">This season</h3>
+            <Sparkline {series} primary={teamMeta?.primary} secondary={teamMeta?.secondary} {baseline} />
+          {/if}
+          <a class="more" href={historyHash(team)}>Mood over time →</a>
+        </section>
+      </div>
     </div>
   {/if}
 </article>
@@ -378,6 +424,12 @@
   }
   /* sections carry their own rule-top spacing, so the stack itself adds no gap */
   .columns {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  /* right column (>=1024): expectations above recent games; one grid item, the .block rules space it */
+  .right {
     display: flex;
     flex-direction: column;
     min-width: 0;
