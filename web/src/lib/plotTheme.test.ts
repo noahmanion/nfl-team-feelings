@@ -6,9 +6,11 @@ describe('withTheme', () => {
   it('merges the theme without clobbering caller style keys', () => {
     const out = withTheme({ width: 300, style: { fontSize: '14px' } })
     expect(out.width).toBe(300)
-    expect(out.style.fontSize).toBe('14px')
-    expect(out.style.fontFamily).toBe('var(--font-mono)')
-    expect(out.style.background).toBe('transparent')
+    // T is inferred from the input, so the merged theme keys are only visible at runtime
+    const style = out.style as Record<string, string>
+    expect(style.fontSize).toBe('14px')
+    expect(style.fontFamily).toBe('var(--font-mono)')
+    expect(style.background).toBe('transparent')
   })
 
   it('applies themeStyle as-is when the caller has no style and adds no title keys', () => {
