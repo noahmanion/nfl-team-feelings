@@ -68,7 +68,7 @@ export interface Candidate { key: string; label: string; brier_only?: boolean }
 export type CI = [number, number]
 export interface MetricCI { value: number | null; ci: CI | null; ci_season?: CI | null }
 export type PeriodMetrics = Record<string, MetricCI>
-export interface DiffMetric { value: number; ci_season?: CI; ci_cluster?: CI; seasons_won?: number; of?: number;
+export interface DiffMetric { value: number | null; ci_season?: CI; ci_cluster?: CI; seasons_won?: number; of?: number;
   per_season?: unknown }
 export type DiffBlock = Record<string, DiffMetric>
 export interface WalkForwardBlock { seasons: [number, number]; label: string; spearman_n8: PeriodMetrics;
