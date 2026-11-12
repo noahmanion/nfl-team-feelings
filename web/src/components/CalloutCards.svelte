@@ -25,7 +25,7 @@
     <svelte:element this={`h${level}`} id={headingId} class="callouts-heading">{heading}</svelte:element>
     <div class="grid">
       {#each first as c (key(c))}
-        <CalloutCard callout={c} team={meta.teams[c.franchise]} bands={meta.bands} level={level + 1} />
+        <CalloutCard callout={c} team={meta.teams[c.franchise]} bands={meta.bands} {meta} level={level + 1} />
       {/each}
     </div>
     {#if rest.length > 0}
@@ -33,7 +33,7 @@
         <summary>Show all {callouts.length}</summary>
         <div class="grid more">
           {#each rest as c (key(c))}
-            <CalloutCard callout={c} team={meta.teams[c.franchise]} bands={meta.bands} level={level + 1} />
+            <CalloutCard callout={c} team={meta.teams[c.franchise]} bands={meta.bands} {meta} level={level + 1} />
           {/each}
         </div>
       </details>

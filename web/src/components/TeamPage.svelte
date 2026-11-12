@@ -1,5 +1,6 @@
 <script lang="ts">
   import CalloutCards from './CalloutCards.svelte'
+  import CopyLinkButton from './CopyLinkButton.svelte'
   import ChartFrame from './ChartFrame.svelte'
   import Delta from './Delta.svelte'
   import FactorBars from './FactorBars.svelte'
@@ -12,10 +13,12 @@
   import TeamLogo from './TeamLogo.svelte'
   import WinTotals from './WinTotals.svelte'
   import { cardCallouts, forTeam, forWeek } from '../lib/callouts'
+  import { deepLink } from '../lib/copyLink'
   import { findSeason, loadGames, loadRecords, loadSeason, loadTeam } from '../lib/data'
   import { bandIndex, formatRecord, moodToken, weekLabel } from '../lib/format'
   import { formatDate, streakLine } from '../lib/records'
   import { boardHash, historyHash, teamHash } from '../lib/router'
+  import { teamCopyUrl } from '../lib/share'
   import { findTeamRow, playoffText, recentGames, seasonSeries, stepWeek } from '../lib/team'
   import { eraName, eraText } from '../lib/teamNames'
   import type { ActiveStreak, GamesFile, Meta, SeasonFile, TeamFile } from '../lib/types'
@@ -232,6 +235,14 @@
             {#if odds}<span>{odds}</span>{/if}{#if odds && qb}<Sep />{/if}{#if qb}<span>{qb}</span>{/if}
           </p>
         {/if}
+        <!-- D-23/D-24: share page for the viewed week (latest pinned), hash link before launch -->
+        <div class="share-row">
+          <CopyLinkButton
+            getUrl={() => teamCopyUrl({ team, season, week, latest }, meta, location.origin, deepLink)}
+            {name}
+            ariaLabel="Copy link to {name}"
+          />
+        </div>
       </div>
       <div class="score-cell">
         <span class="score" style:--band={band}><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
@@ -345,6 +356,11 @@
     font-size: var(--text-label);
     line-height: var(--lh-label);
     font-variant-numeric: tabular-nums;
+  }
+  .share-row {
+    display: flex;
+    min-width: 0;
+    margin-top: var(--space-xs);
   }
   .score-cell {
     display: flex;
