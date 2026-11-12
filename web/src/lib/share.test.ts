@@ -188,6 +188,44 @@ describe('sharePageHtml', () => {
     expect(html).toMatch(/facebookexternalhit/)
   })
 
+  describe('crawler UA guard', () => {
+    // Evaluate the exact regex literal the page ships, so the test cannot drift from the HTML.
+    const src = html.match(/if \(!\/(.+)\/i\.test\(navigator\.userAgent\)\)/)?.[1] ?? ''
+    const re = new RegExp(src, 'i')
+    const redirects = (ua: string) => !re.test(ua)
+
+    it('ships a regex literal', () => {
+      expect(src).not.toBe('')
+      expect(re).toBeInstanceOf(RegExp)
+    })
+
+    it.each([
+      ['LinkedIn in-app (iOS)', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [LinkedInApp]/9.29.1234'],
+      ['LinkedIn in-app (Android)', 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/124.0.0.0 Mobile Safari/537.36 [LinkedInApp]/4.1.900'],
+      ['Telegram in-app (Android)', 'Mozilla/5.0 (Linux; Android 13; SM-S911B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36 Telegram-Android/10.12.0 (Samsung SM-S911B; Android 13; SDK 33; HIGH)'],
+      ['Pinterest in-app (iOS)', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 [Pinterest/iOS]'],
+      ['Cubot phone', 'Mozilla/5.0 (Linux; Android 12; CUBOT KINGKONG 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36'],
+      ['desktop Chrome', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36'],
+    ])('redirects people: %s', (_name, ua) => {
+      expect(redirects(ua)).toBe(true)
+    })
+
+    it.each([
+      ['Facebook', 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)'],
+      ['X/Twitter', 'Twitterbot/1.0'],
+      ['Slack', 'Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)'],
+      ['LinkedIn', 'LinkedInBot/1.0 (compatible; Mozilla/5.0; Apache-HttpClient +http://www.linkedin.com)'],
+      ['Discord', 'Mozilla/5.0 (compatible; Discordbot/2.0; +https://discordapp.com)'],
+      ['Telegram', 'TelegramBot (like TwitterBot)'],
+      ['WhatsApp', 'WhatsApp/2.23.20.0 A'],
+      ['iMessage', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_1) AppleWebKit/601.2.4 (KHTML, like Gecko) Version/9.0.1 Safari/601.2.4 facebookexternalhit/1.1 Facebot Twitterbot/1.0'],
+      ['Pinterest', 'Pinterest/0.2 (+https://www.pinterest.com/bot.html)'],
+      ['Reddit', 'Mozilla/5.0 (compatible; redditbot/1.0; +http://www.reddit.com/feedback)'],
+    ])('keeps crawlers on the page: %s', (_name, ua) => {
+      expect(redirects(ua)).toBe(false)
+    })
+  })
+
   it('cannot be broken out of by hostile title or hash', () => {
     const evil = sharePageHtml({
       ...base,

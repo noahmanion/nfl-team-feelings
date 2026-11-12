@@ -157,7 +157,15 @@ export interface SharePageInput extends ShareMeta {
 }
 
 // Link-preview fetchers stay on the page (a JS-running previewer would otherwise follow the redirect).
-const CRAWLER_RE = '/bot|facebookexternalhit|facebot|twitterbot|slack|linkedin|discord|whatsapp|telegram|embedly|applebot/i'
+// Match the fetchers' own tokens only, never app names: people tapping links inside the LinkedIn
+// (LinkedInApp), Telegram (Telegram-Android) or Pinterest ([Pinterest/iOS]) in-app browsers, or on
+// phones whose model token contains "bot" (Cubot), must still be redirected (WR-01).
+const CRAWLER_TOKENS = [
+  'facebookexternalhit', 'facebot', 'twitterbot', 'slackbot', 'linkedinbot', 'discordbot', 'telegrambot',
+  'whatsapp', 'applebot', 'googlebot', 'bingbot', 'embedly', 'pinterestbot', 'pinterest\\/0\\.', 'redditbot',
+  'skypeuripreview', 'vkshare', 'w3c_validator', 'iframely', 'opengraph',
+]
+const CRAWLER_RE = `/${CRAWLER_TOKENS.join('|')}/i`
 
 /**
  * Full static HTML for a share page. All og/twitter tags precede the single script (crawlers read
