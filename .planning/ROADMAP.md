@@ -126,7 +126,26 @@ Plans:
   4. Logos appear on board rows, the team page header, records rows and chart marks, fall back to the color chip when a logo fails to load, and relocated franchises show the current logo with the era-correct name (e.g. "San Diego Chargers" in 2010)
   5. Routes, the week scrubber, my-team pin, callouts, copy-link and the 375px mobile layout all still work, and the existing web tests pass
 
-**Plans**: TBD
+**Plans**: 7 plans
+
+Plans:
+
+**Wave 1**
+
+- [ ] 12-01-PLAN.md — Self-hosted fonts (exact pins), editorial tokens/palette, .num, Plot grid override, brand guard test
+- [ ] 12-02-PLAN.md — teamNames (era names, eraText), logos helpers + 96px derivatives, TeamChip sizes, TeamLogo
+- [ ] 12-03-PLAN.md — plotTheme shared chart theme + ChartFrame (headline/dek/SOURCE-NOTES)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 12-04-PLAN.md — HistoryChart/MethodologyChart/Sparkline on the theme, logo end mark, ChartFrames, history dek
+- [ ] 12-05-PLAN.md — Board table, callouts, movers, header/footer/scrubber restyle with logos and era names
+- [ ] 12-06-PLAN.md — Team, records and methodology pages restyle with logos, era names, framed breakdown
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 12-07-PLAN.md — README credits, VITE_LOGOS=off check, Playwright screenshots + behavior sweep
+
 **UI hint**: yes
 
 ### Phase 13: Explore Charts & Win Totals Display
