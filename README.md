@@ -92,11 +92,15 @@ Each factor is z-scored across teams in the same week, weighted, and summed. The
 
 ## Status
 
-**v1.0 is complete.** It includes the mood board, mood over time, team pages, callouts with base-rate evidence, biggest movers, a records page, a "my team" pin, and a draft-aware offseason. Weights are frozen and the holdout is consumed.
+**v2.0 "Public Site" shipped (2026-11-12, tag `v2.0`).** The site is live at https://nfl-team-feelings.vercel.app/. It redeploys on Vercel whenever `web/` changes on `main`.
 
-The site now also has an **Explore** page with two logo scatters: offense vs defense EPA per play, and record vs evidence (win % against the feel-good score). Team pages show the preseason Vegas win total next to the team's actual pace, with a label whenever that line is display-only and not used in the score.
+- **v1 model:** mood board, mood over time, team pages, callouts with base-rate evidence, movers, records, a "my team" pin and a draft-aware offseason. Weights are frozen forever, and a golden test pins every score for seasons up to 2025.
+- **Look:** an editorial redesign (Inter and IBM Plex Mono, one shared chart theme) with local team logos and era-correct names (e.g. San Diego Chargers in 2010).
+- **Explore** (`#/explore`): an offense-vs-defense EPA scatter and a record-vs-evidence scatter, both using logos as marks. Team pages also show the preseason Vegas win total against actual pace (display-only from 2021 on).
+- **Share links:** each build renders 1200×630 cards and static `/s/` share pages for every team and every current-season callout (from 2026 week 9). Copy-link buttons use these pages, so links unfurl with a card.
+- **v2 model:** pre-registered, but not built yet. `pipeline/PREREGISTRATION_V2.md` (one commit, never edited; errata in `PREREGISTRATION_V2_DEVIATIONS.md`) covers good-loss luck and Vegas win totals in the score. Free agency was dropped. The model must be frozen before 2027 Week 1, and it is judged on the 2027 season as a fresh holdout.
 
-Every build also renders share cards (1200×630 PNGs) and static share pages under `/s/`, one per team and per current-season callout from week 9 of 2026 on. The copy-link buttons share those pages, so links unfurl with a card in Slack, iMessage, X and similar apps.
+Still open: manual checks of link previews on real platforms (Slack, iMessage, X, the Facebook and LinkedIn debuggers).
 
 ## Credits
 
