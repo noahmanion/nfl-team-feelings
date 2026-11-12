@@ -110,8 +110,9 @@
     row-gap: var(--space-xs);
     padding: var(--space-md);
     background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
     margin-bottom: var(--space-lg);
   }
   .season-label,
@@ -143,6 +144,8 @@
     margin-top: var(--space-sm);
   }
   output {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: var(--text-body);
     line-height: var(--lh-body);
     font-weight: var(--weight-semibold);
@@ -166,6 +169,8 @@
     position: relative;
     block-size: calc(var(--text-label) * var(--lh-label));
     color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
     font-size: var(--text-label);
     line-height: var(--lh-label);
   }
@@ -192,7 +197,7 @@
     border: 1px solid transparent;
     border-radius: var(--radius-md);
     font: inherit;
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
     cursor: pointer;
     transition:
       background-color 120ms ease,

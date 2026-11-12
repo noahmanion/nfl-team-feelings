@@ -12,9 +12,12 @@
     padding: 0 var(--space-sm);
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
-    font-size: var(--text-label);
-    line-height: var(--lh-label);
-    font-weight: var(--weight-semibold);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--lh-micro);
+    font-weight: var(--weight-regular);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     color: var(--text-muted);
     white-space: nowrap;
   }

@@ -97,14 +97,14 @@
     line-height: var(--lh-body);
   }
   .panel :global(code) {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 0.9em;
+    font-family: var(--font-mono);
+    font-size: var(--text-label);
     overflow-wrap: anywhere;
   }
   h2 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .actions {
     display: flex;
@@ -124,7 +124,7 @@
       color 120ms ease;
   }
   .actions button:hover {
-    background: var(--bg);
+    background: var(--surface-hover);
   }
   .actions button:focus-visible,
   .dismiss:focus-visible {

@@ -13,13 +13,17 @@
     </p>
   {/if}
   <p class="disclaimer" class:solo={!meta}>
-    Unofficial fan project — not affiliated with the NFL. Data: <a href="https://github.com/nflverse">nflverse</a>.
+    Unofficial fan project — not affiliated with or endorsed by the NFL or any team.
+    Team names and logos are trademarks of their respective owners. Data: <a href="https://github.com/nflverse">nflverse</a>.
   </p>
 </footer>
 
 <style>
   .site-footer {
     margin-top: var(--space-xl);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border);
+    overflow-wrap: anywhere;
     font-size: var(--text-label);
     line-height: var(--lh-label);
     color: var(--text-muted);

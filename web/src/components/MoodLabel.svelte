@@ -16,7 +16,7 @@
   .heading {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   /* Explicit em-based gap: emoji advance widths vary (variation selectors), and the flex gap
      alone left the glyph touching the label. Scales with the heading size. */

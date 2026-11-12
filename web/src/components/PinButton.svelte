@@ -32,7 +32,7 @@
     border: 0;
     border-radius: var(--radius-sm);
     color: var(--text-muted);
-    font-size: 20px;
+    font-size: var(--text-heading);
     line-height: 1;
     cursor: pointer;
   }

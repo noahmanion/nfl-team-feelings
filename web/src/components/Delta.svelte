@@ -9,6 +9,7 @@
 
 <style>
   .delta {
+    font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--lh-label);
     font-weight: var(--weight-semibold);

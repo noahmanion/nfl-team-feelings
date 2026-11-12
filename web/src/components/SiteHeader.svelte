@@ -32,15 +32,19 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--rule-strong);
   }
+  /* text wordmark only, never a logo (D-11) */
   .wordmark {
-    font-weight: var(--weight-semibold);
+    font-size: var(--text-body);
+    font-weight: var(--weight-bold);
   }
   h1 {
     margin-top: var(--space-md);
     font-size: var(--text-display);
     line-height: var(--lh-display);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .subhead {
     color: var(--text-muted);
@@ -64,6 +68,7 @@
     min-block-size: var(--tap-min);
     color: var(--text);
     font-size: var(--text-body);
+    font-weight: var(--weight-regular);
     text-decoration: none;
     border-bottom: 2px solid transparent;
   }
