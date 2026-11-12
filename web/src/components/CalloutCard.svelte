@@ -41,7 +41,13 @@
   <div class="actions">
     <a class="see" {href}>See {name}</a>
     <!-- D-22: share page URL from the launch week on, hash deep link before it -->
-    <CopyLinkButton getUrl={() => calloutCopyUrl(callout, meta, location.origin, deepLink)} {name} />
+    <!-- WR-04: unique accessible name ("Copy link" first for label-in-name, WCAG 2.5.3); the headline
+         tells this card apart from the team header button and the team's other callouts -->
+    <CopyLinkButton
+      getUrl={() => calloutCopyUrl(callout, meta, location.origin, deepLink)}
+      {name}
+      ariaLabel="Copy link to {name}: {headline}"
+    />
   </div>
 </article>
 

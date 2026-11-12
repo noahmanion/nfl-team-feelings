@@ -51,7 +51,8 @@ def click_and_read(page, button, status) -> tuple[str, str]:
 
 
 def header_button(page):
-    return page.get_by_role("button", name="Copy link to Buffalo Bills")
+    # exact: callout buttons are "Copy link to Buffalo Bills: <headline>" (WR-04)
+    return page.get_by_role("button", name="Copy link to Buffalo Bills", exact=True)
 
 
 def header_status(page):
