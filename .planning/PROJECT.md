@@ -43,6 +43,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
   - Both scatters: marks click (or double-tap) through to team pages, a my-team ring, and a "Show as table" fallback.
   - Team page shows Vegas preseason vs model preseason vs pace on a number line. Labels say "used in score" (2003–2020) or "display only, not used in score" (2021+), and the 2026 line is marked as the opener. The model expectation comes from a new display-only `expectation` block in the team files; golden pin unchanged.
   - Validated in Phase 13: Explore Charts & Win Totals Display (EXPL-02, EXPL-03, DATA-03)
+- ✓ Share cards and share pages: every `npm run build` runs `vite build && node --expose-gc scripts/share.mjs`, rendering 1200×630 PNG cards with satori 0.63.2 + @resvg/resvg-js 2.6.2 (exact pins; Inter + IBM Plex Mono 400/700 WOFF; local logos with chip fallback; no emoji; glyph guard fails the build on any uncovered character; mover arrow drawn as SVG) for all 32 teams and every callout of each week from launch (2026 w9) forward, plus the site default card. Static pages at `/s/team/{FR}/{season}-w{week}/` and `/s/c/{season}/{week}/{FR}-{type}/` carry absolute og/twitter tags on the production origin and JS-redirect humans (not crawlers) to the hash route. One slug module `web/src/lib/share.ts` (erasable TS, imported by both the app and Node) owns paths, launch gating and escaping. Copy-link on the team header and callout cards copies the share URL where one exists, else the hash link. Production crawler-UA checks (Facebook/Twitter/Slack/LinkedIn) pass; real-platform pastes are human UAT. Validated in Phase 14: Share Cards & Launch Verification (SHARE-01, SHARE-02, SHARE-03)
 
 ### Active
 
@@ -93,6 +94,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 | 2021+ win totals display-only, from one public source per season | 2021–25 from Sports Odds History (closing lines, via Wayback); 2026 is the DraftKings opener (`preseason_open`), because no closing-line page was reachable; never fed to v1 `vs_exp` | ✓ Good |
 | Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | ✓ Good |
 | Deploy via Vercel Git integration, root web, Node 24.x, ignore step diffs web/ against last deployed SHA | Zero-config static hosting; pipeline/docs-only commits don't rebuild; Standard deployment protection keeps the production domain public | ✓ Good |
+| Share cards rendered at build time (satori + resvg in a post-build Node script), share pages regenerated every build, season+week in every path/filename, generated for every week from launch forward | Crawlers can't see hash routes; durable links all season; Vercel build ~5 s with share step (~24 s projected at season end) | ✓ Good |
 
 ## Evolution
 
@@ -112,4 +114,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-12, after Phase 13 (explore charts & win totals display)*
+*Last updated: 2026-11-12, after Phase 14 (share cards & launch verification)*

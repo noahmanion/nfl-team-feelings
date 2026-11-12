@@ -64,3 +64,9 @@ No code gaps. Remaining items are the deployed-site checks (SC4): the orchestrat
 
 _Verified: 2026-11-12T01:10:00Z_
 _Verifier: Claude (gsd-verifier)_
+
+## Automated pre-check result (2026-11-12, production deploy dpl_6CcU2DchecQ2gPGuczhjRBQ1NZVf @ d706dcb, READY)
+
+All 16 checks passed: 2 pages (`/s/team/BUF/2026-w9/`, `/s/c/2026/9/CLE-worried/`) x 4 UAs (`facebookexternalhit/1.1`, `Twitterbot/1.0`, `Slackbot-LinkExpanding 1.0`, `LinkedInBot/1.0`) returned 200 with `twitter:card=summary_large_image`, absolute `og:url` (= the share page) and absolute `og:image` on `https://nfl-team-feelings.vercel.app`; each og:image returned `200 image/png`. Non-slash form (`-L`) 200; plain curl 200 (no Vercel bot challenge observed); `/og-default.png` 200 (50 KB, new satori card). Redirect script targets `#/team/BUF/2026/9`. Caveat: curl with a crawler UA cannot detect UA+IP-based blocking of the real Meta crawler, so test 4 (FB Sharing Debugger) remains required.
+
+Vercel build log: vite 722 ms; share step 45 cards in 1.71 s (38 ms/card), rss 273 MB; build completed in 5 s; projected full season ~24 s.
