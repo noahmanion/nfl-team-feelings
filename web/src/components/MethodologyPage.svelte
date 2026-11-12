@@ -67,7 +67,12 @@
   const excludesZero = (ci?: [number, number] | null) => !!ci && (ci[0] > 0 || ci[1] < 0)
 </script>
 
-<article class="methodology">
+<article class="methodology" aria-labelledby="how-heading">
+  <header class="intro">
+    <h2 id="how-heading">How it works</h2>
+    <p class="dek">What goes into the score, how it was tested, and where it falls short.</p>
+  </header>
+
   {#if failed}
     <StatusPanel
       variant="error"
@@ -104,10 +109,11 @@
             <span class="chip" style:background={`var(--mood-${moodToken(i, meta.bands.length)})`}></span>
             <span aria-hidden="true">{b.emoji}</span>
             <span>{b.label}</span>
-            <span class="muted">{b.min}–{b.max}</span>
+            <span class="muted num">{b.min}–{b.max}</span>
           </li>
         {/each}
       </ul>
+      <p class="muted">Relocated teams show their name from that season with the current logo.</p>
     </section>
 
     <section>
@@ -222,36 +228,50 @@
 
 <style>
   .methodology {
-    max-width: 680px;
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
     font-size: var(--text-body);
     line-height: var(--lh-body);
+    min-width: 0;
   }
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+  .dek {
+    color: var(--text-muted);
+  }
+  /* Prose column (D-22): paragraphs and lists cap at --prose-max; figures use the full width. */
+  .methodology p,
+  .methodology ul,
+  .methodology ol {
+    max-width: var(--prose-max);
+  }
+  /* Rule-topped sections (D-22): no box, background or radius. */
   section {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
     min-width: 0;
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-md);
   }
   h2 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   h3 {
     font-size: var(--text-body);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .strong {
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .muted {
     color: var(--text-muted);
-  }
-  .num {
-    font-variant-numeric: tabular-nums;
   }
   .bands {
     display: flex;
@@ -266,24 +286,24 @@
     align-items: center;
     gap: var(--space-sm);
   }
+  /* square 8px band swatch */
   .chip {
-    inline-size: var(--chip-size);
-    block-size: var(--chip-size);
-    border-radius: var(--radius-sm);
+    inline-size: 8px;
+    block-size: 8px;
+    border-radius: 0;
     flex: none;
   }
   .rows {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
   }
   .row {
-    background: var(--surface);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
