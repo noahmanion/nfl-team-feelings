@@ -16,7 +16,7 @@
 
 - [ ] **DEPLOY-01**: The site is publicly reachable at a Vercel production URL, built from `web/` in the GitHub repo, with Node pinned to 24.x
 - [ ] **DEPLOY-02**: Pushing to `main` redeploys automatically, and pipeline-only commits don't trigger a web build
-- [ ] **DEPLOY-03**: The site shows a "data through" freshness stamp, carries site-wide title, description and share-card tags, and has a footer saying it's an unofficial fan project, not affiliated with the NFL, with data from nflverse
+- [x] **DEPLOY-03**: The site shows a "data through" freshness stamp, carries site-wide title, description and share-card tags, and has a footer saying it's an unofficial fan project, not affiliated with the NFL, with data from nflverse
 
 ### Data Loose Ends
 
@@ -73,7 +73,7 @@
 | INTEG-03 | Phase 9 | Complete |
 | DEPLOY-01 | Phase 10 | Pending |
 | DEPLOY-02 | Phase 10 | Pending |
-| DEPLOY-03 | Phase 10 | Pending |
+| DEPLOY-03 | Phase 10 | Complete |
 | DATA-01 | Phase 11 | Pending |
 | DATA-02 | Phase 11 | Pending |
 | DATA-03 | Phase 13 | Pending |

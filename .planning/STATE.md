@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Site
 status: executing
-stopped_at: Phase 10 UI-SPEC approved
-last_updated: "2026-11-12T01:29:15.283Z"
+stopped_at: Completed 10-01-PLAN.md
+last_updated: "2026-11-12T01:31:23.895Z"
 last_activity: 2026-11-12 -- Phase 10 planning complete
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 3
-  completed_plans: 1
+  completed_plans: 2
   percent: 17
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 ## Current Position
 
 Phase: 10
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-11-12 -- Phase 10 planning complete
+Plan: 10-01 complete (1 of 2); next 10-02
+Status: Executing
+Last activity: 2026-11-11 -- Completed 10-01 (Node 24 pin, share tags, og image, disclaimer footer)
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 67%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [██████████] 100%
 
 *Updated after each plan completion*
 | Phase 9 P01 | 4 min | 3 tasks | 1 files |
+| Phase 10 P01 | 2 min | 3 tasks | 11 files |
 
 ## Accumulated Context
 
@@ -70,6 +71,8 @@ Recent decisions affecting current work:
 - [v2.0 Research]: 2021+ win totals are display-only; `vegas_expectations` must never read past 2020.
 - [Phase 9]: v2 prereg committed alone at 9c32319; never edited; errata only in PREREGISTRATION_V2_DEVIATIONS.md
 - [Phase 9]: MODEL-V2-02 free agency DROPPED (no signing dates); re-entry only via a v3 prereg
+- [Phase 10-01]: Site origin resolves SITE_ORIGIN, then https:// + VERCEL_PROJECT_PRODUCTION_URL, then https://nfl-team-feelings.vercel.app (never VERCEL_URL); Vite plugin order 'pre'
+- [Phase 10-01]: SiteFooter always renders (incl. error page); data stamp only when ready; nflverse source folded into the disclaimer
 - [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
 
 ### Pending Todos
@@ -94,9 +97,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T01:17:40.174Z
-Stopped at: Phase 10 UI-SPEC approved
-Resume file: .planning/phases/10-deploy/10-UI-SPEC.md
+Last session: 2026-11-12T01:31:23.891Z
+Stopped at: Completed 10-01-PLAN.md
+Resume file: None
 
 ## Operator Next Steps
 
