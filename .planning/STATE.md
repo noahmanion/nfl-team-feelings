@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Site
-status: executing
+status: verifying
 stopped_at: v2.0 roadmap created
-last_updated: "2026-11-12T00:53:30.383Z"
-last_activity: 2026-11-12 -- Phase 9 execution started
+last_updated: "2026-11-12T00:58:49.848Z"
+last_activity: 2026-11-12
 progress:
   total_phases: 6
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 1
-  completed_plans: 0
-  percent: 0
+  completed_plans: 1
+  percent: 17
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 
 Phase: 9 (v2 Pre-registration) — EXECUTING
 Plan: 1 of 1
-Status: Executing Phase 9
-Last activity: 2026-11-12 -- Phase 9 execution started
+Status: Phase complete — ready for verification
+Last activity: 2026-11-12
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: -
 
 *Updated after each plan completion*
+| Phase 9 P01 | 4 min | 3 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Recent decisions affecting current work:
 - [v2.0 Research]: Logos stored in repo from ESPN (nflverse Wikipedia URLs return HTTP 400); current logo + era-correct names; color-chip fallback.
 - [v2.0 Research]: Node pinned to 24.x on Vercel (the `>=22.12` range would resolve to Node 26).
 - [v2.0 Research]: 2021+ win totals are display-only; `vegas_expectations` must never read past 2020.
+- [Phase 9]: v2 prereg committed alone at 9c32319; never edited; errata only in PREREGISTRATION_V2_DEVIATIONS.md
+- [Phase 9]: MODEL-V2-02 free agency DROPPED (no signing dates); re-entry only via a v3 prereg
+- [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
 
 ### Pending Todos
 
@@ -89,7 +93,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12
+Last session: 2026-11-12T00:58:45.741Z
 Stopped at: v2.0 roadmap created
 Resume file: None
 

@@ -9,8 +9,8 @@
 ### Model Integrity (frozen v1 + v2 pre-registration)
 
 - [ ] **INTEG-01**: A golden test pins a hash of every exported composite score and mood label for seasons ≤2025, so any v2.0 change that alters a frozen v1 score fails the test suite
-- [ ] **INTEG-02**: A new `pipeline/PREREGISTRATION_V2.md` (v1's `PREREGISTRATION.md` untouched) commits, before any v2 model code exists, to: the exact definitions of the candidate inputs (MODEL-V2-01 good-loss luck, MODEL-V2-02 free agency, MODEL-V2-03 Vegas win totals into the score), the development-data ceiling (≤2025), the holdout (games kicking off after the v2 freeze commit, with 2027 primary), the comparators (frozen v1 composite and Elo), the metrics, the per-input drop rules, and the verdict wording decided in advance
-- [ ] **INTEG-03**: The pre-registration states whether each candidate input can be built without leakage from free data (e.g. whether free-agency data has signing dates), and pre-commits to dropping any that can't
+- [x] **INTEG-02**: A new `pipeline/PREREGISTRATION_V2.md` (v1's `PREREGISTRATION.md` untouched) commits, before any v2 model code exists, to: the exact definitions of the candidate inputs (MODEL-V2-01 good-loss luck, MODEL-V2-02 free agency, MODEL-V2-03 Vegas win totals into the score), the development-data ceiling (≤2025), the holdout (games kicking off after the v2 freeze commit, with 2027 primary), the comparators (frozen v1 composite and Elo), the metrics, the per-input drop rules, and the verdict wording decided in advance
+- [x] **INTEG-03**: The pre-registration states whether each candidate input can be built without leakage from free data (e.g. whether free-agency data has signing dates), and pre-commits to dropping any that can't
 
 ### Deploy
 
@@ -69,8 +69,8 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | INTEG-01 | Phase 11 | Pending |
-| INTEG-02 | Phase 9 | Pending |
-| INTEG-03 | Phase 9 | Pending |
+| INTEG-02 | Phase 9 | Complete |
+| INTEG-03 | Phase 9 | Complete |
 | DEPLOY-01 | Phase 10 | Pending |
 | DEPLOY-02 | Phase 10 | Pending |
 | DEPLOY-03 | Phase 10 | Pending |

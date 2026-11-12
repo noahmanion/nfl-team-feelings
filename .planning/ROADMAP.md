@@ -27,7 +27,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 
 **Milestone goal:** Take the site public. Deploy it, restyle it as FiveThirtyEight-inspired data journalism with team logos, make callouts shareable, add exploratory EPA charts, and close the v1 data loose ends. The frozen v1 model stays untouched, and the v2 model is pre-registered against a fresh 2026–27 holdout.
 
-- [ ] **Phase 9: v2 Pre-registration** - Commit the v2 model plan and holdout before any v2 model code or more 2026 weeks are spent (docs only, time-critical)
+- [x] **Phase 9: v2 Pre-registration** - Commit the v2 model plan and holdout before any v2 model code or more 2026 weeks are spent (docs only, time-critical) (completed 2026-11-12)
 - [ ] **Phase 10: Deploy** - The existing site is live on a Vercel production URL with auto-redeploys, a freshness stamp, site-level share tags and a disclaimer
 - [ ] **Phase 11: Pipeline Data & Guards** - Golden frozen-score test first, then forfeit audit, display-only 2021+ win totals, EPA export and local logos in one pass
 - [ ] **Phase 12: Redesign Foundation & Team Identity** - Editorial type system, shared chart theme, restyled pages and logos everywhere, with all v1 behavior intact
@@ -48,7 +48,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 **Plans**: 1 plan
 
 Plans:
-- [ ] 09-01-PLAN.md — Write, self-check and single-commit pipeline/PREREGISTRATION_V2.md, then read-only integrity checks 1–8
+- [x] 09-01-PLAN.md — Write, self-check and single-commit pipeline/PREREGISTRATION_V2.md, then read-only integrity checks 1–8
 
 ### Phase 10: Deploy
 **Goal**: Anyone can open the current site at a public Vercel URL, and it stays current on its own
@@ -123,7 +123,7 @@ Plans:
 | 6. Weight Freeze & Methodology | v1.0 | 5/5 | Complete | 2026-11-11 |
 | 7. Draft-Aware Offseason | v1.0 | 4/4 | Complete | 2026-11-11 |
 | 8. Callouts, Records & My Team | v1.0 | 5/5 | Complete | 2026-11-11 |
-| 9. v2 Pre-registration | v2.0 | 0/TBD | Not started | - |
+| 9. v2 Pre-registration | v2.0 | 1/1 | Complete   | 2026-11-12 |
 | 10. Deploy | v2.0 | 0/TBD | Not started | - |
 | 11. Pipeline Data & Guards | v2.0 | 0/TBD | Not started | - |
 | 12. Redesign Foundation & Team Identity | v2.0 | 0/TBD | Not started | - |
