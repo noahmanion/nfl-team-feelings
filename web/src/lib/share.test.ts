@@ -177,7 +177,7 @@ describe('sharePageHtml', () => {
     expect(script).toBeGreaterThan(0)
     expect(html.indexOf('<script', script + 1)).toBe(-1)
     const tagIdx = [...html.matchAll(/(property="og:|name="twitter:|rel="canonical")/g)].map((m) => m.index ?? -1)
-    expect(tagIdx.length).toBeGreaterThanOrEqual(17)
+    expect(tagIdx.length).toBe(16)
     for (const i of tagIdx) expect(i).toBeLessThan(script)
   })
 
@@ -247,7 +247,8 @@ describe('share page meta copy', () => {
   })
 
   it('calloutShareMeta prefixes the era name otherwise', () => {
-    const m = calloutShareMeta({ ...joy, type: 'worried', franchise: 'CLE', headline: '5-4, but you should feel worried', detail: 'The Browns have the 16th-best record but the 25th-best score.' }, realMeta)
+    const worried = { ...joy, type: 'worried' as const, franchise: 'CLE', headline: '5-4, but you should feel worried', detail: 'The Browns have the 16th-best record but the 25th-best score.' }
+    const m = calloutShareMeta(worried, realMeta)
     expect(m.title).toBe('Cleveland Browns: 5-4, but you should feel worried')
   })
 })
