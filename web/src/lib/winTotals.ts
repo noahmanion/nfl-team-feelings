@@ -85,7 +85,9 @@ export function winTotalsView(file: WinTotalsInput, season: number,
   }
 
   const notes = vi < 0
-    ? 'No Vegas line on file before 2003. The score uses the model’s preseason expectation.'
+    ? season < 2003
+      ? 'No Vegas line on file before 2003. The score uses the model’s preseason expectation.'
+      : 'No Vegas line on file for this season yet. The score uses the model’s preseason expectation.'
     : vw.used_in_score[vi]
       ? 'The score uses this line, normalized to the league average.'
       : 'Shown for context. The score uses the model’s preseason expectation for this season.'

@@ -80,6 +80,17 @@ describe('winTotalsView', () => {
     expect(v.source).toBeUndefined()
   })
 
+  it('2027 with no Vegas line yet: model only, no "before 2003" note', () => {
+    const f: WinTotalsInput = {
+      vegas_win_totals: file.vegas_win_totals,
+      expectation: { season: [2027], exp_total: [9.2], source: ['model'], reg_games: [17] },
+    }
+    const v = winTotalsView(f, 2027, { wins: 2, losses: 1, ties: 0 })!
+    expect(v.rows.map((r) => r.key)).toEqual(['model', 'pace'])
+    expect(v.notes).toBe('No Vegas line on file for this season yet. The score uses the model’s preseason expectation.')
+    expect(v.source).toBeUndefined()
+  })
+
   it('pace row: in progress, finished, week 0', () => {
     const mid = winTotalsView(file, 2023, { wins: 6, losses: 2, ties: 0 })!
     expect(mid.rows[2]).toMatchObject({ key: 'pace', label: 'On pace for 12.8 wins (6–2 after 8 games)', value: '12.8' })
