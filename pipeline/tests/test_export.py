@@ -80,7 +80,7 @@ def real_files():
     derived = derive(load_schedules(), **derive_inputs())
     # same display-only win totals the CLI passes (export and refresh paths)
     return derived, build_export(derived, load_teams(), generated_at=GEN,
-                                 win_totals=cli._display_win_totals(CACHE_DIR))
+                                 win_totals=cli._display_win_totals(CACHE_DIR)[0])
 
 
 def _all_rows(files):

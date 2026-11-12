@@ -150,22 +150,33 @@ def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
     return frame
 
 
-def _display_win_totals(cache_dir) -> pl.DataFrame:
+def _display_win_totals(cache_dir) -> tuple[pl.DataFrame, list[str]]:
     """Export-only Vegas win totals (D-13): the cached nflverse 2003-2020 file (used_in_score=True)
     plus the committed, display-only 2021+ lines in pipeline/inputs/ (used_in_score=False).
     Never passed to derive(); the score's expectations come from _cached_vegas only.
 
-    WR-01: a problem in the display-only 2021+ files (validation, overlap, unreadable) must not abort
-    refresh/export. It warns on stderr and exports without the 2021+ rows (2003-2020 rows still
-    exported). Strictness on the committed files is enforced by tests/test_wintotals.py."""
+    Returns (frame, skipped): skipped lists the display files that were dropped, one message each.
+    WR-01: a problem in a display-only 2021+ file must not abort refresh/export. Each file degrades on
+    its own (a bad 2026plus append keeps the write-once 2021-2025 lines); every skip is a stderr
+    WARNING here and is counted in the command's final summary line. Strictness on the committed
+    files is enforced by tests/test_wintotals.py."""
     wt = cache_dir / "win_totals.csv"
     raw = pl.read_csv(wt) if wt.exists() else None
     try:
-        return wintotals.display_frame(raw, wintotals.load_display_win_totals())
-    except (ValueError, OSError, pl.exceptions.PolarsError) as e:
-        print(f"WARNING: display-only 2021+ win totals skipped ({type(e).__name__}: {e}); "
-              "team files carry only the 2003-2020 vegas_win_totals", file=sys.stderr)
-        return wintotals.display_frame(raw, wintotals.empty_display())
+        display, skipped = wintotals.load_display_win_totals_lenient()
+        frame = wintotals.display_frame(raw, display)
+    except (ValueError, OSError, pl.exceptions.PolarsError) as e:  # cross-file overlap guard
+        skipped = [f"all display files: {type(e).__name__}: {e}"]
+        frame = wintotals.display_frame(raw, wintotals.empty_display())
+    for msg in skipped:
+        print(f"WARNING: display-only win totals file skipped ({msg}); its seasons are missing from "
+              "the team files' vegas_win_totals", file=sys.stderr)
+    return frame, skipped
+
+
+def _skipped_msg(skipped: list[str]) -> str:
+    """Suffix for the final summary line so a skipped display file is visible in the run's output."""
+    return f"; WARNING: {len(skipped)} display win-totals file(s) skipped (see stderr)" if skipped else ""
 
 
 DRAFT_FILES = ("draft_picks.parquet", "draft_values.csv")
@@ -475,8 +486,9 @@ def _cmd_refresh(args) -> int:
         print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    win_totals, skipped = _display_win_totals(cache_dir)
     files = export.build_export(derived, teams, generated_at=generated_at,
-                                win_totals=_display_win_totals(cache_dir))  # pure; may still raise before writes
+                                win_totals=win_totals)  # pure; may still raise before writes
     # WR-03: the writes below are atomic per file, not as a set. The marker brackets them so a
     # crash/Ctrl-C mid-sequence is detected: `fgs export` refuses and `fgs check` fails until a
     # refresh completes, instead of publishing a mix of new and old inputs.
@@ -500,6 +512,7 @@ def _cmd_refresh(args) -> int:
     print(
         f"refreshed in {time.perf_counter() - t0:.1f}s: exported {len(files)} files; latest {meta['latest']['season']} week "
         f"{meta['latest']['week']} (partial={meta['partial_week']}); data through {meta['data_through']}"
+        f"{_skipped_msg(skipped)}"
     )
     print(_records_check_msg(check))
     return 0
@@ -532,15 +545,15 @@ def _cmd_export(args) -> int:
     derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())  # cache only (schedules download once if missing)
     teams = load_teams()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    files = export.build_export(derived, teams, generated_at=generated_at,
-                                win_totals=_display_win_totals(CACHE_DIR))  # CACHE_DIR read at call time
+    win_totals, skipped = _display_win_totals(CACHE_DIR)  # CACHE_DIR read at call time
+    files = export.build_export(derived, teams, generated_at=generated_at, win_totals=win_totals)
     out_dir = WEB_DATA_DIR  # module global read at call time so tests can monkeypatch it
     export.write_export(files, out_dir)
     check = _write_records_check(files)
     meta = files["meta.json"]
     print(
         f"exported {len(files)} files to {out_dir}; latest {meta['latest']['season']} "
-        f"week {meta['latest']['week']} (partial={meta['partial_week']})"
+        f"week {meta['latest']['week']} (partial={meta['partial_week']}){_skipped_msg(skipped)}"
     )
     print(_records_check_msg(check))
     return 0

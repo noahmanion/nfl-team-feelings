@@ -130,9 +130,33 @@ def test_display_win_totals_degrades_on_bad_inputs(tmp_path, monkeypatch, capsys
     for name in wintotals.FILES:
         (inputs / name).write_text(",".join(wintotals.COLUMNS) + "\n")  # header only: "no rows"
     monkeypatch.setattr(paths, "INPUTS_DIR", inputs)
-    out = cli._display_win_totals(cache)
+    out, skipped = cli._display_win_totals(cache)
     assert "WARNING" in capsys.readouterr().err
+    assert len(skipped) == 2 and "skipped" in cli._skipped_msg(skipped)
     assert out.rows() == [("KC", 2020, 11.5, -110, -110, "nflverse", wintotals.WIN_TOTALS_URL, True)]
+
+
+def test_display_win_totals_degrades_per_file(tmp_path, monkeypatch, capsys):
+    """WR-01 (iteration 2): a malformed 2026plus file (e.g. a partial 2027 append) is skipped on its
+    own; the valid write-once 2021-2025 lines survive and the skip is reported."""
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    (inputs / F2021).write_text((paths.INPUTS_DIR / F2021).read_text())
+    good = (paths.INPUTS_DIR / F2026).read_text()
+    partial = "\n".join(good.strip().splitlines()[1:4]).replace("2026,", "2027,")
+    (inputs / F2026).write_text(good.rstrip("\n") + "\n" + partial + "\n")  # 3-team 2027 season
+    monkeypatch.setattr(paths, "INPUTS_DIR", inputs)
+    with pytest.raises(ValueError):
+        wintotals.load_display_win_totals()  # strict path still raises
+    out, skipped = cli._display_win_totals(cache)
+    err = capsys.readouterr().err
+    assert len(skipped) == 1 and F2026 in skipped[0] and F2026 in err and "WARNING" in err
+    assert cli._skipped_msg([]) == ""
+    seasons = sorted(set(out["season"].to_list()))
+    assert seasons == [2021, 2022, 2023, 2024, 2025]
+    assert out.height == 5 * 32 and not out["used_in_score"].any()
 
 
 # --- guards (D-12) --------------------------------------------------------------------------------

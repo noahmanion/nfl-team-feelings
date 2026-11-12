@@ -98,21 +98,39 @@ def validate(df: pl.DataFrame, file_seasons: tuple[int, int | None], name: str =
 
 
 def load_display_win_totals(inputs_dir=None) -> pl.DataFrame:
-    """Both committed files, validated against their season ranges, sorted by season, franchise_id."""
-    d = paths.INPUTS_DIR if inputs_dir is None else inputs_dir  # read at call time
-    frames = [
-        validate(pl.read_csv(d / fname, infer_schema_length=0), rng, fname) for fname, rng in FILES.items()
-    ]
-    out = pl.concat(frames).sort(["season", "franchise_id"])
-    dup = out.group_by(["season", "franchise_id"]).len().filter(pl.col("len") > 1)
-    if dup.height:
-        raise ValueError(f"display win totals overlap across files: {dup.rows()[:3]}")
+    """Both committed files, validated against their season ranges, sorted by season, franchise_id.
+    Strict: raises on the first file that fails (used by the tests on the committed files)."""
+    out, _ = _load_display(inputs_dir, strict=True)
     return out
 
 
+def load_display_win_totals_lenient(inputs_dir=None) -> tuple[pl.DataFrame, list[str]]:
+    """Per-file degradation (WR-01, iteration 2): each file is validated on its own; a file that fails
+    is skipped and described in the returned problems list, while the files that validate are kept
+    (so a bad 2026plus append never drops the write-once 2021-2025 lines)."""
+    return _load_display(inputs_dir, strict=False)
+
+
+def _load_display(inputs_dir, strict: bool) -> tuple[pl.DataFrame, list[str]]:
+    d = paths.INPUTS_DIR if inputs_dir is None else inputs_dir  # read at call time
+    frames, problems = [], []
+    for fname, rng in FILES.items():
+        try:
+            frames.append(validate(pl.read_csv(d / fname, infer_schema_length=0), rng, fname))
+        except (ValueError, OSError, pl.exceptions.PolarsError) as e:
+            if strict:
+                raise
+            problems.append(f"{fname}: {type(e).__name__}: {e}")
+    out = pl.concat(frames).sort(["season", "franchise_id"]) if frames else empty_display()
+    dup = out.group_by(["season", "franchise_id"]).len().filter(pl.col("len") > 1)
+    if dup.height:  # unreachable while FILES' season ranges are disjoint; kept as a guard
+        raise ValueError(f"display win totals overlap across files: {dup.rows()[:3]}")
+    return out, problems
+
+
 def empty_display() -> pl.DataFrame:
-    """A zero-row frame shaped like load_display_win_totals() (the runtime fallback when the committed
-    display files fail validation: the export then carries only the nflverse 2003-2020 lines)."""
+    """A zero-row frame shaped like load_display_win_totals() (the runtime fallback when no committed
+    display file validates: the export then carries only the nflverse 2003-2020 lines)."""
     return pl.DataFrame(schema=VALIDATED_SCHEMA)
 
 
