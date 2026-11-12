@@ -2,7 +2,7 @@
 phase: 14
 slug: share-cards-launch-verification
 status: in-progress
-nyquist_compliant: false
+nyquist_compliant: true
 wave_0_complete: true
 created: 2026-11-12
 ---
@@ -36,7 +36,7 @@ created: 2026-11-12
 
 ## Per-Task Verification Map
 
-Task IDs filled by 14-03. Statuses reflect runs on 2026-11-12 (Node 24): quick run 65 tests green, full suite 342 tests green, `npm run check` 0 errors, build + verify_share.py ALL PASS.
+Task IDs filled by 14-03. Statuses reflect runs on 2026-11-12 (Node 24): quick run 65 tests green, full suite 342 tests green, `npm run check` 0 errors, build + verify_share.py ALL PASS, verify_copy.py ALL PASS (14-04).
 
 | Task | Req | Behavior | Test Type | Automated Command | File Exists | Status |
 |------|-----|----------|-----------|-------------------|-------------|--------|
@@ -54,7 +54,8 @@ Task IDs filled by 14-03. Statuses reflect runs on 2026-11-12 (Node 24): quick r
 | 14-03-T2 | SHARE-02 | Real build emits `dist/s/team/BUF/2026-w9/index.html` + `dist/og/team/BUF/2026-w9.png`; timing log | smoke | `npm run build && test -f dist/s/team/BUF/2026-w9/index.html && test -f dist/og/team/BUF/2026-w9.png` | n/a | ✅ green |
 | 14-03-T2 | SHARE-02 | Share page redirects a browser to the hash route; crawler UA gets og:image; card served as image/png (vite preview) | e2e | `python3 ../.planning/phases/14-share-cards-launch-verification/verify_share.py` | ✅ | ✅ green |
 | 14-01-T1 | SHARE-03 | Copy URL = share URL when `hasSharePage`, else `deepLink(hash)`; latest team view pins `meta.latest` week | unit | `npx vitest run src/lib/share.test.ts` | ✅ | ✅ green |
-| 14-04-T1/T2 | SHARE-03 | Copy-link buttons (team header + callouts) use teamCopyUrl/calloutCopyUrl | build + browser | 14-04 plan verify (copycheck build, port 4174) | — | ⬜ pending (14-04) |
+| 14-04-T1 | SHARE-03 | Shared CopyLinkButton in team header + callout cards uses teamCopyUrl/calloutCopyUrl; check 0/0 | build | `npx vitest run src/ && npm run check && npx vite build --outDir node_modules/.tmp/copycheck --emptyOutDir` | ✅ | ✅ green |
+| 14-04-T2 | SHARE-03 | Browser: latest team/callout copy share URLs, w8 copies hash links, WR-05 re-announce, 375px no h-scroll | e2e | `python3 ../.planning/phases/14-share-cards-launch-verification/verify_copy.py` (preview on 4174) | ✅ | ✅ green (6/6 ALL PASS) |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -74,7 +75,7 @@ Task IDs filled by 14-03. Statuses reflect runs on 2026-11-12 (Node 24): quick r
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Copy-link button in team header + callouts copies share URL ("Link copied") | SHARE-03 | No component test infra (no jsdom) | Playwright/browser at `vite preview`: click, read clipboard/manual field |
+| Copy-link button in team header + callouts copies share URL ("Link copied") | SHARE-03 | No component test infra (no jsdom) | Automated by `verify_copy.py` (Playwright, clipboard permissions) — ✅ ALL PASS 2026-11-12 |
 | Production crawler fetch (facebookexternalhit, Twitterbot, Slackbot) → 200, absolute tags, image 200 | SHARE-02 | Needs deployed production | D-25 curl block after Vercel READY (in `14-HUMAN-UAT.md`) — ⬜ pending (orchestrator) |
 | Slack / iMessage / X pastes; FB Sharing Debugger; LinkedIn Post Inspector | SC 4 | Real platforms, human accounts | `14-HUMAN-UAT.md` URLs — ⬜ pending (human UAT) |
 
@@ -87,6 +88,6 @@ Task IDs filled by 14-03. Statuses reflect runs on 2026-11-12 (Node 24): quick r
 - [x] Wave 0 covers all MISSING references
 - [x] No watch-mode flags
 - [x] Feedback latency < 30s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-12 (automated; production crawler + platform UAT remain in 14-HUMAN-UAT.md)

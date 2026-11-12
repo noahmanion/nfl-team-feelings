@@ -32,7 +32,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 11: Pipeline Data & Guards** - Golden frozen-score test first, then forfeit audit, display-only 2021+ win totals, EPA export and local logos in one pass (completed 2026-11-12)
 - [x] **Phase 12: Redesign Foundation & Team Identity** - Editorial type system, shared chart theme, restyled pages and logos everywhere, with all v1 behavior intact (completed 2026-11-12)
 - [x] **Phase 13: Explore Charts & Win Totals Display** - A new Explore page with the EPA and record-vs-evidence scatters, and Vegas win totals on the team page (completed 2026-11-12)
-- [ ] **Phase 14: Share Cards & Launch Verification** - Build-time share images and static share pages, copy-link wired to them, verified on real platforms
+- [x] **Phase 14: Share Cards & Launch Verification** - Build-time share images and static share pages, copy-link wired to them, verified on real platforms (completed 2026-11-12)
 
 ## Phase Details
 
@@ -202,7 +202,7 @@ Plans:
 - [x] 14-01-PLAN.md — share.ts: share URL scheme, launch gate, share page HTML, copy-URL helpers (+ tsconfig allowImportingTsExtensions)
 - [x] 14-02-PLAN.md — satori + resvg-js exact pins; og-template.mjs card tokens, fonts, glyph guard, team/callout/site card trees
 - [x] 14-03-PLAN.md — share.mjs buildShare wired into npm run build; measured build, local dist/redirect checks, ≤4 samples, 14-HUMAN-UAT.md
-- [ ] 14-04-PLAN.md — CopyLinkButton extraction; callout + team header copy links use share URLs; Playwright copy check
+- [x] 14-04-PLAN.md — CopyLinkButton extraction; callout + team header copy links use share URLs; Playwright copy check
 **UI hint**: yes
 
 ## Progress
@@ -224,4 +224,4 @@ Plans:
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete    | 2026-11-12 |
 | 13. Explore Charts & Win Totals Display | v2.0 | 7/7 | Complete    | 2026-11-12 |
-| 14. Share Cards & Launch Verification | v2.0 | 3/4 | In Progress|  |
+| 14. Share Cards & Launch Verification | v2.0 | 4/4 | Complete   | 2026-11-12 |

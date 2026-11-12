@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Site
-status: executing
+status: verifying
 stopped_at: Completed 14-01-PLAN.md
-last_updated: "2026-11-12T06:50:46.594Z"
+last_updated: "2026-11-12T06:52:58.246Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 26
-  completed_plans: 25
-  percent: 83
+  completed_plans: 26
+  percent: 100
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 
 Phase: 14 (share-cards-launch-verification) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-11-12
 
-Progress: [██████████] 96%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 96%
 | Phase 13 P05 | 6 min | 2 tasks | 3 files |
 | Phase 13 P06 | 4min | 3 tasks | 8 files |
 | Phase 14 P01 | 6min | 2 tasks | 3 files |
+| Phase 14 P04 | 8min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -104,6 +105,7 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-06: EPA crosshair means computed over plotted teams only
 - [Phase 14]: 14-01: shareTargets is derived from hasSharePage over meta week_labels so build and app agree by construction
 - [Phase 14]: 14-01: share page redirect is crawler-UA guarded; hash JSON-encoded with < escaped as u003c
+- [Phase ?]: 14-04: CopyLinkButton computes its URL at click time via getUrl(); share-vs-hash choice stays in share.ts
 
 ### Pending Todos
 
@@ -127,7 +129,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T06:50:46.591Z
+Last session: 2026-11-12T06:52:54.649Z
 Stopped at: Completed 14-01-PLAN.md
 Resume file: None
 
