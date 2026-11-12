@@ -201,5 +201,5 @@ export function epaEmpty(args: { season: number; week: number; gamesPlayed: numb
 export function emptyCopy(kind: Exclude<EpaEmpty, null>, season: number, weekLabelText: string, firstEpaSeason: number): string {
   if (kind === 'no-games') return `No games played yet in ${season}. Pick a later week.`
   if (kind === 'no-pbp') return `No play-by-play efficiency data for ${season}. Pick ${firstEpaSeason} or later.`
-  return `No efficiency data through ${weekLabelText} yet. Pick an earlier week.`
+  return `No efficiency data through ${weekLabelText} yet. Check back after the play-by-play update.`
 }

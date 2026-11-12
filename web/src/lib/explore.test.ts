@@ -265,6 +265,6 @@ describe('empty states', () => {
     expect(emptyCopy('no-pbp', 1998, 'Week 3', 1999))
       .toBe('No play-by-play efficiency data for 1998. Pick 1999 or later.')
     expect(emptyCopy('no-week', 2026, 'Week 10', 1999))
-      .toBe('No efficiency data through Week 10 yet. Pick an earlier week.')
+      .toBe('No efficiency data through Week 10 yet. Check back after the play-by-play update.')
   })
 })
