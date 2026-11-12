@@ -53,6 +53,10 @@
     gap: var(--space-sm);
     min-width: 0;
   }
+  .baseline {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
   .baseline,
   .missing {
     color: var(--text-muted);
@@ -78,6 +82,7 @@
     line-height: var(--lh-body);
   }
   .value {
+    font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--lh-label);
     font-weight: var(--weight-semibold);
@@ -104,12 +109,12 @@
     inset-block: calc(-1 * var(--space-xs));
     left: 50%;
     width: 1px;
-    background: var(--border);
+    background: var(--text-muted);
   }
   .bar {
     position: absolute;
     inset-block: 0;
-    border-radius: var(--radius-sm);
+    border-radius: 0;
   }
   .bar.pos {
     left: 50%;
@@ -127,7 +132,8 @@
   }
   .total {
     padding-top: var(--space-sm);
-    border-top: 1px solid var(--border);
+    border-top: 1px solid var(--rule-strong);
+    font-family: var(--font-mono);
     font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
   }

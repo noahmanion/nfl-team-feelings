@@ -1,5 +1,6 @@
 <script lang="ts">
   import CalloutCards from './CalloutCards.svelte'
+  import ChartFrame from './ChartFrame.svelte'
   import Delta from './Delta.svelte'
   import FactorBars from './FactorBars.svelte'
   import MoodLabel from './MoodLabel.svelte'
@@ -8,20 +9,27 @@
   import Sep from './Sep.svelte'
   import Sparkline from './Sparkline.svelte'
   import StatusPanel from './StatusPanel.svelte'
-  import TeamChip from './TeamChip.svelte'
+  import TeamLogo from './TeamLogo.svelte'
   import { cardCallouts, forTeam, forWeek } from '../lib/callouts'
   import { findSeason, loadGames, loadRecords, loadSeason } from '../lib/data'
-  import { formatRecord, weekLabel } from '../lib/format'
+  import { bandIndex, formatRecord, moodToken, weekLabel } from '../lib/format'
   import { formatDate, streakLine } from '../lib/records'
   import { boardHash, historyHash, teamHash } from '../lib/router'
   import { findTeamRow, playoffText, recentGames, seasonSeries, stepWeek } from '../lib/team'
+  import { eraName, eraText } from '../lib/teamNames'
   import type { ActiveStreak, GamesFile, Meta, SeasonFile } from '../lib/types'
 
   let { meta, team, season, week, latest }: { meta: Meta; team: string; season: number; week: number; latest: boolean } =
     $props()
 
   const teamMeta = $derived(meta.teams[team])
-  const name = $derived(teamMeta?.name ?? team)
+  // Era-correct name for the viewed season (D-16); the pin button keeps the current name.
+  const name = $derived(eraName(team, season, meta))
+  const currentName = $derived(teamMeta?.name ?? team)
+
+  // Header logo: 32px below 1024px, 48px at desktop widths. Starts at 32 for first paint.
+  let innerWidth = $state(0)
+  const wide = $derived(innerWidth >= 1024)
   const seasonMeta = $derived(findSeason(meta, season))
   const prevSeason = $derived(findSeason(meta, season - 1) ? season - 1 : null)
 
@@ -128,6 +136,11 @@
     row && ok(row.wins) && ok(row.losses) ? formatRecord(row.wins, row.losses, ok(row.ties) ? row.ties : 0) : '–',
   )
   const baseline = $derived(meta.baseline ?? 50)
+  // Shaded score cell: band from the exported label (hysteresis-adjusted), never the raw score.
+  const bandIdx = $derived(row ? bandIndex(row.band, meta.bands) : -1)
+  const band = $derived(bandIdx < 0 ? 'var(--border)' : `var(--mood-${moodToken(bandIdx, meta.bands.length)})`)
+  // Same condition FactorBars uses before it falls back to "Factor breakdown unavailable".
+  const hasPoints = $derived(!!row?.points)
   const odds = $derived(row ? playoffText(row.playoff_prob) : null)
   const qb = $derived(row?.qb ? `QB ${row.qb}` : null)
 
@@ -147,6 +160,8 @@
     </nav>
   {/if}
 {/snippet}
+
+<svelte:window bind:innerWidth />
 
 <article class="team-page" aria-labelledby="team-heading">
   {#if seasonFailed}
@@ -169,14 +184,14 @@
     <header class="head">
       <div class="who">
         <div class="name-line">
-          <TeamChip primary={teamMeta?.primary} secondary={teamMeta?.secondary} size={24} />
+          <TeamLogo franchise={team} primary={teamMeta?.primary} secondary={teamMeta?.secondary} size={wide ? 48 : 32} />
           <h2 id="team-heading">{name}</h2>
-          {#if teamMeta}<PinButton abbr={team} {name} />{/if}
+          {#if teamMeta}<PinButton abbr={team} name={currentName} />{/if}
         </div>
         <p class="sub">
           {when}{#if !latest}<Sep /><a href={teamHash(team)}>Now</a>{/if}
         </p>
-        <p class="sub"><span>{record}</span><Sep /><span>Rank #{row.rank}</span></p>
+        <p class="sub"><span class="num">{record}</span><Sep /><span>Rank <span class="num">#{row.rank}</span></span></p>
         {#if odds || qb}
           <p class="sub">
             {#if odds}<span>{odds}</span>{/if}{#if odds && qb}<Sep />{/if}{#if qb}<span>{qb}</span>{/if}
@@ -184,7 +199,7 @@
         {/if}
       </div>
       <div class="score-cell">
-        <span class="score"><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
+        <span class="score" style:--band={band}><span class="visually-hidden">Score </span>{ok(row.score) ? row.score : '–'}</span>
         <Delta value={row.score_delta} kind="score" />
         {#if week === 0 && ok(row.score_delta)}<span class="delta-note">vs end of last season</span>{/if}
       </div>
@@ -195,15 +210,23 @@
     {#if streakText && activeStreak}
       <p class="streak">{streakText}, since {formatDate(activeStreak.start)}{asOfText}</p>
     {/if}
-    {#if row.blurb}<p class="blurb">{row.blurb}</p>{/if}
+    {#if row.blurb}<p class="blurb">{eraText(row.blurb, team, season)}</p>{/if}
     {#if row.draft?.text}<p class="draft-note">{row.draft.text}</p>{/if}
 
     <CalloutCards callouts={teamCallouts} {meta} heading="Callouts" level={3} />
 
     <div class="columns">
       <section class="block" aria-labelledby="why-heading">
-        <h3 id="why-heading">Score breakdown</h3>
-        <FactorBars points={row.points} factors={meta.factors ?? []} {baseline} score={row.score} />
+        <ChartFrame
+          id="why-heading"
+          level={3}
+          headline={hasPoints ? `Where the ${row.score} comes from` : 'Score breakdown'}
+          dek={hasPoints
+            ? `Points each factor adds to or takes from an average team (${baseline}). Together they sum to the score.`
+            : undefined}
+        >
+          <FactorBars points={row.points} factors={meta.factors ?? []} {baseline} score={row.score} />
+        </ChartFrame>
       </section>
 
       <section class="block" aria-labelledby="games-heading">
@@ -264,7 +287,7 @@
     min-width: 0;
     font-size: var(--text-display);
     line-height: var(--lh-display);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
     overflow-wrap: anywhere;
   }
   .sub {
@@ -277,9 +300,22 @@
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    gap: var(--space-xs);
     white-space: nowrap;
   }
+  /* Shaded score cell (12-UI-SPEC Color): band tint with a solid 4px band edge. No muted text inside. */
   .score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    min-inline-size: 72px;
+    min-block-size: 56px;
+    padding: 0 var(--space-sm) 0 calc(var(--stripe-width) + var(--space-sm));
+    background: color-mix(in srgb, var(--band) var(--cell-tint), var(--bg));
+    box-shadow: inset var(--stripe-width) 0 0 var(--band);
+    color: var(--text);
+    font-family: var(--font-mono);
     font-size: var(--text-display);
     line-height: var(--lh-display);
     font-weight: var(--weight-semibold);
@@ -322,25 +358,31 @@
     line-height: var(--lh-body);
     color: var(--text-muted);
   }
+  /* sections carry their own rule-top spacing, so the stack itself adds no gap */
   .columns {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xl);
     min-width: 0;
   }
+  /* Rule-topped sections (D-22): no box, background or radius. */
   .block {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
     min-width: 0;
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-md);
+    margin-top: var(--space-xl);
   }
   h3 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .spark-heading {
-    margin-top: var(--space-md);
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-md);
+    margin-top: var(--space-xl);
   }
   .more {
     align-self: flex-start;
@@ -352,7 +394,7 @@
     .columns {
       display: grid;
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: var(--space-2xl);
+      column-gap: var(--space-2xl);
     }
   }
 </style>

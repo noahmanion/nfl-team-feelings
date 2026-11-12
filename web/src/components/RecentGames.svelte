@@ -1,8 +1,9 @@
 <script lang="ts">
-  import TeamChip from './TeamChip.svelte'
+  import TeamLogo from './TeamLogo.svelte'
   import { findSeason } from '../lib/data'
   import { weekLabel } from '../lib/format'
   import { signed, type RecentGame } from '../lib/team'
+  import { eraAbbr, eraName } from '../lib/teamNames'
   import type { Meta } from '../lib/types'
 
   let { games, meta, currentSeason }: { games: RecentGame[]; meta: Meta; currentSeason: number } = $props()
@@ -25,13 +26,13 @@
       <li class="game">
         <span class="visually-hidden"
           >{when(g)}: {word[g.result]} {g.pf} to {g.pa} {g.home || g.neutral ? 'against' : 'at'}
-          {opp?.name ?? g.opp}{g.neutral ? ', neutral site' : ''}.</span
+          {eraName(g.opp, g.season, meta)}{g.neutral ? ', neutral site' : ''}.</span
         >
         <span class="when" aria-hidden="true">{when(g)}</span>
         <span class="matchup" aria-hidden="true">
           <span class="at">{g.home || g.neutral ? 'vs' : '@'}</span>
-          <TeamChip primary={opp?.primary} secondary={opp?.secondary} />
-          <span class="opp">{g.opp}</span>
+          <TeamLogo franchise={g.opp} primary={opp?.primary} secondary={opp?.secondary} size={20} />
+          <span class="opp">{eraAbbr(g.opp, g.season)}</span>
           {#if g.neutral}<span class="neutral">(neutral)</span>{/if}
         </span>
         <span class="outcome" aria-hidden="true">
@@ -87,7 +88,7 @@
     color: var(--text-muted);
   }
   .opp {
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .neutral {
     color: var(--text-muted);
@@ -99,6 +100,7 @@
     display: flex;
     align-items: baseline;
     gap: var(--space-sm);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
