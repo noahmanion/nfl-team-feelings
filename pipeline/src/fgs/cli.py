@@ -133,10 +133,17 @@ def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
         print(f"WARNING: {wt} is missing; 2003-2020 expectations fall back to the model "
               "(vs_exp and scores change). Run `uv run fgs build` to fetch it.", file=sys.stderr)
         return None
-    frame = vegas_expectations(pl.read_csv(wt))
+    raw = pl.read_csv(wt)
     # D-12: the score's Vegas expectations are the frozen nflverse 2003-2020 lines only. The 2021+
     # lines in pipeline/inputs/ are display-only (fgs.wintotals) and must never arrive here.
-    # ValueError, not assert, so the guard survives `python -O`.
+    # WR-02: seasons > 2020 in the cached file (e.g. upstream nflverse extends it) are dropped, not
+    # fatal. vegas_expectations normalizes per season, so dropping them cannot change 2003-2020.
+    if raw.height and int(raw["season"].max()) > 2020:
+        print(f"WARNING: {wt} has seasons > 2020 (max {int(raw['season'].max())}); ignoring them "
+              "(the score uses the nflverse 2003-2020 lines only)", file=sys.stderr)
+        raw = raw.filter(pl.col("season") <= 2020)
+    frame = vegas_expectations(raw)
+    # Post-condition on the filtered frame. ValueError, not assert, so the guard survives `python -O`.
     if frame.height and int(frame["season"].max()) > 2020:
         raise ValueError(f"vegas_expectations must never read past 2020 (got season {int(frame['season'].max())} "
                          f"from {wt}); 2021+ win totals are display-only")

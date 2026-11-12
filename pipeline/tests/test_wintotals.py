@@ -144,11 +144,21 @@ def test_guard_cached_vegas_stops_at_2020():
     assert v is not None and int(v["season"].max()) <= 2020
 
 
-def test_guard_cached_vegas_refuses_post_2020(tmp_path):
-    rows = ["season,team,line,over_odds,under_odds", "2020,KC,11.5,-110,-110", "2021,KC,12.5,-110,-110"]
-    (tmp_path / "win_totals.csv").write_text("\n".join(rows) + "\n")
-    with pytest.raises(ValueError, match="never read past 2020"):
-        cli._cached_vegas(tmp_path)
+def test_guard_cached_vegas_drops_post_2020(tmp_path, capsys):
+    """WR-02: a >2020 row in the cached CSV is dropped (with a warning), never passed through, and
+    the 2020 expectation is unchanged by its presence."""
+    rows = ["season,team,line,over_odds,under_odds", "2020,KC,11.5,-110,-110", "2020,BUF,8.5,-110,-110"]
+    clean, dirty = tmp_path / "clean", tmp_path / "dirty"
+    clean.mkdir()
+    dirty.mkdir()
+    (clean / "win_totals.csv").write_text("\n".join(rows) + "\n")
+    (dirty / "win_totals.csv").write_text("\n".join(rows + ["2021,KC,12.5,-110,-110"]) + "\n")
+    want = cli._cached_vegas(clean)
+    assert "seasons > 2020" not in capsys.readouterr().err
+    got = cli._cached_vegas(dirty)
+    assert "seasons > 2020" in capsys.readouterr().err
+    assert got is not None and int(got["season"].max()) <= 2020
+    assert got.sort(got.columns).equals(want.sort(want.columns))
 
 
 FORBIDDEN = ("wintotals", "INPUTS_DIR", "inputs/", "win_totals_2021plus", "display_2026plus")
