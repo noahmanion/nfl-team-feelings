@@ -32,6 +32,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 - ✓ Fixed, backtested weights (Ridge, frozen) with pre-registered one-time 2022–25 holdout — v1.0 (verdict: "Yes, slightly", within noise)
 - ✓ Mood board, team deep-dive with factor bars + blurbs, mood-over-time chart, week scrubber, records page, methodology page, perception-gap callouts, movers, calendar-day streaks, my-team pin — v1.0
 - ✓ One-command weekly refresh → static JSON → static site — v1.0
+- ✓ v2 model pre-registered before any v2 code (`pipeline/PREREGISTRATION_V2.md` + closed pre-data errata in `PREREGISTRATION_V2_DEVIATIONS.md`): holdout = games kicking off after the v2 freeze commit, 2027 primary (2028 if the freeze misses 2027 Week 1); dev data ≤2025; free agency DROPPED (no signing dates in `load_contracts`) — Validated in Phase 9: v2 Pre-registration (INTEG-02, INTEG-03)
 
 ### Active
 
@@ -76,6 +77,9 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 | Full history 1999→present | Enables historical extremes ("saddest fanbase ever") | ✓ Good |
 | Offseason reacts to draft (v1); FA deferred | Draft value is cleanly available; FA value is messy | ✓ Good |
 | No tanking reward | Don't encourage tanking | ✓ Good |
+| v2 holdout by kickoff time after the freeze commit, 2027 primary | 2026 weeks 1–10 were already watched; season-label holdouts would leak | — Pending (eval ~Feb 2028) |
+| Free agency dropped from v2 | `load_contracts` has no signing date (year-level only), current-team only, UFA coverage complete only from 2012 | ✓ Good |
+| Pre-registration fixes go to closed errata, never the prereg file | The prereg must stay at one commit; errata route is in its section 1.3 | ✓ Good |
 | Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | ✓ Good |
 
 ## Evolution
@@ -96,4 +100,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11, v2.0 milestone started*
+*Last updated: 2026-11-11, after Phase 9 (v2 pre-registration)*
