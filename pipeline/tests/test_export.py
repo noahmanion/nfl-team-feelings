@@ -75,7 +75,9 @@ def real_files():
     if not (CACHE_DIR / "schedules.parquet").exists() or not (CACHE_DIR / "teams.parquet").exists():
         pytest.skip("no cached schedules/teams; run `uv run fgs export` once first")
     derived = derive(load_schedules(), **derive_inputs())
-    return derived, build_export(derived, load_teams(), generated_at=GEN)
+    # same display-only win totals the CLI passes (export and refresh paths)
+    return derived, build_export(derived, load_teams(), generated_at=GEN,
+                                 win_totals=cli._display_win_totals(CACHE_DIR))
 
 
 def _all_rows(files):
@@ -656,6 +658,47 @@ def test_export_without_draft_values_has_null_draft(synthetic_games):
     for r in derived["features"].iter_rows(named=True):
         assert export._draft_info(r, ctx) is None
     assert load_offseason()["weight"] == derived["offseason"]["weight"]
+
+
+# --- Phase 11: display-only Vegas win totals (DATA-02, D-13) --------------------------------
+
+VWT_KEYS = {"season", "line", "over_odds", "under_odds", "line_type", "source", "used_in_score"}
+
+
+def test_vegas_win_totals_empty_without_frame(monkeypatch):
+    """win_totals=None (the default): every team file still carries the key, all columns empty."""
+    files, _ = _draft_export(monkeypatch, {**LIVE_CFG, "weight": 0.0, "display_only": True})
+    teams = [p for p in files if p.startswith("teams/")]
+    assert teams
+    for p in teams:
+        assert files[p]["vegas_win_totals"] == {k: [] for k in VWT_KEYS}, p
+
+
+def test_vegas_win_totals_real(real_files):
+    if not (CACHE_DIR / "win_totals.csv").exists():
+        pytest.skip("win_totals.csv not cached")
+    derived, files = real_files
+    for fid in sorted(CANONICAL):
+        v = files[f"teams/{fid}.json"]["vegas_win_totals"]
+        assert set(v) == VWT_KEYS and len({len(c) for c in v.values()}) == 1, fid
+        assert v["season"] == sorted(v["season"]) == list(range(2003, 2027)), fid  # 18 nflverse + 6 display
+        for se, used, lt in zip(v["season"], v["used_in_score"], v["line_type"]):
+            if se <= 2020:
+                assert used is True and lt == "nflverse", (fid, se)
+            else:
+                assert used is False and lt in {"preseason_close", "preseason_open"}, (fid, se)
+        assert all(isinstance(x, float) and x > 0 for x in v["line"])
+        assert v["source"][0].startswith("https://") and v["source"][-1].startswith("https://")
+        assert json.dumps(v, allow_nan=False)
+    # LV 2003-2019 come from raw OAK; the lines match the score's own vegas frame (2003-2020)
+    lv = files["teams/LV.json"]["vegas_win_totals"]
+    raw = pl.read_csv(CACHE_DIR / "win_totals.csv").filter(pl.col("team") == "OAK").sort("season")
+    assert raw["season"].to_list() == list(range(2003, 2020))
+    assert lv["line"][:17] == [float(x) for x in raw["line"]]
+    vegas = derived["vegas"]
+    kc = files["teams/KC.json"]["vegas_win_totals"]
+    want = vegas.filter(pl.col("franchise_id") == "KC").sort("season")
+    assert kc["line"][:18] == want["vegas_line"].to_list()
 
 
 # --- Phase 8: callouts (INSIGHT-02 perception gap, INSIGHT-06 movers) -----------------------

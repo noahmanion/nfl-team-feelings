@@ -253,10 +253,14 @@ def as_of_date(generated_at: str) -> date:
 
 def build_export(
     derived: dict, teams_df: pl.DataFrame, generated_at: str, *, evidence: dict | None = None,
+    win_totals: pl.DataFrame | None = None,
 ) -> dict[str, object]:
     """evidence: the perception-gap base rates; None loads paths.CALLOUT_EVIDENCE_PATH. Either way it
     is validated against the current threshold, window, training seasons and the fgs.fingerprint
-    hashes (weights, Elo params, code, 1999-2021 data)."""
+    hashes (weights, Elo params, code, 1999-2021 data).
+
+    win_totals: display-only Vegas preseason lines (cli._display_win_totals); copied verbatim into
+    each team file's vegas_win_totals. Nothing in the score, labels or history reads it."""
     games = derived["games"]
     scored = score_frame(derived["features"]).sort(["season", "week", "rank"])
     teams = team_meta(teams_df)
@@ -340,6 +344,7 @@ def build_export(
                 "score": part["score"].to_list(), "elo": [int(round(e)) for e in part["elo"]],
                 "label": part["label"].to_list(),
             },
+            "vegas_win_totals": _vegas_win_totals(win_totals, fid),
         }
     files["history.json"] = {"keys": keys, "teams": hist}
     files["callouts.json"] = by_week.get((int(s), int(w)), [])  # the flat list for meta.latest
@@ -348,6 +353,28 @@ def build_export(
     # in `files` so write_export swaps it in atomically with everything else (Pitfall 3)
     files["methodology.json"] = methodology.build_methodology(weights, *methodology.load_evidence(), live=int(s))
     return files
+
+
+VEGAS_WIN_TOTAL_KEYS = ("season", "line", "over_odds", "under_odds", "line_type", "source", "used_in_score")
+
+
+def _vegas_win_totals(win_totals: pl.DataFrame | None, fid: str) -> dict[str, list]:
+    """Columnar Vegas preseason lines for one franchise, sorted by season. used_in_score is True for
+    the nflverse 2003-2020 lines the score used and False for the display-only 2021+ lines. Empty
+    lists (same keys) when no frame is given, so the team-file shape is stable."""
+    if win_totals is None:
+        return {k: [] for k in VEGAS_WIN_TOTAL_KEYS}
+    part = win_totals.filter(pl.col("franchise_id") == fid).sort("season")
+    opt_int = lambda v: None if v is None else int(v)  # noqa: E731
+    return {
+        "season": [int(v) for v in part["season"]],
+        "line": [float(v) for v in part["line"]],
+        "over_odds": [opt_int(v) for v in part["over_odds"]],
+        "under_odds": [opt_int(v) for v in part["under_odds"]],
+        "line_type": part["line_type"].to_list(),
+        "source": part["source"].to_list(),
+        "used_in_score": [bool(v) for v in part["used_in_score"]],
+    }
 
 
 def write_export(files: dict[str, object], out_dir: Path) -> None:

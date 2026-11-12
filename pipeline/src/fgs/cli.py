@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, draft, export, features, freeze, holdout, paths, records, score, sim
+from fgs import checks, draft, export, features, freeze, holdout, paths, records, score, sim, wintotals
 from fgs.backtest import (
     draft_gate, draft_walk_forward, format_draft_report, format_proposal, format_report, propose_weights,
     run_backtest,
@@ -133,7 +133,23 @@ def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
         print(f"WARNING: {wt} is missing; 2003-2020 expectations fall back to the model "
               "(vs_exp and scores change). Run `uv run fgs build` to fetch it.", file=sys.stderr)
         return None
-    return vegas_expectations(pl.read_csv(wt))
+    frame = vegas_expectations(pl.read_csv(wt))
+    # D-12: the score's Vegas expectations are the frozen nflverse 2003-2020 lines only. The 2021+
+    # lines in pipeline/inputs/ are display-only (fgs.wintotals) and must never arrive here.
+    # ValueError, not assert, so the guard survives `python -O`.
+    if frame.height and int(frame["season"].max()) > 2020:
+        raise ValueError(f"vegas_expectations must never read past 2020 (got season {int(frame['season'].max())} "
+                         f"from {wt}); 2021+ win totals are display-only")
+    return frame
+
+
+def _display_win_totals(cache_dir) -> pl.DataFrame:
+    """Export-only Vegas win totals (D-13): the cached nflverse 2003-2020 file (used_in_score=True)
+    plus the committed, display-only 2021+ lines in pipeline/inputs/ (used_in_score=False).
+    Never passed to derive(); the score's expectations come from _cached_vegas only."""
+    wt = cache_dir / "win_totals.csv"
+    raw = pl.read_csv(wt) if wt.exists() else None
+    return wintotals.display_frame(raw, wintotals.load_display_win_totals())
 
 
 DRAFT_FILES = ("draft_picks.parquet", "draft_values.csv")
@@ -443,7 +459,8 @@ def _cmd_refresh(args) -> int:
         print("checks failed; cache and JSON not updated", file=sys.stderr)
         return 1
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    files = export.build_export(derived, teams, generated_at=generated_at)  # pure; may still raise before writes
+    files = export.build_export(derived, teams, generated_at=generated_at,
+                                win_totals=_display_win_totals(cache_dir))  # pure; may still raise before writes
     # WR-03: the writes below are atomic per file, not as a set. The marker brackets them so a
     # crash/Ctrl-C mid-sequence is detected: `fgs export` refuses and `fgs check` fails until a
     # refresh completes, instead of publishing a mix of new and old inputs.
@@ -499,7 +516,8 @@ def _cmd_export(args) -> int:
     derived = derive(load_schedules(), **cached_inputs(), sim_cache_dir=sim_cache_dir())  # cache only (schedules download once if missing)
     teams = load_teams()
     generated_at = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
-    files = export.build_export(derived, teams, generated_at=generated_at)
+    files = export.build_export(derived, teams, generated_at=generated_at,
+                                win_totals=_display_win_totals(CACHE_DIR))  # CACHE_DIR read at call time
     out_dir = WEB_DATA_DIR  # module global read at call time so tests can monkeypatch it
     export.write_export(files, out_dir)
     check = _write_records_check(files)

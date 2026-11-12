@@ -1,5 +1,6 @@
 """`fgs elo` as-of semantics on synthetic derived data in a tmp dir (no network, no real cache)."""
 
+import json
 import re
 import shutil
 
@@ -237,6 +238,12 @@ def test_refresh_happy_path_writes_parquet_and_json(refresh_dirs, monkeypatch, c
         assert (web_dir / f).exists()
     assert "Notable non-entries" in cli.paths.RECORDS_CHECK_PATH.read_text()  # hand-check written with the export
     assert len(list((web_dir / "teams").iterdir())) == 32
+    # D-13: the refresh path carries the display-only Vegas win totals too
+    vwt = json.loads((web_dir / "teams" / "KC.json").read_text())["vegas_win_totals"]
+    i2021 = vwt["season"].index(2021)
+    assert vwt["used_in_score"][i2021] is False and 2026 in vwt["season"]
+    if (cache_dir / "win_totals.csv").exists():
+        assert vwt["season"][0] == 2003 and vwt["used_in_score"][0] is True
     assert any((web_dir / "snapshots").iterdir())
     out = capsys.readouterr().out
     assert "all checks passed" in out and re.search(r"refreshed in \d+\.\ds: exported", out)

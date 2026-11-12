@@ -8,6 +8,9 @@ CACHE_DIR = DATA_DIR / "cache"
 DERIVED_DIR = DATA_DIR / "derived"
 WEB_DATA_DIR = PIPELINE_ROOT.parent / "web" / "public" / "data"
 WEIGHTS_PATH = PIPELINE_ROOT / "weights.yaml"
+# Phase 11: committed, sourced 2021+ Vegas win totals. Display only: never read by the score
+# (vegas_expectations / vs_exp stop at the nflverse 2003-2020 file).
+INPUTS_DIR = PIPELINE_ROOT / "inputs"
 # Phase 6 freeze / holdout artifacts (consumers read these as `paths.X` at call time)
 PREREG_PATH = PIPELINE_ROOT / "PREREGISTRATION.md"
 FREEZE_RESULT_PATH = PIPELINE_ROOT / "FREEZE_RESULT.json"
