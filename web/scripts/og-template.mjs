@@ -105,3 +105,152 @@ export async function renderPng(tree, where) {
   }
   return png
 }
+
+// ---- Card trees (14-UI-SPEC geometry) ----
+
+const HEX = /^#[0-9A-Fa-f]{6}$/
+const MONO = 'IBM Plex Mono'
+const meta24 = { fontFamily: MONO, fontWeight: 400, fontSize: 24, lineHeight: '32px', textTransform: 'uppercase', letterSpacing: 0.96, color: CARD.muted }
+
+/** Callout type → kicker text. Unknown types get no kicker. */
+export const KICKER = { worried: 'Worried', hopeful: 'Hopeful', misery: 'Misery', joy: 'Joy', mover_up: 'Rising', mover_down: 'Falling' }
+
+function frame(stripe, ...body) {
+  return h(
+    'div',
+    { width: CARD.w, height: CARD.h, display: 'flex', flexDirection: 'column', backgroundColor: CARD.bg, fontFamily: 'Inter', color: CARD.text },
+    stripe,
+    h('div', { display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flexGrow: 1, padding: `${CARD.pad - CARD.stripe}px ${CARD.pad}px ${CARD.pad}px` }, ...body),
+  )
+}
+
+const solidStripe = (color) => h('div', { display: 'flex', width: CARD.w, height: CARD.stripe, flex: 'none', backgroundColor: color })
+
+function footer(host) {
+  return h(
+    'div',
+    { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTop: `2px solid ${CARD.rule}`, paddingTop: 16 },
+    h('div', { fontFamily: 'Inter', fontWeight: 700, fontSize: 24, lineHeight: '32px', color: CARD.text }, 'Feel-Good Score'),
+    h('div', { fontFamily: MONO, fontWeight: 400, fontSize: 24, lineHeight: '32px', color: CARD.muted }, String(host ?? '')),
+  )
+}
+
+/** Logo image, or the TeamChip-style gradient chip (D-04). The chip has no letters. */
+export function logoBox(logo, size, primary, secondary, radius) {
+  if (logo) return { type: 'img', props: { src: logo, width: size, height: size, style: { width: size, height: size, flex: 'none', objectFit: 'contain' } } }
+  const ok = HEX.test(primary ?? '') && HEX.test(secondary ?? '')
+  const fill = ok
+    ? { backgroundImage: `linear-gradient(135deg, ${primary} 0%, ${primary} 50%, ${secondary} 50%, ${secondary} 100%)` }
+    : { backgroundColor: CARD.chipFallback }
+  return h('div', { display: 'flex', boxSizing: 'border-box', width: size, height: size, flex: 'none', borderRadius: radius, border: `2px solid ${CARD.chipOutline}`, ...fill })
+}
+
+const body = (...rows) => h('div', { display: 'flex', flexDirection: 'column' }, ...rows)
+const gap = (n) => h('div', { display: 'flex', height: n, flex: 'none' })
+
+/** Team card (D-08): score + mood label claim, rank + record support. */
+export function teamCard(vm) {
+  const { stripe, tint } = bandColors(vm.band, vm.bands ?? [])
+  const name = String(vm.name ?? '')
+  const big = name.length <= 28
+  const score = Number.isFinite(vm.score) ? String(Math.round(vm.score)) : '–'
+  const identity = h(
+    'div',
+    { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 32, width: 688, height: 192 },
+    logoBox(vm.logo, 144, vm.primary, vm.secondary, 12),
+    h(
+      'div',
+      { display: 'flex', flexDirection: 'column', gap: 4, width: 512 },
+      h('div', { fontWeight: 700, fontSize: big ? 56 : 36, lineHeight: big ? '62px' : '44px', color: CARD.text }, name),
+      h('div', { fontFamily: MONO, fontWeight: 400, fontSize: 36, lineHeight: '44px', color: CARD.muted }, `#${vm.rank} of ${vm.nTeams} · ${vm.record}`),
+    ),
+  )
+  const scoreCol = h(
+    'div',
+    { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, width: 352 },
+    h(
+      'div',
+      { display: 'flex', boxSizing: 'border-box', alignItems: 'center', justifyContent: 'flex-end', width: 352, height: 192, backgroundColor: tint, borderLeft: `${CARD.stripe}px solid ${stripe}`, paddingRight: 24 },
+      h('div', { fontFamily: MONO, fontWeight: 700, fontSize: 160, lineHeight: '160px', color: CARD.text }, score),
+    ),
+    h('div', { ...meta24 }, 'out of 100'),
+  )
+  return frame(
+    solidStripe(stripe),
+    body(
+      h('div', { ...meta24 }, String(vm.dateStamp ?? '')),
+      gap(32),
+      h('div', { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }, identity, scoreCol),
+      gap(32),
+      h(
+        'div',
+        { display: 'flex', boxSizing: 'border-box', alignItems: 'center', width: 1072, height: 88, backgroundColor: tint, borderLeft: `${CARD.stripe}px solid ${stripe}`, paddingLeft: 24 },
+        h('div', { fontWeight: 700, fontSize: 36, lineHeight: '44px', color: CARD.text }, String(vm.label ?? '')),
+      ),
+    ),
+    footer(vm.host),
+  )
+}
+
+/** Callout card (D-09/D-10): kicker, who, clamped headline claim, detail support. */
+export function calloutCard(vm) {
+  const { stripe } = bandColors(vm.band, vm.bands ?? [])
+  const kicker = KICKER[vm.type]
+  const detailText = String(vm.detail ?? '')
+  const detailStyle = { fontWeight: 400, fontSize: 36, lineHeight: '44px', color: CARD.muted }
+  const detail = detailText.includes('→')
+    ? h('div', { ...detailStyle, display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: 16 }, ...cardRuns(detailText).map((r) => (typeof r === 'string' ? h('div', {}, r) : r)))
+    : h('div', { ...detailStyle, display: 'block', lineClamp: 2 }, clampText(detailText, 110))
+  return frame(
+    solidStripe(stripe),
+    body(
+      h(
+        'div',
+        { display: 'flex', flexDirection: 'row', justifyContent: kicker ? 'space-between' : 'flex-end', height: 32 },
+        ...(kicker ? [h('div', { fontWeight: 700, fontSize: 24, lineHeight: '32px', textTransform: 'uppercase', letterSpacing: 0.96, color: CARD.text }, kicker)] : []),
+        h('div', { ...meta24 }, String(vm.dateStamp ?? '')),
+      ),
+      gap(32),
+      h(
+        'div',
+        { display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 24, height: 80 },
+        logoBox(vm.logo, 80, vm.primary, vm.secondary, 8),
+        h('div', { fontWeight: 700, fontSize: 36, lineHeight: '44px', color: CARD.text }, String(vm.name ?? '')),
+      ),
+      gap(32),
+      h(
+        'div',
+        { display: 'flex', boxSizing: 'border-box', flexDirection: 'column', gap: 16, width: 1072, borderLeft: `${CARD.stripe}px solid ${stripe}`, paddingLeft: 24 },
+        h('div', { display: 'block', lineClamp: 2, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, clampText(vm.headline, 68)),
+        detail,
+      ),
+    ),
+    footer(vm.host),
+  )
+}
+
+const scale = (height) => h('div', { display: 'flex', flexDirection: 'row', width: '100%', height, flex: 'none' }, ...CARD.mood.map((c) => h('div', { display: 'flex', flexGrow: 1, height, backgroundColor: c })))
+
+/** Site-default card (D-06): no logo, no date. */
+export function siteCard({ host }) {
+  return frame(
+    scale(CARD.stripe),
+    body(
+      h('div', { ...meta24 }, 'Every NFL team · Every week'),
+      gap(32),
+      h('div', { display: 'block', lineClamp: 2, width: 1072, fontWeight: 700, fontSize: 56, lineHeight: '62px', color: CARD.text }, 'How should you feel about your NFL team?'),
+      gap(16),
+      h('div', { display: 'block', lineClamp: 2, width: 1072, fontWeight: 400, fontSize: 36, lineHeight: '44px', color: CARD.muted }, 'A momentum-weighted, backtested score from 0 to 100, with a mood label on top.'),
+      gap(32),
+      h('div', { display: 'flex', width: 1072 }, scale(24)),
+      gap(8),
+      h(
+        'div',
+        { display: 'flex', flexDirection: 'row', justifyContent: 'space-between', width: 1072 },
+        h('div', { fontFamily: MONO, fontWeight: 400, fontSize: 24, lineHeight: '32px', color: CARD.muted }, '0'),
+        h('div', { fontFamily: MONO, fontWeight: 400, fontSize: 24, lineHeight: '32px', color: CARD.muted }, '100'),
+      ),
+    ),
+    footer(host),
+  )
+}
