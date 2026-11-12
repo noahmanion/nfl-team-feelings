@@ -4,6 +4,7 @@
   import { go } from '../lib/route.svelte'
   import { validMyTeam } from '../lib/myteam'
   import { myTeam } from '../lib/myteam.svelte'
+  import { isActiveFranchise } from '../lib/teamNames'
   import type { Meta, Row } from '../lib/types'
 
   let {
@@ -30,7 +31,9 @@
   const SKELETON_ROWS = 8
 
   const pinned = $derived(validMyTeam(myTeam.abbr, meta?.teams))
-  const pinnedOnBoard = $derived(pinned !== null && rows.some((r) => r.franchise === pinned))
+  // D-17: franchises that did not exist yet in the viewed season (HOU before 2002) are not shown.
+  const visibleRows = $derived(rows.filter((r) => isActiveFranchise(r.franchise, season)))
+  const pinnedOnBoard = $derived(pinned !== null && visibleRows.some((r) => r.franchise === pinned))
 
   // No row fragment link: the app uses hash routing, so scroll and focus by hand.
   function jumpToMine(): void {
@@ -43,8 +46,8 @@
 
 {#snippet columns()}
   <div class="columns" aria-hidden="true">
-    <span>#</span><span>Team</span><span>Record</span><span class="num">Score</span><span>Mood</span><span class="num"
-      >Change</span
+    <span>#</span><span>Team</span><span class="right">Record</span><span class="right">Score</span><span>Mood</span><span
+      class="right">Change</span
     >
   </div>
 {/snippet}
@@ -59,7 +62,7 @@
       {/each}
     </ol>
   </div>
-{:else if !busy && rows.length === 0}
+{:else if !busy && visibleRows.length === 0}
   <StatusPanel
     variant="empty"
     title="No moods to report"
@@ -73,7 +76,7 @@
     {/if}
     {@render columns()}
     <ol aria-labelledby="board-heading" aria-busy={busy}>
-      {#each rows as row (row.franchise)}
+      {#each visibleRows as row (row.franchise)}
         <BoardRow {row} team={meta.teams[row.franchise]} bands={meta.bands} {season} {week} {latest} {pinned} />
       {/each}
     </ol>
@@ -84,7 +87,7 @@
   ol {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 0;
   }
   .busy {
     opacity: 0.6;
@@ -103,11 +106,11 @@
     color: var(--text);
     font: inherit;
     font-size: var(--text-label);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
     cursor: pointer;
   }
   .jump button:hover {
-    background: var(--bg);
+    background: var(--surface-hover);
   }
   .jump button:focus-visible {
     outline: 2px solid var(--accent);
@@ -118,17 +121,15 @@
     align-items: center;
     block-size: 64px;
     padding: 0 var(--space-md);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: var(--stripe-width) solid var(--border);
-    border-radius: var(--radius-md);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0;
   }
   .bar {
     display: block;
     inline-size: 60%;
     block-size: 16px;
     background: var(--border);
-    border-radius: var(--radius-sm);
+    border-radius: 0;
   }
   .columns {
     display: none;
@@ -136,17 +137,20 @@
   @media (min-width: 1024px) {
     .columns {
       display: grid;
-      grid-template-columns: 48px minmax(0, 1fr) 80px 72px minmax(0, 280px) 72px;
+      grid-template-columns: 32px minmax(0, 1fr) 80px var(--score-cell) minmax(0, 280px) 72px;
       column-gap: var(--space-md);
-      /* align with row content: 1px border + stripe on the left, 1px border on the right */
-      /* right side also reserves the pin button slot (BoardRow padding-inline-end) */
-      padding: 0 calc(var(--tap-min) + var(--space-sm) + 1px) var(--space-sm) calc(var(--space-md) + var(--stripe-width));
-      font-size: var(--text-label);
-      line-height: var(--lh-label);
-      font-weight: var(--weight-semibold);
+      /* align with BoardRow content; the right side reserves the pin button slot */
+      padding: 0 calc(var(--tap-min) + var(--space-sm)) var(--space-sm) var(--space-md);
+      border-bottom: 1px solid var(--rule-strong);
+      font-family: var(--font-mono);
+      font-size: var(--text-micro);
+      line-height: var(--lh-micro);
+      font-weight: var(--weight-regular);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
       color: var(--text-muted);
     }
-    .num {
+    .right {
       text-align: right;
     }
   }
