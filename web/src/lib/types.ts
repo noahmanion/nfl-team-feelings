@@ -95,7 +95,9 @@ export interface Methodology {
   notes: Note[]
 }
 
-/** epa/{season}.json: columnar, one row per played team-game with pbp (11-03). def_* = the opponent's off_*. */
+/** epa/{season}.json: columnar, one row per played team-game with pbp (11-03). def_* = the opponent's off_*.
+ * Play counts are never null (0 when a side had no qualifying plays); the per-play rates can be null
+ * then (WR-05), so consumers must skip null rates rather than treat them as 0. */
 export interface EpaFile { season: number; note: string; game_id: string[]; week: number[]; game_type: string[];
-  franchise: string[]; opponent: string[]; off_epa: number[]; off_plays: number[]; off_sr: number[];
-  def_epa: number[]; def_plays: number[]; def_sr: number[] }
+  franchise: string[]; opponent: string[]; off_epa: (number | null)[]; off_plays: number[]; off_sr: (number | null)[];
+  def_epa: (number | null)[]; def_plays: number[]; def_sr: (number | null)[] }

@@ -19,7 +19,7 @@ from fgs.ingest import load_schedules, load_teams
 from fgs.mood import BANDS
 from fgs.paths import CACHE_DIR, WEIGHTS_PATH
 from fgs.score import load_offseason, load_weights
-from fgs import insights, paths, season_config
+from fgs import export, insights, paths, season_config
 from fgs.season_config import SEEDS, n_teams, playoff_teams
 from conftest import derive_inputs
 
@@ -833,6 +833,27 @@ def test_epa_def_sr_is_opponent_off_sr(real_files):
             j = idx[(g, o)]
             assert f["def_sr"][i] == f["off_sr"][j], (p, g, o)
             assert f["def_epa"][i] == f["off_epa"][j] and f["def_plays"][i] == f["off_plays"][j], (p, g, o)
+
+
+def test_epa_files_null_side_exports_zero_plays():
+    """WR-05: a team-game with defensive but no offensive plays (full-join null) exports off_plays 0,
+    null off rates, and the opponent's def side follows (def_sr null, def_plays 0)."""
+    tg = pl.DataFrame({
+        "game_id": ["g1", "g1"], "season": [2025, 2025], "asof_week": [1, 1], "game_type": ["REG", "REG"],
+        "franchise_id": ["KC", "BAL"], "opponent_id": ["BAL", "KC"], "played": [True, True],
+    })
+    tge = pl.DataFrame({
+        "game_id": ["g1", "g1"], "franchise_id": ["KC", "BAL"],
+        "off_epa": [None, 0.1], "off_plays": [None, 50], "off_sr": [None, 0.45],
+        "def_epa": [0.1, None], "def_plays": [50, None],
+    }, schema_overrides={"off_epa": pl.Float64, "off_plays": pl.Int64, "off_sr": pl.Float64,
+                         "def_epa": pl.Float64, "def_plays": pl.Int64})
+    f = export._epa_files({"team_game_epa": tge, "team_games": tg}, [2025])["epa/2025.json"]
+    i, j = f["franchise"].index("KC"), f["franchise"].index("BAL")
+    assert f["off_plays"][i] == 0 and f["off_epa"][i] is None and f["off_sr"][i] is None
+    assert f["def_plays"][j] == 0 and f["def_sr"][j] is None
+    assert f["def_plays"][i] == 50 and f["def_sr"][i] == 0.45
+    assert all(isinstance(v, int) for v in f["off_plays"] + f["def_plays"])
 
 
 def test_meta_teams_conf_division(real_files):

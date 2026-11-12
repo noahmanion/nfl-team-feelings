@@ -49,7 +49,11 @@ def _r4(x: float | None) -> float | None:
 def _epa_files(derived: dict, seasons) -> dict[str, dict]:
     """Columnar per-team-game efficiency, one file per scored season that has pbp (D-14). def_sr is the
     opponent's off_sr in the same game (same scrimmage filter as def_epa/def_plays). Games without pbp
-    (KNOWN_NO_PBP, lagging current-season games) drop out through the inner join."""
+    (KNOWN_NO_PBP, lagging current-season games) drop out through the inner join.
+
+    WR-05: pbp.team_game_epa is a full outer join of offense and defense, so a side with no qualifying
+    plays can be null. Play counts are exported as 0 (never null); the per-play rates stay null there
+    (EpaFile types them `(number | null)[]` and seasonToDate skips null rates)."""
     tge = derived.get("team_game_epa")
     if tge is None:
         return {}
@@ -74,7 +78,7 @@ def _epa_files(derived: dict, seasons) -> dict[str, dict]:
             "opponent": part["opponent_id"].to_list(),
         }
         for c in ("off_epa", "off_plays", "off_sr", "def_epa", "def_plays", "def_sr"):
-            f[c] = [_r4(v) for v in part[c]] if c in EPA_FLOATS else [None if v is None else int(v) for v in part[c]]
+            f[c] = [_r4(v) for v in part[c]] if c in EPA_FLOATS else [0 if v is None else int(v) for v in part[c]]
         out[f"epa/{int(season)}.json"] = f
     return out
 

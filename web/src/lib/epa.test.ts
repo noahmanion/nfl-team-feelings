@@ -69,4 +69,18 @@ describe('seasonToDate', () => {
     expect(z.off_plays).toBe(0)
     expect(z.games).toBe(1)
   })
+
+  it('skips null rates instead of treating them as 0 (WR-05)', () => {
+    const g = file([
+      [1, 'KC', 'BAL', 0.1, 60, 0.5, -0.2, 50, 0.4],
+      [2, 'KC', 'BUF', 0.2, 40, 0.4, 0.3, 70, 0.5],
+    ])
+    g.off_sr[1] = null
+    g.def_sr[1] = null
+    const kc = seasonToDate(g, 2).KC
+    expect(kc.off_sr).toBeCloseTo(0.5)
+    expect(kc.def_sr).toBeCloseTo(0.4)
+    expect(kc.off_epa).toBeCloseTo(0.14)
+    expect(kc.off_plays).toBe(100)
+  })
 })
