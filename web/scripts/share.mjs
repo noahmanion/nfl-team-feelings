@@ -67,16 +67,17 @@ export async function buildShare({ dataDir, outDir, logoDir, env = {}, log = con
     return uri
   }
 
+  // A missing or corrupt snapshot file is a build error, not "no rows": the app's copy buttons
+  // (hasSharePage) already point at these weeks, so skipping would ship links that 404 (WR-02).
   const seasons = new Map()
   const seasonFile = (season) => {
     if (!seasons.has(season)) {
-      let f = null
+      const file = join(dataDir, `snapshots/${season}.json`)
       try {
-        f = readJson(join(dataDir, `snapshots/${season}.json`))
-      } catch {
-        f = null
+        seasons.set(season, readJson(file))
+      } catch (err) {
+        throw new Error(`share: cannot read ${file} (${err?.message ?? err}); copy links for ${season} would 404`)
       }
-      seasons.set(season, f)
     }
     return seasons.get(season)
   }
@@ -103,8 +104,7 @@ export async function buildShare({ dataDir, outDir, logoDir, env = {}, log = con
     const rows = file?.weeks?.[String(week)] ?? []
     const callouts = file?.callouts?.[String(week)] ?? []
     if (!rows.length) {
-      log(`share: no snapshot rows for ${season} w${week}`)
-      continue
+      throw new Error(`share: no snapshot rows for ${season} w${week}, but hasSharePage lists it (copy links would 404)`)
     }
     targets++
     const sm = meta.seasons.find((s) => s.season === season)

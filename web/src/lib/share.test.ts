@@ -75,6 +75,13 @@ describe('launch gate', () => {
     expect(hasSharePage(2028, 1, synthMeta)).toBe(false)
   })
 
+  it('hasSharePage ignores week labels past max_week (labels emitted ahead of play)', () => {
+    const ahead = { seasons: [{ ...season(2027, 18), max_week: 3 }] }
+    expect(hasSharePage(2027, 3, ahead)).toBe(true)
+    expect(hasSharePage(2027, 4, ahead)).toBe(false)
+    expect(shareTargets(ahead).map((t) => t.week)).toEqual([0, 1, 2, 3])
+  })
+
   it('shareTargets on the real meta is just the launch week', () => {
     expect(shareTargets(realMeta)).toEqual([{ season: 2026, week: 9 }])
   })
@@ -92,7 +99,7 @@ describe('launch gate', () => {
   })
 
   it('shareTargets sorts numerically even when label keys are out of order', () => {
-    const odd = { seasons: [{ ...season(2027, 0), week_labels: { '10': 'x', '2': 'y', '0': 'z' } }, season(2026, 10)] }
+    const odd = { seasons: [{ ...season(2027, 10), week_labels: { '10': 'x', '2': 'y', '0': 'z' } }, season(2026, 10)] }
     expect(shareTargets(odd)).toEqual([
       { season: 2026, week: 9 },
       { season: 2026, week: 10 },

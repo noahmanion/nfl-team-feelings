@@ -32,12 +32,17 @@ export const calloutImagePath = (c: CalloutKey): string => `/og/c/${calloutId(c)
 export const calloutShareHash = (c: Pick<Callout, 'franchise' | 'season' | 'week'>): string =>
   teamHash(c.franchise, c.season, c.week)
 
-/** True when (season, week) is at or after SHARE_LAUNCH and the week exists in meta (D-24). */
+/**
+ * True when (season, week) is at or after SHARE_LAUNCH, the week has a label in meta, and the week
+ * has been played (<= max_week, so labels emitted ahead of time never count) (D-24, WR-02).
+ * The single predicate for both the app's copy buttons and the build (via shareTargets); the build
+ * fails if any week this returns true for has no snapshot rows, so a copied share link cannot 404.
+ */
 export function hasSharePage(season: number, week: number, meta: Pick<Meta, 'seasons'>): boolean {
   const afterLaunch = season > SHARE_LAUNCH.season || (season === SHARE_LAUNCH.season && week >= SHARE_LAUNCH.week)
   if (!afterLaunch) return false
   const s = meta.seasons.find((x) => x.season === season)
-  return !!s && Object.prototype.hasOwnProperty.call(s.week_labels ?? {}, String(week))
+  return !!s && week <= s.max_week && Object.prototype.hasOwnProperty.call(s.week_labels ?? {}, String(week))
 }
 
 /** Every (season, week) with a share page, ascending. Built from hasSharePage, so build and app agree. */

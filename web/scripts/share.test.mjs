@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -121,4 +121,35 @@ describe('buildShare (integration against public/data)', () => {
       rmSync(tmp2, { recursive: true, force: true })
     }
   }, 120_000)
+})
+
+describe('buildShare fails loudly when the app would link to a missing page (WR-02)', () => {
+  // A season the app treats as shareable (hasSharePage true for 2026 w9).
+  const fakeMeta = {
+    ...meta,
+    latest: { season: 2026, week: 9 },
+    seasons: [{ season: 2026, max_week: 9, reg_weeks: 18, n_teams: 32, week_labels: { '9': 'Week 9' } }],
+  }
+  let dir
+  beforeAll(() => {
+    dir = mkdtempSync(join(tmpdir(), 'fgs-share-bad-'))
+    mkdirSync(join(dir, 'data/snapshots'), { recursive: true })
+    writeFileSync(join(dir, 'data/meta.json'), JSON.stringify(fakeMeta))
+  })
+  afterAll(() => dir && rmSync(dir, { recursive: true, force: true }))
+  const run = () => buildShare({ dataDir: join(dir, 'data'), outDir: join(dir, 'out'), logoDir, env: { SITE_ORIGIN: ORIGIN }, log: () => {} })
+
+  it('throws when the snapshot file is missing', async () => {
+    await expect(run()).rejects.toThrow(/cannot read .*2026\.json/)
+  })
+
+  it('throws when the snapshot file is corrupt', async () => {
+    writeFileSync(join(dir, 'data/snapshots/2026.json'), '{not json')
+    await expect(run()).rejects.toThrow(/cannot read .*2026\.json/)
+  })
+
+  it('throws when a shareable week has no rows', async () => {
+    writeFileSync(join(dir, 'data/snapshots/2026.json'), JSON.stringify({ weeks: { '8': [] }, callouts: {} }))
+    await expect(run()).rejects.toThrow(/no snapshot rows for 2026 w9/)
+  })
 })
