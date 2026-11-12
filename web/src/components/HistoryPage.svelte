@@ -1,4 +1,5 @@
 <script lang="ts">
+  import ChartFrame from './ChartFrame.svelte'
   import HistoryChart from './HistoryChart.svelte'
   import StatusPanel from './StatusPanel.svelte'
   import { findSeason, loadHistory } from '../lib/data'
@@ -55,6 +56,7 @@
     (valid ? team : defaultTeam(latestRows, validMyTeam(myTeam.abbr, meta.teams))) ?? Object.keys(meta.teams)[0],
   )
   const teamMeta = $derived(meta.teams[selected])
+  const firstSeason = $derived(meta.seasons.length ? Math.min(...meta.seasons.map((s) => s.season)) : 1999)
 
   const options = $derived(
     Object.entries(meta.teams)
@@ -111,7 +113,10 @@
 
 <section class="history" aria-labelledby="history-heading">
   <div class="top">
-    <h2 id="history-heading">Mood over time</h2>
+    <div class="intro">
+      <h2 id="history-heading">Mood over time</h2>
+      <p class="dek">Every team’s feel-good score, every week since {firstSeason}. Pick a team to put it in color.</p>
+    </div>
     <div class="picker">
       <label for="team-select">Highlight team</label>
       <select id="team-select" value={selected} onchange={(e) => go(historyHash(e.currentTarget.value))}>
@@ -131,17 +136,25 @@
     />
   {:else if chart && teamMeta}
     <p class="summary">{summary} <a href={teamHash(selected)}>See {teamMeta.name} →</a></p>
-    <HistoryChart
-      rows={chart.rows}
-      xMax={chart.xMax}
-      starts={chart.starts}
-      connectors={conn}
-      team={selected}
-      teamName={teamMeta.name}
-      {color}
-      bands={meta.bands}
-      {dark}
-    />
+    <ChartFrame
+      id="history-chart-heading"
+      level={3}
+      headline={`How ${teamMeta.name} fans should have felt since ${firstSeason}`}
+      dek={`Weekly feel-good score, 0 to 100. ${teamMeta.name} in color, every other team in gray.`}
+      notes="Dashed segments mark offseason changes. Shaded bands are the mood labels."
+    >
+      <HistoryChart
+        rows={chart.rows}
+        xMax={chart.xMax}
+        starts={chart.starts}
+        connectors={conn}
+        team={selected}
+        teamName={teamMeta.name}
+        {color}
+        bands={meta.bands}
+        {dark}
+      />
+    </ChartFrame>
   {:else}
     <p class="loading" role="status">Loading mood history…</p>
   {/if}
@@ -164,7 +177,20 @@
   h2 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
+  }
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    min-width: 0;
+  }
+  .dek {
+    margin: 0;
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
+    color: var(--text-muted);
+    max-width: var(--prose-max);
   }
   .picker {
     display: flex;
