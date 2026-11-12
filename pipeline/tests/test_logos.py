@@ -97,6 +97,22 @@ def test_changed_url_refetches(tmp_path):
     assert m["KC"]["fetched"] == "2026-11-11"
 
 
+@pytest.mark.parametrize("bad", ["{not json", "[1, 2]", None])
+def test_odd_manifest_refetches_instead_of_crashing(tmp_path, bad):
+    """IN-08: a corrupt, non-dict or oddly shaped manifest re-fetches instead of raising."""
+    calls: list[str] = []
+    logos.fetch_logos(out_dir=tmp_path, fetch=_fake(calls), today="2026-11-11")
+    if bad is None:  # valid JSON object, but one entry is a string instead of a dict
+        manifest = json.loads((tmp_path / "manifest.json").read_text())
+        manifest["KC"] = "oops"
+        bad = json.dumps(manifest)
+    (tmp_path / "manifest.json").write_text(bad)
+    calls.clear()
+    m = logos.fetch_logos(out_dir=tmp_path, fetch=_fake(calls), today="2026-12-01")
+    assert logos.logo_url("KC") in calls and m["KC"]["url"] == logos.logo_url("KC")
+    assert set(m) == set(CANONICAL)
+
+
 def test_invalid_download_raises_without_partial(tmp_path):
     def bad(url: str) -> bytes:
         return b"<html>nope</html>"

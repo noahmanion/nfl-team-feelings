@@ -8,6 +8,7 @@ team_logo_wikipedia URLs.
 import hashlib
 import json
 import os
+import sys
 import urllib.request
 from datetime import date
 from pathlib import Path
@@ -66,12 +67,17 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
     today = date.today().isoformat() if today is None else today
     out.mkdir(parents=True, exist_ok=True)
     manifest_path = out / "manifest.json"
-    old = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    try:
+        old = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
+    except json.JSONDecodeError:  # IN-08: a corrupt manifest means "no trusted entries", not a crash
+        print(f"WARNING: corrupt logo manifest {manifest_path}; re-fetching all", file=sys.stderr)
+        old = {}
+    old = old if isinstance(old, dict) else {}
 
     manifest, staged = {}, {}
     for f in sorted(CANONICAL):
         path, url = out / f"{f}.png", logo_url(f)
-        prev = old.get(f, {})
+        prev = old.get(f) if isinstance(old.get(f), dict) else {}  # IN-08: odd entries re-fetch
         if path.exists() and not force and prev.get("url") == url:
             data = path.read_bytes()
             validate_png(data)
