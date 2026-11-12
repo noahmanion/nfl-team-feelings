@@ -704,6 +704,47 @@ def test_vegas_win_totals_real(real_files):
     assert kc["line"][:18] == want["vegas_line"].to_list()
 
 
+# --- Phase 13: display-only expectation (DATA-03, D-17) ------------------------------------
+
+EXP_KEYS = ("season", "exp_total", "source", "reg_games")
+
+
+def test_expectation_shape_without_sim(monkeypatch):
+    """Synthetic frames have no sim: the block still exists with a stable shape and null exp_total."""
+    files, _ = _draft_export(monkeypatch, {**LIVE_CFG, "weight": 0.0, "display_only": True})
+    teams = [p for p in files if p.startswith("teams/")]
+    assert teams
+    for p in teams:
+        e = files[p]["expectation"]
+        assert tuple(e) == EXP_KEYS, p
+        assert len({len(c) for c in e.values()}) == 1, p
+        assert all(v is None for v in e["exp_total"]), p
+        assert json.dumps(e, allow_nan=False)
+
+
+def test_expectation_real(real_files):
+    derived, files = real_files
+    g = derived["games"].filter(pl.col("game_type") == "REG")
+    reg_counts = pl.concat([
+        g.select("season", pl.col("home_id").alias("fid")), g.select("season", pl.col("away_id").alias("fid")),
+    ]).group_by("season", "fid").len()
+    reg = {(r["season"], r["fid"]): r["len"] for r in reg_counts.iter_rows(named=True)}
+    for fid in sorted(CANONICAL):
+        t = files[f"teams/{fid}.json"]
+        e = t["expectation"]
+        assert tuple(e) == EXP_KEYS and len({len(c) for c in e.values()}) == 1, fid
+        assert e["season"] == sorted(set(t["history"]["season"])), fid
+        assert e["season"][0] == (2002 if fid == "HOU" else 1999), fid
+        for se, x, src, n in zip(e["season"], e["exp_total"], e["source"], e["reg_games"]):
+            assert src == ("vegas" if 2003 <= se <= 2020 else "model"), (fid, se)
+            assert x is not None and 0 < x <= 17 and round(x, 1) == x, (fid, se, x)
+            want = 16 if se <= 2020 or (se, fid) in {(2022, "BUF"), (2022, "CIN")} else 17
+            assert n == want, (fid, se, n)
+            if se <= 2025:
+                assert n == reg[(se, fid)], (fid, se, n, reg[(se, fid)])
+        assert json.dumps(e, allow_nan=False)
+
+
 # --- Phase 8: callouts (INSIGHT-02 perception gap, INSIGHT-06 movers) -----------------------
 
 def test_callouts_contract(real_files):
