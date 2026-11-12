@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -152,4 +153,17 @@ describe('buildShare fails loudly when the app would link to a missing page (WR-
     writeFileSync(join(dir, 'data/snapshots/2026.json'), JSON.stringify({ weeks: { '8': [] }, callouts: {} }))
     await expect(run()).rejects.toThrow(/no snapshot rows for 2026 w9/)
   })
+})
+
+describe('plain Node can import the build script and its .ts helpers (WR-03)', () => {
+  // Vitest transforms TS with esbuild (enums compile, extensionless imports resolve); the real build
+  // runs scripts/share.mjs under bare Node type stripping, which rejects both. Exercise that path.
+  it('imports scripts/share.mjs in a spawned node process', () => {
+    const r = spawnSync(
+      process.execPath,
+      ['--input-type=module', '-e', "const m = await import('./scripts/share.mjs'); if (typeof m.buildShare !== 'function') process.exit(2)"],
+      { cwd: webRoot, encoding: 'utf8', timeout: 60_000 },
+    )
+    expect(r.status, r.stderr).toBe(0)
+  }, 60_000)
 })
