@@ -3,6 +3,7 @@ import {
   bandIndex,
   carryWeek,
   changeText,
+  formatRankDelta,
   formatDate,
   formatDateOnly,
   formatDelta,
@@ -131,5 +132,21 @@ describe('changeText', () => {
     expect(changeText({ score_delta: -1, rank_delta: -1 }, 3)).toBe('Down 1 point, down 1 spot from last week.')
     expect(changeText({ score_delta: 0, rank_delta: 0 }, 3)).toBe('No change from last week.')
     expect(changeText({ score_delta: 0, rank_delta: 3 }, 3)).toBe('Same score, up 3 spots from last week.')
+  })
+})
+
+describe('formatRankDelta', () => {
+  it('reads upward moves as spots with singular/plural', () => {
+    expect(formatRankDelta(1)).toEqual({ text: '▲1 spot', dir: 'up', aria: 'Up 1 spot in rank' })
+    expect(formatRankDelta(3)).toEqual({ text: '▲3 spots', dir: 'up', aria: 'Up 3 spots in rank' })
+  })
+  it('reads downward moves', () => {
+    expect(formatRankDelta(-2)).toEqual({ text: '▼2 spots', dir: 'down', aria: 'Down 2 spots in rank' })
+  })
+  it('reads zero/null/undefined as no change', () => {
+    const none = { text: 'no change', dir: 'none', aria: 'No change in rank' }
+    expect(formatRankDelta(0)).toEqual(none)
+    expect(formatRankDelta(null)).toEqual(none)
+    expect(formatRankDelta(undefined)).toEqual(none)
   })
 })
