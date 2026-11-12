@@ -94,6 +94,8 @@ Each factor is z-scored across teams in the same week, weighted, and summed. The
 
 **v1.0 is complete.** It includes the mood board, mood over time, team pages, callouts with base-rate evidence, biggest movers, a records page, a "my team" pin, and a draft-aware offseason. Weights are frozen and the holdout is consumed.
 
+The site now also has an **Explore** page with two logo scatters: offense vs defense EPA per play, and record vs evidence (win % against the feel-good score). Team pages show the preseason Vegas win total next to the team's actual pace, with a label whenever that line is display-only and not used in the score.
+
 ## Credits
 
 NFL data comes from [nflverse](https://github.com/nflverse) (`nflreadpy`, `nfldata`). Elo methodology draws on FiveThirtyEight's published NFL Elo approach. This is an unofficial fan project, not affiliated with the NFL or any team.
