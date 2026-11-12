@@ -93,7 +93,7 @@ Recent decisions affecting current work:
 - [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
 - [Phase 11]: 11-03: epa/{season}.json def_sr = opponent off_sr; conf/division are current alignment (not era-correct)
 - [Phase 11]: 11-05: site data regenerated once from cache; golden pin 3ac3c2b5 unchanged before/after
-- [Phase ?]: Phase 12-01: brand.test reads CSS via node:fs because vitest stubs CSS ?raw imports
+- [Phase 14]: Phase 12-01: brand.test reads CSS via node:fs because vitest stubs CSS ?raw imports
 - [Phase 12]: 12-03: createRawSnippet works under svelte/server SSR for snippet-children tests; withTheme T hides merged theme keys (cast in tests)
 
 - [Phase 12]: Vercel ignored-build command hardened (project setting): `P=${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}; git cat-file -e "$P^{commit}" && git diff --quiet "$P" HEAD -- . || exit 1`; the old one exited 128 (deploy ERROR) when the previous SHA was outside Vercel's shallow clone (pushes of >10 commits)
@@ -105,7 +105,7 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-06: EPA crosshair means computed over plotted teams only
 - [Phase 14]: 14-01: shareTargets is derived from hasSharePage over meta week_labels so build and app agree by construction
 - [Phase 14]: 14-01: share page redirect is crawler-UA guarded; hash JSON-encoded with < escaped as u003c
-- [Phase ?]: 14-04: CopyLinkButton computes its URL at click time via getUrl(); share-vs-hash choice stays in share.ts
+- [Phase 14]: 14-04: CopyLinkButton computes its URL at click time via getUrl(); share-vs-hash choice stays in share.ts
 
 ### Pending Todos
 
