@@ -33,6 +33,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 - ✓ Mood board, team deep-dive with factor bars + blurbs, mood-over-time chart, week scrubber, records page, methodology page, perception-gap callouts, movers, calendar-day streaks, my-team pin — v1.0
 - ✓ One-command weekly refresh → static JSON → static site — v1.0
 - ✓ v2 model pre-registered before any v2 code (`pipeline/PREREGISTRATION_V2.md` + closed pre-data errata in `PREREGISTRATION_V2_DEVIATIONS.md`): holdout = games kicking off after the v2 freeze commit, 2027 primary (2028 if the freeze misses 2027 Week 1); dev data ≤2025; free agency DROPPED (no signing dates in `load_contracts`) — Validated in Phase 9: v2 Pre-registration (INTEG-02, INTEG-03)
+- ✓ Site is public at https://nfl-team-feelings.vercel.app/. Vercel builds it from `web/` on Node 24.x, and a push to main redeploys it. The ignored-build step skips commits that don't touch `web/`. Pages carry a "data through" stamp, site-wide og/twitter share tags and a "not affiliated with the NFL" footer. Validated in Phase 10: Deploy (DEPLOY-01, DEPLOY-02, DEPLOY-03)
 
 ### Active
 
@@ -101,4 +102,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11, after Phase 9 (v2 pre-registration)*
+*Last updated: 2026-11-11, after Phase 10 (deploy)*
