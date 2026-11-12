@@ -50,37 +50,211 @@ DRAFT_VALUES_URL = "https://raw.githubusercontent.com/nflverse/nfldata/master/da
 STAGE = {"WC": 1, "DIV": 2, "CON": 3, "SB": 4}  # last playoff game; won SB -> 5; no playoffs -> 0
 SB_WINNER = 5
 EXPANSION_FIRST: dict[int, str] = {2002: "HOU"}  # (CLE 1999 too, but 1999 isn't derivable)
-# (draft year, round) -> original slot owners whose pick was stripped by the league (tampering,
-# cap/integrity penalties, and the next-year pick spent in a supplemental draft). Each entry was
-# checked against the pick data (short round, or the slot shift it causes).
+# (draft year, round) -> ORIGINAL slot owners whose pick was stripped by the league (tampering,
+# cap/integrity penalties, and the next-year pick spent in a supplemental draft). Audited in Phase 11
+# against .planning/phases/11-pipeline-data-guards/sources/forfeit_audit.json; each team-line carries
+# its reason and citations. FORFEIT_KIND labels each line penalty vs supplemental.
 FORFEITS: dict[tuple[int, int], list[str]] = {
-    (2001, 5): ["SF"],                          # cap violations
+    # 2001 R5 SF (penalty): salary cap violations (Druckenmiller et al.)
+    #   https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    (2001, 5): ["SF"],
+    # 2003 R6 HOU (supplemental): 2002 supplemental pick (Milford Brown) [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2003_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    (2003, 6): ["HOU"],
+    # 2004 R2 LV (supplemental): OAK pick traded to HOU; HOU used on T. Hollings [relabeled]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2004_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://houstontexans.com/news/texans-snag-hollings-in-supplemental-draft-2682942
     (2004, 2): ["LV"],
-    (2006, 5): ["MIA"],                         # 2005 supplemental (M. Wright)
-    (2007, 3): ["CIN"],                         # 2006 supplemental (A. Brooks)
-    (2008, 1): ["NE"],                          # videotaping
-    (2008, 4): ["LAC"],                         # 2007 supplemental (P. Oliver)
-    (2008, 5): ["SF"],                          # tampering
-    (2010, 3): ["WAS"],                         # 2009 supplemental (J. Jarmon)
-    (2011, 7): ["CHI"],                         # 2010 supplemental (H. Unga)
-    (2012, 2): ["NO"],                          # bounty
-    (2012, 3): ["LV"],                          # 2011 supplemental (T. Pryor)
-    (2013, 2): ["NO", "CLE"],                   # bounty; 2012 supplemental (J. Gordon)
-    (2016, 1): ["NE"],                          # ball deflation
-    (2016, 3): ["KC"],                          # tampering
-    (2016, 5): ["ATL", "LA"],                   # crowd noise; 2015 supplemental (I. Battle)
-    (2017, 4): ["NE"],                          # ball deflation
-    (2017, 6): ["KC"],                          # tampering
-    (2019, 3): ["NYG"],                         # 2018 supplemental (S. Beal)
-    (2019, 6): ["WAS"],                         # 2018 supplemental (A. Alexander)
-    (2020, 5): ["ARI"],                         # 2019 supplemental (J. Thompson)
-    (2021, 3): ["NE"],                          # videotaping
-    (2023, 1): ["MIA"],                         # tampering
-    (2024, 3): ["MIA"],                         # tampering
-    (2025, 5): ["ATL", "SF"],                   # tampering; payroll accounting
+    # 2006 R5 MIA (supplemental): 2005 supplemental pick (Manuel Wright)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2006_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.patriots.com/news/wright-taken-by-dolphins-in-supplemental-draft-91381
+    (2006, 5): ["MIA"],
+    # 2007 R3 CIN (supplemental): 2006 supplemental pick (Ahmad Brooks)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2007_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://web.archive.org/web/20120425112940/http://virginiasports.cstv.com/sports/m-footbl/spec-rel/071306aaa.html
+    (2007, 3): ["CIN"],
+    # 2008 R1 NE (penalty): Spygate videotaping penalty
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+    (2008, 1): ["NE"],
+    # 2008 R4 LAC (supplemental): 2007 supplemental pick (Paul Oliver)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/chargers-pick-oliver-ravens-select-gaither-in-supplemental-draf-09000d5d80013317
+    (2008, 4): ["LAC"],
+    # 2008 R5 SF (penalty): tampering with Lance Briggs
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+    # 2008 R5 BAL (supplemental): 2007 supplemental pick (Jared Gaither) [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.baltimoreravens.com/news/2008-ravens-draft-release-7745333
+    #   https://www.patriots.com/news/oliver-gaither-selected-in-supplemental-draft-100831
+    (2008, 5): ["SF", "BAL"],
+    # 2010 R3 WAS (supplemental): 2009 supplemental pick (Jeremy Jarmon)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2009_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://web.archive.org/web/20090918155833/http://www.sportingnews.com/nfl/article/2009-07-16/redskins-select-jarmon-nfl-supplemental-draft
+    (2010, 3): ["WAS"],
+    # 2011 R7 CHI (supplemental): 2010 supplemental pick (Harvey Unga)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2011_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://web.archive.org/web/20110909011212/http://www.nationalfootballpost.com/2010-supplemental-draft-breakdown.html
+    # 2011 R7 DAL (supplemental): 2010 supplemental pick (Josh Brent) [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2011_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://web.archive.org/web/20110909011212/http://www.nationalfootballpost.com/2010-supplemental-draft-breakdown.html
+    (2011, 7): ["CHI", "DAL"],
+    # 2012 R2 NO (penalty): Bountygate penalty
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/nfl-bans-saints-payton-a-year-for-bounties-williams-out-too-09000d5d827c0dd9
+    (2012, 2): ["NO"],
+    # 2012 R3 LV (supplemental): 2011 supplemental pick (Terrelle Pryor)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/raiders-select-pryor-in-third-round-of-nfl-supplemental-draft-09000d5d821a49b2
+    (2012, 3): ["LV"],
+    # 2012 R6 DET (penalty): tampering with Chiefs players [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    (2012, 6): ["DET"],
+    # 2013 R2 NO (penalty): Bountygate penalty (second year)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2013_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/nfl-bans-saints-payton-a-year-for-bounties-williams-out-too-09000d5d827c0dd9
+    # 2013 R2 CLE (supplemental): 2012 supplemental pick (Josh Gordon)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2013_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/josh-gordon-drafted-by-cleveland-browns-in-round-2-09000d5d82a808c0
+    (2013, 2): ["NO", "CLE"],
+    # 2016 R1 NE (penalty): Deflategate penalty
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    (2016, 1): ["NE"],
+    # 2016 R3 KC (penalty): tampering (Jeremy Maclin)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.si.com/nfl/2016/03/09/kansas-city-chiefs-nfl-tampering-forfeit-two-draft-picks
+    (2016, 3): ["KC"],
+    # 2016 R5 ATL (penalty): piped artificial crowd noise
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/12586639/nfl-expected-take-draft-pick-atlanta-falcons-suspend-team-president-rich-mckay-competition-committee
+    # 2016 R5 LA (supplemental): 2015 supplemental pick (Isaiah Battle)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/13228050/st-louis-rams-pick-isaiah-battle-supplemental-draft
+    (2016, 5): ["ATL", "LA"],
+    # 2017 R4 NO (penalty): Deflategate; forfeited R4 was NO-original [corrected from NE: NE held this NO-original pick via the Brandin Cooks trade]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    (2017, 4): ["NO"],
+    # 2017 R5 SEA (penalty): OTA no-live-contact violation [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    (2017, 5): ["SEA"],
+    # 2017 R6 KC (penalty): tampering (Jeremy Maclin), second year
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.si.com/nfl/2016/03/09/kansas-city-chiefs-nfl-tampering-forfeit-two-draft-picks
+    (2017, 6): ["KC"],
+    # 2019 R3 NYG (supplemental): 2018 supplemental pick (Sam Beal)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2019_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://abc7ny.com/post/giants-surrender-2019-third-round-pick-to-take-sam-beal-in-supplemental-draft/3745965/
+    (2019, 3): ["NYG"],
+    # 2019 R6 WAS (supplemental): 2018 supplemental pick (Adonis Alexander)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2019_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/giants-redskins-select-corners-in-supplemental-draft-0ap3000000940026
+    (2019, 6): ["WAS"],
+    # 2020 R5 ARI (supplemental): 2019 supplemental pick (Jalen Thompson)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2020_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://spokesman.com/stories/2019/jul/10/arizona-cardinals-spend-fifth-round-pick-on-washin
+    (2020, 5): ["ARI"],
+    # 2021 R3 NE (penalty): 2019 Bengals sideline filming
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/29380577/new-england-patriots-fined-11-million-lose-draft-pick-film-crew-fallout
+    (2021, 3): ["NE"],
+    # 2021 R7 MIN (penalty): 2019 practice-squad cap violation [added; was UNATTRIBUTED_SHORT]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.cbsnews.com/minnesota/news/vikings-lose-7th-rounder-execs-fined-for-19-cap-violation/
+    #   https://www.profootballrumors.com/2021/03/draft-pick-updates-vikings-saints-raiders-patriots
+    (2021, 7): ["MIN"],
+    # 2022 R6 NO (penalty): repeated COVID-19 protocol violations [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2022_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    (2022, 6): ["NO"],
+    # 2023 R1 MIA (penalty): tampering (Brady, Payton)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2023_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/34334514/nfl-strips-miami-dolphins-2023-first-round-pick-fines-stephen-ross-15m-tampering-tom-brady-sean-payton
+    (2023, 1): ["MIA"],
+    # 2023 R5 HOU (penalty): salary cap reporting violation (Watson) [added]
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2023_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.nfl.com/news/texans-forfeit-2023-fifth-round-pick-fined-175k-for-salary-cap-reporting-violati
+    (2023, 5): ["HOU"],
+    # 2024 R3 MIA (penalty): tampering (Brady, Payton), second year
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2024_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/34334514/nfl-strips-miami-dolphins-2023-first-round-pick-fines-stephen-ross-15m-tampering-tom-brady-sean-payton
+    (2024, 3): ["MIA"],
+    # 2025 R5 ATL (penalty): tampering (Cousins, Mooney, Woerner)
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2025_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.espn.com/nfl/story/_/id/40341876/nfl-penalizes-falcons-tampering-eagles-cleared
+    # 2025 R5 SF (penalty): 2022 payroll accounting errors
+    #   https://en.wikipedia.org/w/api.php?action=parse&page=2025_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+    #   https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+    #   https://www.nfl.com/news/niners-to-forfeit-2025-fifth-round-pick-as-result-of-administrative-payroll-accounting-errors
+    (2025, 5): ["ATL", "SF"],
+}
+FORFEIT_KIND: dict[tuple[int, int, str], str] = {
+    (2001, 5, "SF"): "penalty",
+    (2003, 6, "HOU"): "supplemental",
+    (2004, 2, "LV"): "supplemental",
+    (2006, 5, "MIA"): "supplemental",
+    (2007, 3, "CIN"): "supplemental",
+    (2008, 1, "NE"): "penalty",
+    (2008, 4, "LAC"): "supplemental",
+    (2008, 5, "SF"): "penalty",
+    (2008, 5, "BAL"): "supplemental",
+    (2010, 3, "WAS"): "supplemental",
+    (2011, 7, "CHI"): "supplemental",
+    (2011, 7, "DAL"): "supplemental",
+    (2012, 2, "NO"): "penalty",
+    (2012, 3, "LV"): "supplemental",
+    (2012, 6, "DET"): "penalty",
+    (2013, 2, "NO"): "penalty",
+    (2013, 2, "CLE"): "supplemental",
+    (2016, 1, "NE"): "penalty",
+    (2016, 3, "KC"): "penalty",
+    (2016, 5, "ATL"): "penalty",
+    (2016, 5, "LA"): "supplemental",
+    (2017, 4, "NO"): "penalty",
+    (2017, 5, "SEA"): "penalty",
+    (2017, 6, "KC"): "penalty",
+    (2019, 3, "NYG"): "supplemental",
+    (2019, 6, "WAS"): "supplemental",
+    (2020, 5, "ARI"): "supplemental",
+    (2021, 3, "NE"): "penalty",
+    (2021, 7, "MIN"): "penalty",
+    (2022, 6, "NO"): "penalty",
+    (2023, 1, "MIA"): "penalty",
+    (2023, 5, "HOU"): "penalty",
+    (2024, 3, "MIA"): "penalty",
+    (2025, 5, "ATL"): "penalty",
+    (2025, 5, "SF"): "penalty",
 }
 # Rounds known to be one regular pick short whose owner we can't attribute: nobody is charged.
-UNATTRIBUTED_SHORT: set[tuple[int, int]] = {(2021, 7)}
+# Empty since Phase 11: the 2021 R7 gap is MIN's forfeit (now in FORFEITS).
+UNATTRIBUTED_SHORT: set[tuple[int, int]] = set()
+# Sourced, real, but the derived pick order can't place them; not applied.
+# The positional test shows no slot gap for these rounds in the pick data: adding them would
+# reclassify a real regular pick as comp and charge an uninvolved team 3.9-7.1 points.
+#   2000 R4 NE (supplemental): 1999 supplemental pick (J'Juan Cherry)
+#     https://en.wikipedia.org/w/api.php?action=parse&page=2000_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+#   2001 R3 PIT (penalty): 1998 cap violation (Will Wolford)
+#     https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+#     https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+#   2002 R3 DEN (penalty): deferred compensation fund violation
+#     https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+#     https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/
+#     https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+#   2002 R3 SF (penalty): salary cap violations (same as 2001 R5)
+#     https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+#     https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+#   2005 R3 DEN (penalty): 1996-98 salary cap circumvention
+#     https://en.wikipedia.org/w/api.php?action=parse&page=2005_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+#     https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks
+# Also not forfeits: 2001 R3 DEN (DEN used its own R3, #87); 2021 R6 LV and 2021 R7 NO were
+# announced then rescinded:
+#     https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1
+#     https://www.profootballrumors.com/2021/03/draft-pick-updates-vikings-saints-raiders-patriots
 STD_EPS = 1e-12
 EVEN = 0.5  # |surplus| below this reads "about even with their original slots" (rounds to 0)
 

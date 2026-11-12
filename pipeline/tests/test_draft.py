@@ -318,6 +318,28 @@ def test_checks_draft_coverage_and_sum():
     assert run == {"draft_coverage": [], "draft_sum": []}
 
 
+# ---------- audited forfeit table (Phase 11, DATA-01) ----------
+
+def test_forfeit_kind_keys_match_team_lines():
+    lines = {(y, r, t) for (y, r), ts in draft.FORFEITS.items() for t in ts}
+    assert set(draft.FORFEIT_KIND) == lines
+    assert set(draft.FORFEIT_KIND.values()) <= {"penalty", "supplemental"}
+
+
+def test_forfeit_table_audited_values():
+    assert draft.FORFEITS[(2017, 4)] == ["NO"]
+    assert draft.FORFEITS[(2021, 7)] == ["MIN"]
+    assert draft.UNATTRIBUTED_SHORT == set()
+    assert draft.FORFEIT_KIND[(2004, 2, "LV")] == "supplemental"
+    assert len(draft.FORFEITS) == 30
+    assert sum(map(len, draft.FORFEITS.values())) == 35
+
+
+def test_unplaceable_candidates_not_applied():
+    for key in [(2000, 4), (2001, 3), (2002, 3), (2005, 3)]:
+        assert key not in draft.FORFEITS
+
+
 # ---------- real cache (skips without it) ----------
 
 @pytest.fixture(scope="module")
@@ -414,10 +436,10 @@ def test_no_unknown_short_rounds_real(real_draft):
 
 def test_forfeit_2008_r5_is_sf_not_kc_lv(real_draft):
     o, regular, gone = _round(real_draft["tg"], real_draft["picks"], 2008, 5)
-    assert gone == ["SF"]
+    assert sorted(gone) == ["BAL", "SF"]
     owners = [own for own, _, _ in regular]
-    assert len(regular) == 31 and len(owners) == len(set(owners))
-    assert "KC" in owners and "LV" in owners and "SF" not in owners
+    assert len(regular) == 30 and len(owners) == len(set(owners))
+    assert "KC" in owners and "LV" in owners and "SF" not in owners and "BAL" not in owners
 
 
 def test_forfeit_2016_r5_atl_la(real_draft):
@@ -428,9 +450,9 @@ def test_forfeit_2016_r5_atl_la(real_draft):
     assert "LV" in owner_of.values() and "WAS" in owner_of.values()
 
 
-def test_forfeit_2017_r4_ne_and_regular_picks_kept(real_draft):
+def test_forfeit_2017_r4_no_and_regular_picks_kept(real_draft):
     o, regular, gone = _round(real_draft["tg"], real_draft["picks"], 2017, 4)
-    assert gone == ["NE"]
+    assert gone == ["NO"]
     owners = {own for own, _, _ in regular}
     assert {"BUF", "MIA"} <= owners and len(regular) == 31
     assert 138 in {p for _, p, _ in regular}  # CIN's pick 138 is a regular pick, not a comp pick
