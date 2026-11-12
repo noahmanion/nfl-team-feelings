@@ -1,9 +1,9 @@
 <script lang="ts">
   import Sep from './Sep.svelte'
-  import { historyHash, methodologyHash, recordsHash } from '../lib/router'
+  import { exploreHash, historyHash, methodologyHash, recordsHash } from '../lib/router'
 
   // 'team': neither nav link is the current page.
-  let { current = 'board' }: { current?: 'board' | 'history' | 'team' | 'records' | 'methodology' } = $props()
+  let { current = 'board' }: { current?: 'board' | 'history' | 'team' | 'explore' | 'records' | 'methodology' } = $props()
 </script>
 
 <header class="site-header">
@@ -16,6 +16,9 @@
     <a href="#/" aria-current={current === 'board' ? 'page' : undefined}>Board</a>
     <span class="item"
       ><Sep /><a href={historyHash()} aria-current={current === 'history' ? 'page' : undefined}>Mood over time</a></span
+    >
+    <span class="item"
+      ><Sep /><a href={exploreHash()} aria-current={current === 'explore' ? 'page' : undefined}>Explore</a></span
     >
     <span class="item"
       ><Sep /><a href={recordsHash} aria-current={current === 'records' ? 'page' : undefined}>Records</a></span

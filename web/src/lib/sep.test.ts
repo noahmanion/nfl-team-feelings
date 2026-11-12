@@ -31,8 +31,8 @@ describe('Sep separator', () => {
     const header = sources['../components/SiteHeader.svelte']
     const nav = /<nav[\s\S]*?<\/nav>/.exec(header)?.[0] ?? ''
     // every separator sits right before a link, inside a no-wrap item
-    expect(nav.match(/<Sep \/>/g)?.length).toBe(3)
-    expect(nav.match(/<span class="item"\s*><Sep \/><a /g)?.length).toBe(3)
+    expect(nav.match(/<Sep \/>/g)?.length).toBe(4)
+    expect(nav.match(/<span class="item"\s*><Sep \/><a /g)?.length).toBe(4)
     expect(nav).not.toMatch(/<\/a>\s*<Sep \/>/)
     expect(header).toMatch(/\.item\s*\{[^}]*white-space:\s*nowrap/)
   })

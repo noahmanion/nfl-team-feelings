@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import ExplorePage from './components/ExplorePage.svelte'
   import HistoryPage from './components/HistoryPage.svelte'
   import MethodologyPage from './components/MethodologyPage.svelte'
   import RecordsPage from './components/RecordsPage.svelte'
@@ -106,6 +107,12 @@
       replace('#/')
     } else if (r.kind === 'history' || r.kind === 'methodology' || r.kind === 'records') {
       notice = null
+    } else if (r.kind === 'explore') {
+      notice = null
+      // a season without a week, or an unknown season / out-of-range week, goes to the latest explore page
+      if (r.season !== undefined && (r.week === undefined || !validTeamWeek(meta, r.season, r.week))) {
+        replace('#/explore')
+      }
     } else if (r.kind === 'team') {
       if (!validTeam(meta, r.team)) {
         replace('#/')
@@ -219,7 +226,9 @@
           ? 'methodology'
           : route.current.kind === 'records'
             ? 'records'
-            : 'board'}
+            : route.current.kind === 'explore'
+              ? 'explore'
+              : 'board'}
   />
 
   <main>
@@ -231,6 +240,10 @@
     {:else if route.current.kind === 'history' && status === 'ready' && meta && latestFile}
       <HistoryPage {meta} latestRows={latestFile.rows} team={route.current.team} />
     {:else if route.current.kind === 'history'}
+      <p class="loading" role="status">Loading…</p>
+    {:else if route.current.kind === 'explore' && status === 'ready' && meta && latestFile}
+      <ExplorePage {meta} latestRows={latestFile.rows} season={route.current.season} week={route.current.week} />
+    {:else if route.current.kind === 'explore'}
       <p class="loading" role="status">Loading…</p>
     {:else if route.current.kind === 'team' && status === 'ready' && meta && teamTarget}
       <TeamPage
