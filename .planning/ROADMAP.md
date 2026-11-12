@@ -45,7 +45,10 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
   2. The document defines MODEL-V2-01 (good-loss luck), MODEL-V2-02 (free agency) and MODEL-V2-03 (Vegas win totals into the score) precisely enough that someone else could build them, along with the development-data ceiling (≤2025), the holdout (games kicking off after the v2 freeze commit, 2027 primary), the comparators (frozen v1 composite and Elo), the metrics, the per-input drop rules and the verdict wording
   3. For each candidate input, the document states whether it can be built from free data without leakage (e.g. whether `load_contracts` has signing dates) and pre-commits to dropping any that can't
   4. The git history shows no v2 model code before the pre-registration commit
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 09-01-PLAN.md — Write, self-check and single-commit pipeline/PREREGISTRATION_V2.md, then read-only integrity checks 1–8
 
 ### Phase 10: Deploy
 **Goal**: Anyone can open the current site at a public Vercel URL, and it stays current on its own
