@@ -224,8 +224,8 @@
         <ChartFrame
           id="why-heading"
           level={3}
-          headline={hasPoints ? `Where the ${row.score} comes from` : 'Score breakdown'}
-          dek={hasPoints
+          headline={hasPoints && ok(row.score) ? `Where the ${row.score} comes from` : 'Score breakdown'}
+          dek={hasPoints && ok(row.score)
             ? `Points each factor adds to or takes from an average team (${baseline}). Together they sum to the score.`
             : undefined}
         >
