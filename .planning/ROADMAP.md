@@ -107,7 +107,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 11-04-PLAN.md — fgs logos command, 32 committed ESPN logos + manifest, no-hotlink tests
+- [x] 11-04-PLAN.md — fgs logos command, 32 committed ESPN logos + manifest, no-hotlink tests
 
 **Wave 5** *(blocked on Wave 4 completion)*
 
@@ -174,7 +174,7 @@ Plans:
 | 8. Callouts, Records & My Team | v1.0 | 5/5 | Complete | 2026-11-11 |
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
-| 11. Pipeline Data & Guards | v2.0 | 3/5 | In Progress|  |
+| 11. Pipeline Data & Guards | v2.0 | 4/5 | In Progress|  |
 | 12. Redesign Foundation & Team Identity | v2.0 | 0/TBD | Not started | - |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |

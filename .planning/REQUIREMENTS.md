@@ -26,7 +26,7 @@
 
 ### Team Identity
 
-- [ ] **LOGO-01**: All 32 team logos are downloaded once by a pipeline command into `web/public/logos/` and committed, so there's no hotlinking at runtime
+- [x] **LOGO-01**: All 32 team logos are downloaded once by a pipeline command into `web/public/logos/` and committed, so there's no hotlinking at runtime
 - [ ] **LOGO-02**: Logos appear on board rows, the team page header, records rows and chart marks, falling back to the existing color chip if a logo fails to load
 - [ ] **LOGO-03**: Relocated franchises show the current logo with the era-correct team name for that season (e.g. "San Diego Chargers" in 2010)
 
@@ -77,7 +77,7 @@
 | DATA-01 | Phase 11 | Complete |
 | DATA-02 | Phase 11 | Complete |
 | DATA-03 | Phase 13 | Pending |
-| LOGO-01 | Phase 11 | Pending |
+| LOGO-01 | Phase 11 | Complete |
 | LOGO-02 | Phase 12 | Pending |
 | LOGO-03 | Phase 12 | Pending |
 | DESIGN-01 | Phase 12 | Pending |
