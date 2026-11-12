@@ -46,8 +46,8 @@
 ### Share Cards
 
 - [ ] **SHARE-01**: Each build generates 1200×630 share images (satori + resvg) for all 32 teams and the current season's callouts, using the redesign's fonts, colors and local logos
-- [ ] **SHARE-02**: Each share image has a static share page at a real path that includes the season and week. The page carries absolute share-card tags (og:image on the production domain) and redirects to the matching hash route with JavaScript
-- [ ] **SHARE-03**: The copy-link buttons on team pages and callouts copy the share-page URL where one exists and fall back to the hash link otherwise
+- [x] **SHARE-02**: Each share image has a static share page at a real path that includes the season and week. The page carries absolute share-card tags (og:image on the production domain) and redirects to the matching hash route with JavaScript
+- [x] **SHARE-03**: The copy-link buttons on team pages and callouts copy the share-page URL where one exists and fall back to the hash link otherwise
 
 ## Future Requirements (deferred)
 
@@ -88,8 +88,8 @@
 | EXPL-02 | Phase 13 | Complete |
 | EXPL-03 | Phase 13 | Complete |
 | SHARE-01 | Phase 14 | Pending |
-| SHARE-02 | Phase 14 | Pending |
-| SHARE-03 | Phase 14 | Pending |
+| SHARE-02 | Phase 14 | Complete |
+| SHARE-03 | Phase 14 | Complete |
 
 **Coverage:** 22/22 v2.0 requirements mapped, no orphans, no duplicates.
 

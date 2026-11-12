@@ -199,7 +199,7 @@ Plans:
 
 Plans:
 
-- [ ] 14-01-PLAN.md — share.ts: share URL scheme, launch gate, share page HTML, copy-URL helpers (+ tsconfig allowImportingTsExtensions)
+- [x] 14-01-PLAN.md — share.ts: share URL scheme, launch gate, share page HTML, copy-URL helpers (+ tsconfig allowImportingTsExtensions)
 - [ ] 14-02-PLAN.md — satori + resvg-js exact pins; og-template.mjs card tokens, fonts, glyph guard, team/callout/site card trees
 - [ ] 14-03-PLAN.md — share.mjs buildShare wired into npm run build; measured build, local dist/redirect checks, ≤4 samples, 14-HUMAN-UAT.md
 - [ ] 14-04-PLAN.md — CopyLinkButton extraction; callout + team header copy links use share URLs; Playwright copy check
@@ -224,4 +224,4 @@ Plans:
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete    | 2026-11-12 |
 | 13. Explore Charts & Win Totals Display | v2.0 | 7/7 | Complete    | 2026-11-12 |
-| 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
+| 14. Share Cards & Launch Verification | v2.0 | 1/4 | In Progress|  |

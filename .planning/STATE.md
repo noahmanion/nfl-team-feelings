@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Site
-status: ready_to_plan
-stopped_at: Phase 13 complete (7/7) — ready to discuss Phase 14
-last_updated: 2026-11-12T06:06:52.235Z
+status: executing
+stopped_at: Completed 14-01-PLAN.md
+last_updated: "2026-11-12T06:43:07.480Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 6
   completed_phases: 5
-  total_plans: 22
-  completed_plans: 22
-  percent: 83
+  total_plans: 26
+  completed_plans: 23
+  percent: 88
 ---
 
 # Project State
@@ -25,12 +25,12 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 
 ## Current Position
 
-Phase: 14
-Plan: Not started
-Status: Ready to plan
+Phase: 14 (share-cards-launch-verification) — EXECUTING
+Plan: 2 of 4
+Status: Executing Phase 14 (14-01 complete)
 Last activity: 2026-11-12
 
-Progress: [██████████] 100%
+Progress: [█████████░] 88%
 
 ## Performance Metrics
 
@@ -67,6 +67,7 @@ Progress: [██████████] 100%
 | Phase 13 P04 | 5m | 2 tasks | 7 files |
 | Phase 13 P05 | 6 min | 2 tasks | 3 files |
 | Phase 13 P06 | 4min | 3 tasks | 8 files |
+| Phase 14 P01 | 6min | 2 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -101,6 +102,8 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-05: Record chart mood bands span the full frame (no x channel); band labels use frameAnchor right so the logo inset never misaligns them
 - [Phase 13]: 13-06: #/explore/{season} without week and invalid season/week replace to #/explore
 - [Phase 13]: 13-06: EPA crosshair means computed over plotted teams only
+- [Phase 14]: 14-01: shareTargets is derived from hasSharePage over meta week_labels so build and app agree by construction
+- [Phase 14]: 14-01: share page redirect is crawler-UA guarded; hash JSON-encoded with < escaped as u003c
 
 ### Pending Todos
 
@@ -124,8 +127,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T05:52:24.369Z
-Stopped at: Phase 13 UI-SPEC approved
+Last session: 2026-11-12T06:43:07.475Z
+Stopped at: Completed 14-01-PLAN.md
 Resume file: None
 
 ## Operator Next Steps
