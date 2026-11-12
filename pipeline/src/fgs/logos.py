@@ -58,8 +58,9 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
     Skipped files keep their manifest entry (fetched date). A file is only skipped when the manifest
     records it as fetched from the current logo_url (WR-03): a changed URL (e.g. a corrected
     CODE_OVERRIDES entry) or a missing entry re-fetches, so the manifest never claims a URL the file
-    did not come from. An invalid download raises before anything is written for that team; the
-    manifest is written last."""
+    did not come from. WR-04: every download is fetched and validated in memory first; PNGs and the
+    manifest are written only after all 32 succeed, so a mid-run failure leaves files and manifest
+    untouched (and in sync)."""
     out = Path(paths.LOGOS_DIR if out_dir is None else out_dir)
     fetch = _http_get if fetch is None else fetch
     today = date.today().isoformat() if today is None else today
@@ -67,7 +68,7 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
     manifest_path = out / "manifest.json"
     old = json.loads(manifest_path.read_text()) if manifest_path.exists() else {}
 
-    manifest = {}
+    manifest, staged = {}, {}
     for f in sorted(CANONICAL):
         path, url = out / f"{f}.png", logo_url(f)
         prev = old.get(f, {})
@@ -78,9 +79,11 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
         else:
             data = fetch(url)
             validate_png(data)
-            _atomic_write(path, data)
+            staged[path] = data  # written only after every team succeeds (WR-04)
             when = today
         manifest[f] = {"url": url, "sha256": hashlib.sha256(data).hexdigest(), "bytes": len(data), "fetched": when}
 
+    for path, data in staged.items():
+        _atomic_write(path, data)
     _atomic_write(manifest_path, (json.dumps(manifest, indent=1, sort_keys=True) + "\n").encode())
     return manifest

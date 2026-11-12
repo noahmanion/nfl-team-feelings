@@ -107,6 +107,24 @@ def test_invalid_download_raises_without_partial(tmp_path):
     assert not (tmp_path / "manifest.json").exists()
 
 
+def test_midrun_failure_leaves_files_and_manifest_unchanged(tmp_path):
+    """WR-04: with --force, a failure on a later team writes nothing (PNGs and manifest stay in sync)."""
+    logos.fetch_logos(out_dir=tmp_path, fetch=_fake([]), today="2026-11-11")
+    before = {p.name: p.read_bytes() for p in tmp_path.iterdir()}
+    n = 0
+
+    def flaky(url: str) -> bytes:
+        nonlocal n
+        n += 1
+        if n == 15:
+            raise OSError("network down")
+        return GOOD + b"v2" + url.encode()
+
+    with pytest.raises(OSError):
+        logos.fetch_logos(out_dir=tmp_path, force=True, fetch=flaky, today="2026-12-01")
+    assert {p.name: p.read_bytes() for p in tmp_path.iterdir()} == before
+
+
 def test_cli_logos_subcommand_not_in_refresh(tmp_path, monkeypatch, capsys):
     with pytest.raises(SystemExit):
         cli.main(["logos", "--help"])
