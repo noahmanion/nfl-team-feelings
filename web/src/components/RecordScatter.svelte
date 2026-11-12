@@ -99,6 +99,7 @@
         }),
       )
     }
+    let lineLabel: { seg: { x1: number; y1: number; x2: number; y2: number }[] } | null = null
     if (line) {
       const xs = points.map((p) => p.x)
       const x0 = Math.min(...xs)
@@ -116,19 +117,8 @@
           strokeDasharray: '4,3',
         }),
       )
-      if (width >= 400) {
-        marks.push(
-          Plot.text(seg, {
-            x: 'x2',
-            y: 'y2',
-            text: () => 'Typical score for this record',
-            textAnchor: 'end',
-            dy: -8,
-            fontSize: CHART_FONT_PX,
-            fill: 'var(--text-muted)',
-          }),
-        )
-      }
+      // The line label is pushed after the logos (below) with a halo so top-right logos can't hide it.
+      if (width >= 400) lineLabel = { seg }
       marks.push(
         Plot.text(['BETTER THAN THEIR RECORD'], {
           text: (d: string) => d,
@@ -157,6 +147,22 @@
       const ring = highlightColor(t?.primary ?? '', t?.secondary ?? '', bg, dark)
       marks.push(
         ...logoMarks([pin], { x: 'x', y: 'y', size: pinSize, opacity: 1, dark, ringColor: ring, colorOf, pinnedText: true }),
+      )
+    }
+    if (lineLabel) {
+      marks.push(
+        Plot.text(lineLabel.seg, {
+          x: 'x2',
+          y: 'y2',
+          text: () => 'Typical score for this record',
+          textAnchor: 'end',
+          dy: -8,
+          fontSize: CHART_FONT_PX,
+          fill: 'var(--text-muted)',
+          stroke: 'var(--bg)',
+          strokeWidth: 4,
+          paintOrder: 'stroke',
+        }),
       )
     }
     marks.push(

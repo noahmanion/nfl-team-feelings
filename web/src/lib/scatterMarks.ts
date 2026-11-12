@@ -83,9 +83,13 @@ export function attachClick<T extends { franchise: string }>(
     plot.style.cursor = val() ? 'pointer' : ''
   })
   plot.addEventListener('click', () => {
-    const v = val()
-    const r = tapAction(pointerType, armed, v?.franchise ?? null)
-    armed = r.armed
-    if (r.go && v) navigate(href(v))
+    // Plot updates `value` in a requestAnimationFrame after the pointer event; on a touch tap
+    // (no prior hover) it is still null at click time, so read it one frame later.
+    requestAnimationFrame(() => {
+      const v = val()
+      const r = tapAction(pointerType, armed, v?.franchise ?? null)
+      armed = r.armed
+      if (r.go && v) navigate(href(v))
+    })
   })
 }

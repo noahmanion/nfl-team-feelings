@@ -10,19 +10,30 @@
     level = 3,
     id,
     source,
+    footer = true,
     children,
-  }: { headline: string; dek?: string; notes?: string; level?: 2 | 3; id: string; source?: string; children: Snippet } =
-    $props()
+  }: {
+    headline: string
+    dek?: string
+    notes?: string
+    level?: 2 | 3
+    id: string
+    source?: string
+    footer?: boolean
+    children: Snippet
+  } = $props()
 </script>
 
 <figure class="chart-frame" aria-labelledby={id}>
   <svelte:element this={`h${level}`} {id} class="cf-headline">{headline}</svelte:element>
   {#if dek}<p class="cf-dek">{dek}</p>{/if}
   <div class="cf-body">{@render children()}</div>
-  <figcaption class="cf-foot">
-    <span class="cf-source">{source ?? 'SOURCE: NFLVERSE · FEEL-GOOD SCORE'}</span>
-    {#if notes}<span class="cf-notes">NOTES: {notes}</span>{/if}
-  </figcaption>
+  {#if footer}
+    <figcaption class="cf-foot">
+      <span class="cf-source">{source ?? 'SOURCE: NFLVERSE · FEEL-GOOD SCORE'}</span>
+      {#if notes}<span class="cf-notes">NOTES: {notes}</span>{/if}
+    </figcaption>
+  {/if}
 </figure>
 
 <style>

@@ -264,7 +264,7 @@
   {:else}
     <section class="block first" aria-labelledby="epa-heading">
       {#if !rows}
-        <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE}>{@render loading()}</ChartFrame>
+        <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE} footer={false}>{@render loading()}</ChartFrame>
       {:else if epaKind}
         <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE} notes={EPA_NOTES}>
           <p class="chart-empty">{emptyCopy(epaKind, s, wl, firstEpaSeason)}</p>
@@ -279,7 +279,7 @@
           />
         </ChartFrame>
       {:else if !epaFileNow}
-        <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE}>{@render loading()}</ChartFrame>
+        <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE} footer={false}>{@render loading()}</ChartFrame>
       {:else}
         <ChartFrame id="epa-heading" level={3} headline={EPA_HEADLINE} dek={epaDek} notes={EPA_NOTES}>
           <EpaScatter
@@ -300,7 +300,7 @@
 
     <section class="block" aria-labelledby="rve-heading">
       {#if !rows}
-        <ChartFrame id="rve-heading" level={3} headline={RVE_HEADLINE}>{@render loading()}</ChartFrame>
+        <ChartFrame id="rve-heading" level={3} headline={RVE_HEADLINE} footer={false}>{@render loading()}</ChartFrame>
       {:else if recPts.length === 0}
         <ChartFrame id="rve-heading" level={3} headline={RVE_HEADLINE} notes={RVE_NOTES}>
           <p class="chart-empty">{emptyCopy('no-games', s, wl, firstEpaSeason)}</p>

@@ -47,4 +47,11 @@ describe('ChartFrame', () => {
     expect(body).toContain(source)
     expect(body).not.toContain('SOURCE: NFLVERSE · FEEL-GOOD SCORE')
   })
+
+  it('hides the footer when footer is false (loading state)', () => {
+    const { body } = render(ChartFrame, { props: { id: 'cf6', headline: 'H', notes: 'N.', footer: false, children } })
+    expect(body).not.toContain('cf-foot')
+    expect(body).not.toContain('SOURCE:')
+    expect(body).toContain('<div class="probe"></div>')
+  })
 })
