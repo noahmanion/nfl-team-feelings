@@ -304,9 +304,7 @@
     {/if}
   </main>
 
-  {#if status === 'ready' && meta}
-    <SiteFooter {meta} />
-  {/if}
+  <SiteFooter meta={status === 'ready' && meta ? meta : undefined} />
 </div>
 
 <style>
