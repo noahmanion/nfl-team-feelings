@@ -174,7 +174,7 @@ Plans:
 | 8. Callouts, Records & My Team | v1.0 | 5/5 | Complete | 2026-11-11 |
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
-| 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete   | 2026-11-12 |
+| 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 0/TBD | Not started | - |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
