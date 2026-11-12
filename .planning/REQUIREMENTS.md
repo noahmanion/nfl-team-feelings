@@ -68,7 +68,30 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| (filled by roadmapper) | | |
+| INTEG-01 | Phase 11 | Pending |
+| INTEG-02 | Phase 9 | Pending |
+| INTEG-03 | Phase 9 | Pending |
+| DEPLOY-01 | Phase 10 | Pending |
+| DEPLOY-02 | Phase 10 | Pending |
+| DEPLOY-03 | Phase 10 | Pending |
+| DATA-01 | Phase 11 | Pending |
+| DATA-02 | Phase 11 | Pending |
+| DATA-03 | Phase 13 | Pending |
+| LOGO-01 | Phase 11 | Pending |
+| LOGO-02 | Phase 12 | Pending |
+| LOGO-03 | Phase 12 | Pending |
+| DESIGN-01 | Phase 12 | Pending |
+| DESIGN-02 | Phase 12 | Pending |
+| DESIGN-03 | Phase 12 | Pending |
+| DESIGN-04 | Phase 12 | Pending |
+| EXPL-01 | Phase 11 | Pending |
+| EXPL-02 | Phase 13 | Pending |
+| EXPL-03 | Phase 13 | Pending |
+| SHARE-01 | Phase 14 | Pending |
+| SHARE-02 | Phase 14 | Pending |
+| SHARE-03 | Phase 14 | Pending |
+
+**Coverage:** 22/22 v2.0 requirements mapped, no orphans, no duplicates.
 
 ---
 *Defined: 2026-11-11 for milestone v2.0 Public Site*
