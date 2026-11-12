@@ -1,7 +1,8 @@
 ---
 phase: 13-explore-charts-win-totals-display
-reviewed: 2026-11-11T00:00:00Z
+reviewed: 2026-11-11T23:59:59Z
 depth: standard
+iteration: 2
 files_reviewed: 34
 files_reviewed_list:
   - pipeline/src/fgs/export.py
@@ -40,133 +41,72 @@ files_reviewed_list:
   - .planning/phases/13-explore-charts-win-totals-display/verify_ui.py
 findings:
   critical: 0
-  warning: 4
-  info: 7
-  total: 11
-status: issues_found
+  warning: 0
+  info: 5
+  total: 5
+status: clean
 ---
 
-# Phase 13: Code Review Report
+# Phase 13: Code Review Report (re-review, iteration 2)
 
 **Reviewed:** 2026-11-11
 **Depth:** standard
 **Files Reviewed:** 34
-**Status:** issues_found
+**Status:** clean (no Critical or Warning findings remain)
 
 ## Narrative Findings (AI reviewer)
 
 ## Summary
 
-I reviewed the Phase 13 diff (`c574774..HEAD`): the display-only `expectation` export, the new Explore page (router, page, two Plot scatters, shared mark and click helpers, table view), the win-totals block on the team page, and the Phase 12 UI leftovers.
+This re-review covers the six `fix(13)` commits (`f470082..2c4898b`) on top of the iteration-1 review, plus the full scope listed above. All three in-scope warnings are fixed. WR-02 was accepted as designed and is not raised again. The fix commits introduced no new Critical or Warning issues. `vitest run` passes on Node 22 (23 files, 277 tests).
 
-The core logic is sound. I checked these against the shipped data:
-- OLS fit, residual dek, competition ranks, padded domains, tick thinning, and tier diagonals.
-- Pace and finished logic, including the 2022 BUF/CIN 16-game seasons.
-- REG-only EPA in playoff weeks. The snapshot W–L freezes at the regular-season record, which I confirmed in `snapshots/2024.json` and `2022.json`.
-- Agreement between `vegas_win_totals.used_in_score` and `expectation.source`, which match for all 32 team files.
-- 2026 EPA week coverage against `meta.latest`.
+Status of the prior findings:
 
-I found no security issues: no `{@html}` or `innerHTML`, and every href is built from franchise codes. I found no blockers.
-
-The four warnings are user-facing. They cover wrong guidance in empty-state and note copy, a routing fallback that breaks D-01, and a rank-delta label that claims "no change" when the data is missing.
-
-## Warnings
-
-### WR-01: "No week" empty state tells the user to pick an *earlier* week
-
-**File:** `web/src/lib/explore.ts:204`
-**Issue:** `emptyCopy('no-week', …)` returns "No efficiency data through {week} yet. Pick an earlier week." This state happens when games have been played (`gamesPlayed > 0`) but the EPA file has no rows at or before `w`. Two examples: pbp lags the snapshot in Week 1 of a new season, or the EPA file is published before its first week's games. `seasonToDate` takes `week <= w`, so an earlier week has the same or fewer EPA rows. Following the advice can never show the chart, and the only earlier week is week 0, which shows the "no games" state. The test at `explore.test.ts:267` locks in the wrong copy.
-**Fix:** Point the user at the latest week or a later one, or just state the situation:
-```ts
-return `No efficiency data through ${weekLabelText} yet. Check back after the play-by-play update.`
-```
-Update the `explore.test.ts` expectation to match.
-
-### WR-02: Malformed explore week (3+ digits) redirects to the board with a board-specific notice, breaking D-01
-
-**File:** `web/src/lib/router.ts` (EXPLORE regex `\d{1,2}`), `web/src/App.svelte:127`
-**Issue:** D-01 says an invalid season or week falls back to `#/explore` silently. `#/explore/2025/123` (asserted in `router.test.ts:123`) and `#/explore/abc` parse as `{kind:'invalid'}`. App then runs `replace('#/')` and shows `BOARD_NOTICE` ("We don't have a board for that week…"). The user leaves the Explore page and sees a message about a board they never asked for. Only in-range-format but out-of-range values like `#/explore/2099/3` hit the D-01 path.
-**Fix:** Have the regex accept any digits (`(\d+)`) or a trailing garbage segment and return `{kind:'explore'}` for the malformed tail, so App's existing explore branch does `replace('#/explore')`. Alternatively, special-case `h.startsWith('/explore')` before the `invalid` fallthrough:
-```ts
-const EXPLORE = /^\/explore(?:\/(\d+)(?:\/(\d+))?)?\/?$/
-// ...
-if (/^\/explore(\/|$)/.test(h)) return { kind: 'explore' } // any other explore-ish path → latest, silently
-```
-
-### WR-03: Win-totals note hardcodes "before 2003" for any season without a Vegas line
-
-**File:** `web/src/lib/winTotals.ts:87-88`
-**Issue:** `vi < 0` (no Vegas row for the season) always produces "No Vegas line on file before 2003." Per CLAUDE.md, lines from 2021 onward are typed in by hand from covers.com. When the next season starts (2027) before someone enters its line, `winTotalsView` falls into this branch. The team page would then tell users the 2027 line is missing because it is "before 2003". The same applies to any 2021+ team-season left out by mistake. Nothing tests this branch for a season ≥ 2003.
-**Fix:** Branch on the season:
-```ts
-const notes = vi < 0
-  ? season < 2003
-    ? 'No Vegas line on file before 2003. The score uses the model’s preseason expectation.'
-    : 'No Vegas line on file for this season yet. The score uses the model’s preseason expectation.'
-  : ...
-```
-Add a `winTotals.test.ts` case for a 2027 file with only an `expectation` entry.
-
-### WR-04: Missing rank delta now renders as visible "no change" while the score delta beside it renders "–"
-
-**File:** `web/src/lib/format.ts:42`, `web/src/components/Delta.svelte`, `web/src/components/BoardRow.svelte:83-84`
-**Issue:** `formatRankDelta(null|undefined)` returns `'no change'`. A null `rank_delta` means there is no prior snapshot: 1999 week 0, HOU 2002 week 0, or rows without a previous week. That is unknown, not unchanged. The neighboring `<Delta kind="score">` renders `formatDelta(null)` as `–`, so the same row shows "– / no change". On the 1999 preseason board, all 31 rows claim "no change". The `format.test.ts:146-151` case locks this in.
-**Fix:** Keep the en-dash for missing data and use words only for a real zero:
-```ts
-if (!isNum(value)) return { text: '–', dir: 'none', aria: 'No prior rank' }
-if (value === 0) return { text: 'no change', dir: 'none', aria: 'No change in rank' }
-```
+| ID | Status | Evidence |
+|----|--------|----------|
+| WR-01 | Resolved | `explore.ts:204` now reads "Check back after the play-by-play update." The test is updated, and nothing else in `web/src` or `verify_ui.py` still contains the old copy. |
+| WR-02 | Accepted as designed | See the orchestrator note in iteration 1. |
+| WR-03 | Resolved | `winTotals.ts:87-91` branches on `season < 2003`. The new 2027 test covers the 2003+ branch. `verify_ui.py:169` (BUF 2000) still matches the pre-2003 copy. |
+| WR-04 | Resolved (visual) | `formatRankDelta` returns `–` for null, undefined, or NaN, and "no change" only for a real 0. `Delta.svelte` has no remaining reference to `r.aria`. `verify_ui.py:142` still passes because it accepts "spot" or "no change". See IN-08 for the screen-reader side. |
+| IN-01 | Resolved | `aria-label` and the `aria` field are removed. `formatRankDelta` has no other callers. |
+| IN-04 | Resolved | The finished dek reads "N wins" (singular for exactly "1"). The pace dek reads "X.X wins". |
+| IN-06 | Resolved | `noLuck.test.ts` scans 6 sources, including `scatterMarks.ts`. |
+| IN-02, IN-03, IN-05, IN-07 | Open (Info) | Not in the fix scope. Carried over below. |
 
 ## Info
 
-### IN-01: `aria-label` on rank `Delta` is dead
-
-**File:** `web/src/components/Delta.svelte` (rank branch)
-**Issue:** The only rank `Delta` (BoardRow:84) sits inside `<span class="change" aria-hidden="true">`. ARIA 1.2 also prohibits naming a generic `<span>`. Screen readers never announce the new `aria-label`; BoardRow's `srText`/`changeText` already covers this information.
-**Fix:** Drop `aria-label` and the `aria` field, or add `role="img"` if the component is ever used outside an aria-hidden container.
-
-### IN-02: `leagueMeans` weights by total plays, not by plays with non-null EPA
+### IN-02 (carried over): `leagueMeans` weights by total plays, not by plays with non-null EPA
 
 **File:** `web/src/lib/explore.ts:61-62`
-**Issue:** `seasonToDate` averages `off_epa` over `oep` (plays in games with non-null EPA), but `leagueMeans` weights each team by `off_plays` (all plays). If a team-game ever has `off_plays > 0` with `off_epa == null`, the crosshair stops being the true play-weighted mean of the plotted rates. This is latent: the current EPA files have 0 such rows.
-**Fix:** Have `seasonToDate` expose `off_epa_plays`/`def_epa_plays` (`oep`/`dep`) and weight by those.
+**Issue:** The crosshair weights each team by `off_plays`/`def_plays`, but `seasonToDate` averages over plays that have non-null EPA. This is latent: the current data has no such rows.
+**Fix:** Expose `oep`/`dep` from `seasonToDate` and weight by them.
 
-### IN-03: Number-line markers overflow the track at 0 and reg_games
+### IN-03 (carried over): Number-line markers overflow the track at 0 and reg_games
 
 **File:** `web/src/components/WinTotals.svelte:108-113`
-**Issue:** `.mk` uses `translate(-50%, -50%)` at `left: 0%` or `100%`. A 0-win pace (e.g. 0–3) or a 17–0 finish puts half of the 12px dot outside the number line. Tick labels got `.first`/`.last` edge handling; markers didn't.
-**Fix:** Inset the track (e.g. `inset-inline: 6px` on a wrapper the markers are positioned in), or clamp `left` with `calc(clamp(6px, X%, 100% - 6px))`.
+**Issue:** A 0% or 100% `left` with `translate(-50%)` pushes half of the dot past the track.
+**Fix:** Clamp with `left: clamp(6px, X%, calc(100% - 6px))`, or inset the marker container.
 
-### IN-04: Finished dek drops the unit
-
-**File:** `web/src/lib/winTotals.ts:78`
-**Issue:** "Vegas set the line at 10.5 wins. They finished with 13." is missing "wins". The in-progress branch also omits it ("on pace for 12.8.").
-**Fix:** `` `They finished with ${w} wins.` `` (and `` `on pace for ${p.toFixed(1)} wins.` ``).
-
-### IN-05: Team-file failure is never retried for the rest of the session
+### IN-05 (carried over): Team-file failure is never retried for the rest of the session
 
 **File:** `web/src/components/TeamPage.svelte:116-133`
-**Issue:** The effect depends only on `team` and `meta`. After one failed fetch, `teamFile = {failed: true}` persists while the user moves between weeks or seasons of the same team, so the expectations section stays hidden even though `loadTeam` evicted the cache entry. Unlike recent games, it offers no retry action.
-**Fix:** Add a `teamRetry` counter like `gamesRetry`. Or render a StatusPanel with "Try again" in place of silently omitting the section.
+**Issue:** `teamFile = {failed: true}` persists until the user changes team, so the expectations section stays hidden without a retry action.
+**Fix:** Add a `teamRetry` counter, or show a StatusPanel with a "Try again" button.
 
-### IN-06: `noLuck.test.ts` scans a hardcoded list that skips `scatterMarks.ts`
-
-**File:** `web/src/lib/noLuck.test.ts:5-14`
-**Issue:** `lib/scatterMarks.ts` is an Explore source (it draws marks and handles clicks) but isn't in the glob. Any future Explore helper file would also escape the D-15 guard.
-**Fix:** Add `./scatterMarks.ts` and update the expected count to 6. Or use a pattern list (`'../components/{Explore,Epa,Record}*.svelte'`, `'./{explore,scatterMarks}.ts'`).
-
-### IN-07: Duplicated week validation and a dead fallback in ExplorePage
+### IN-07 (carried over): Duplicated week validation and a dead fallback in ExplorePage
 
 **File:** `web/src/components/ExplorePage.svelte:40-50`
-**Issue:** `validWeek` duplicates `App.svelte` `validTeamWeek` (lines 81-84). `seasonMeta = $derived(findSeason(meta, s)!)` asserts non-null, then line 50 tests `seasonMeta ? … : 'Week ${w}'`, which is dead under the assertion.
-**Fix:** Move `validWeek(meta, season, week)` into `lib/data.ts` and use it in both places. Drop the `!` and keep the guard, or keep the `!` and drop the guard.
+**Issue:** `validWeek` duplicates `App.svelte` `validTeamWeek`. The `seasonMeta ? … : …` guard is dead under the `findSeason(...)!` assertion.
+**Fix:** Move a shared `validWeek` into `lib/data.ts`, then drop either the `!` or the guard.
+
+### IN-08 (new): Screen-reader text still reports a missing delta as "No change"
+
+**File:** `web/src/lib/format.ts:58-63`
+**Issue:** After WR-04, the visible rank delta renders `–` for a missing delta. The row's only accessible text is `changeText` in `srText` (BoardRow.svelte:58), and it still announces "No change, preseason." or "No change from last week." when `score_delta` is null. If `score_delta` is present but `rank_delta` is null, `rd` falls back to 0 and the text reads "same spot". So sighted users see "unknown" while screen-reader users hear "unchanged". This behavior is documented (07-04) and predates this phase, so it stays Info.
+**Fix:** For null deltas, return wording like "No prior week to compare." (or "No previous season to compare." at week 0). Use the same wording when `rank_delta` alone is null instead of coercing it to 0.
 
 ---
 
 _Reviewed: 2026-11-11_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
-
-## Orchestrator note
-
-- **WR-02 is accepted as designed.** RESEARCH "Open Question Resolutions" #2 decided that malformed explore hashes (`#/explore/abc`, or a 3-digit week that fails the regex) take the existing invalid-route path, which is the board plus a notice. Only a well-formed `#/explore/{season}/{week}` with an unknown season or out-of-range week falls back silently to `#/explore`. The fixer should skip WR-02.
