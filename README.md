@@ -39,7 +39,7 @@ web/                 static Svelte site; reads web/public/data/*.json
 
 ```bash
 cd web
-nvm use && npm install   # once; Node >=22.12, pinned by web/.nvmrc
+nvm use && npm install   # once; Node 24, pinned by web/.nvmrc
 npm run dev
 ```
 

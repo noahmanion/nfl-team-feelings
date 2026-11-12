@@ -21,7 +21,7 @@
     "vitest": "^5.1.0"
   },
   "engines": {
-    "node": ">=22.12"
+    "node": "24.x"
   },
   "dependencies": {
     "@observablehq/plot": "0.6.19"
