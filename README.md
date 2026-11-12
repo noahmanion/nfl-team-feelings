@@ -96,6 +96,8 @@ Each factor is z-scored across teams in the same week, weighted, and summed. The
 
 The site now also has an **Explore** page with two logo scatters: offense vs defense EPA per play, and record vs evidence (win % against the feel-good score). Team pages show the preseason Vegas win total next to the team's actual pace, with a label whenever that line is display-only and not used in the score.
 
+Every build also renders share cards (1200×630 PNGs) and static share pages under `/s/`, one per team and per current-season callout from week 9 of 2026 on. The copy-link buttons share those pages, so links unfurl with a card in Slack, iMessage, X and similar apps.
+
 ## Credits
 
 NFL data comes from [nflverse](https://github.com/nflverse) (`nflreadpy`, `nfldata`). Elo methodology draws on FiveThirtyEight's published NFL Elo approach. This is an unofficial fan project, not affiliated with the NFL or any team.
