@@ -139,7 +139,7 @@ Plans:
 **Wave 2** *(blocked on Wave 1 completion)*
 
 - [x] 12-04-PLAN.md — HistoryChart/MethodologyChart/Sparkline on the theme, logo end mark, ChartFrames, history dek
-- [ ] 12-05-PLAN.md — Board table, callouts, movers, header/footer/scrubber restyle with logos and era names
+- [x] 12-05-PLAN.md — Board table, callouts, movers, header/footer/scrubber restyle with logos and era names
 - [ ] 12-06-PLAN.md — Team, records and methodology pages restyle with logos, era names, framed breakdown
 
 **Wave 3** *(blocked on Wave 2 completion)*
@@ -194,6 +194,6 @@ Plans:
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
-| 12. Redesign Foundation & Team Identity | v2.0 | 4/7 | In Progress|  |
+| 12. Redesign Foundation & Team Identity | v2.0 | 5/7 | In Progress|  |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
