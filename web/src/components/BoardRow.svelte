@@ -196,6 +196,12 @@
     display: flex;
     min-width: 0;
   }
+  /* Narrow layouts: the mood label is the core message, so it wraps instead of truncating
+     (UI review fix). The wide table layout below restores single-line ellipsis. */
+  .mood :global(.text) {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   /* Shaded score cell (12-UI-SPEC Color): band tint with a solid 4px band edge. The band comes from
      the exported label (bandIndex), never the raw score. No muted text inside the cell. */
   .score-cell {
@@ -266,6 +272,9 @@
     .mood {
       grid-column: 5;
       grid-row: 1;
+    }
+    .mood :global(.text) {
+      white-space: nowrap;
     }
     .change {
       grid-column: 6;
