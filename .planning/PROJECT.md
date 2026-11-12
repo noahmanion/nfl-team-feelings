@@ -12,34 +12,17 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ Per-team feel-good score after every game, 1999→present (additive 11-factor composite, percentile 0–100, mood bands) — v1.0
+- ✓ Inputs: Elo, season record, last-16 (cross-season), margin, opponent-quality of results, streak, close-game luck, efficiency trend (EPA), QB form, vs preseason expectation, playoff-odds trend — v1.0 (weights + signs set by backtest; momentum-type inputs ≈0/negative)
+- ✓ Monte Carlo season simulator (playoff odds, preseason expected wins) — v1.0
+- ✓ Offseason draft reaction (surplus over original slot, anti-tanking) — v1.0, display-only (gate found no predictive signal)
+- ✓ Fixed, backtested weights (Ridge, frozen) with pre-registered one-time 2022–25 holdout — v1.0 (verdict: "Yes, slightly", within noise)
+- ✓ Mood board, team deep-dive with factor bars + blurbs, mood-over-time chart, week scrubber, records page, methodology page, perception-gap callouts, movers, calendar-day streaks, my-team pin — v1.0
+- ✓ One-command weekly refresh → static JSON → static site — v1.0
 
 ### Active
 
-**Scoring model**
-- [ ] Compute a per-team feel-good score after every game, for every season nflverse covers (1999→present)
-- [ ] Inputs: current-season record; rolling last-16-games record regardless of season boundary
-- [ ] Input: efficiency trend (EPA/play trend from nflverse play-by-play) as the free stand-in for "WAR improvement"
-- [ ] Input: strength of win — margin of victory (separate from opponent quality)
-- [ ] Input: opponent quality — strength of the opponent beaten/lost to (separate input, own weight)
-- [ ] Input: performance vs preseason expectations (e.g. Vegas preseason win totals)
-- [ ] Input: playoff odds trend
-- [ ] Input: current win/loss streak
-- [ ] Input: close-game luck (nail-biter wins/heartbreak losses)
-- [ ] Input: QB play trend
-- [ ] Offseason: score reacts to the draft (draft capital via draft-value charts) instead of freezing
-- [ ] Weights are fixed and opinionated, but tuned via backtest against future performance (e.g. next-N-games win %)
-- [ ] Per-team breakdown explaining which factors drive the score
-
-**Visualization**
-- [ ] League-wide mood board: all 32 teams ranked by feel-good score (home page)
-- [ ] Team deep-dive on click: score, mood label, factor breakdown, history
-- [ ] Mood-over-time chart: every team's score week by week, across seasons
-- [ ] Playful mood labels/copy (e.g. "Planning the parade", "Refreshing draft mocks") over clean, serious charts
-- [ ] Shareable "aha" moments surfaced: e.g. "8-2 but you should feel worried", "miserable for 600 straight days", saddest-fanbase-ever historical extremes
-
-**Pipeline**
-- [ ] Weekly refresh: a script run after each week's games regenerates scores as static JSON
+(None — v1.0 shipped. Candidates for next milestone: v2 items in milestones/v1.0-REQUIREMENTS.md.)
 
 ### Out of Scope
 
@@ -52,6 +35,8 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 - Paid data (PFF WAR etc.) — free data only
 
 ## Context
+
+- **v1.0 shipped 2026-11-11:** 8 phases, ~30 plans; 584 pipeline tests + 149 web tests. Holdout 2022–25: composite ≈ Elo (+0.004 Spearman, CI includes 0); Vegas still best on single games. The product's value is explanation (record vs evidence), backed by callout base rates (worried teams −3.5 pts/game vs record peers).
 
 - Inspiration: fans perceiving their team as worse than it really is. The score is a reality check grounded in predictive evidence.
 - Think "Elo, but momentum": a slow strength term plus faster recent-form/trajectory terms.
@@ -71,14 +56,14 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| EPA/play trend as "WAR improvement" proxy | Free, team-level, predictive; PFF WAR is paywalled | — Pending |
-| Margin and opponent quality as separate inputs | User wants each weighted independently | — Pending |
-| Expectations measured vs preseason (Vegas win totals) | A 6-4 team picked to go 4-13 should feel better than one picked to win it all | — Pending |
-| Backtest target = future performance, not sentiment | Score is a corrective to fan perception; must be predictively true | — Pending |
-| Full history 1999→present | Enables historical extremes ("saddest fanbase ever") | — Pending |
-| Offseason reacts to draft (v1); FA deferred | Draft value is cleanly available; FA value is messy | — Pending |
-| No tanking reward | Don't encourage tanking | — Pending |
-| Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | — Pending |
+| EPA/play trend as "WAR improvement" proxy | Free, team-level, predictive; PFF WAR is paywalled | ✓ Good |
+| Margin and opponent quality as separate inputs | User wants each weighted independently | ✓ Good |
+| Expectations measured vs preseason (Vegas win totals) | A 6-4 team picked to go 4-13 should feel better than one picked to win it all | ✓ Good |
+| Backtest target = future performance, not sentiment | Score is a corrective to fan perception; must be predictively true | ✓ Good |
+| Full history 1999→present | Enables historical extremes ("saddest fanbase ever") | ✓ Good |
+| Offseason reacts to draft (v1); FA deferred | Draft value is cleanly available; FA value is messy | ✓ Good |
+| No tanking reward | Don't encourage tanking | ✓ Good |
+| Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | ✓ Good |
 
 ## Evolution
 
@@ -98,4 +83,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11 after initialization*
+*Last updated: 2026-11-11 after v1.0 milestone*
