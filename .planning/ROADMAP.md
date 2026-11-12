@@ -177,7 +177,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 13-06-PLAN.md — #/explore route + nav, ExplorePage, table views, no-"luck" wording test
+- [x] 13-06-PLAN.md — #/explore route + nav, ExplorePage, table views, no-"luck" wording test
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
@@ -216,5 +216,5 @@ Plans:
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete    | 2026-11-12 |
-| 13. Explore Charts & Win Totals Display | v2.0 | 5/7 | In Progress|  |
+| 13. Explore Charts & Win Totals Display | v2.0 | 6/7 | In Progress|  |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |

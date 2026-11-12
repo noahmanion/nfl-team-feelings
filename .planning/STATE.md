@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Public Site
 status: executing
 stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-11-12T05:40:04.425Z"
+last_updated: "2026-11-12T05:43:32.598Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 22
-  completed_plans: 20
+  completed_plans: 21
   percent: 67
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 ## Current Position
 
 Phase: 13 (Explore Charts & Win Totals Display) — EXECUTING
-Plan: 6 of 7
+Plan: 7 of 7
 Status: Ready to execute
 Last activity: 2026-11-12
 
-Progress: [█████████░] 91%
+Progress: [██████████] 95%
 
 ## Performance Metrics
 
@@ -65,6 +65,7 @@ Progress: [█████████░] 91%
 | Phase 13 P01 | 12m | 2 tasks | 38 files |
 | Phase 13 P04 | 5m | 2 tasks | 7 files |
 | Phase 13 P05 | 6 min | 2 tasks | 3 files |
+| Phase 13 P06 | 4min | 3 tasks | 8 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 13]: 13-01: teams/*.json expectation block is display-only (week-0 exp_total, source, reg_games); never read back into the score
 - [Phase 13]: 13-04: WinTotals loading state renders inside ChartFrame with the headline; loadTeam failure omits the section
 - [Phase 13]: 13-05: Record chart mood bands span the full frame (no x channel); band labels use frameAnchor right so the logo inset never misaligns them
+- [Phase 13]: 13-06: #/explore/{season} without week and invalid season/week replace to #/explore
+- [Phase 13]: 13-06: EPA crosshair means computed over plotted teams only
 
 ### Pending Todos
 
@@ -120,7 +123,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T05:40:01.504Z
+Last session: 2026-11-12T05:43:29.597Z
 Stopped at: Phase 13 UI-SPEC approved
 Resume file: None
 
