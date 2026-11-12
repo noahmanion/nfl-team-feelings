@@ -143,10 +143,14 @@ describe('formatRankDelta', () => {
   it('reads downward moves', () => {
     expect(formatRankDelta(-2)).toEqual({ text: '▼2 spots', dir: 'down', aria: 'Down 2 spots in rank' })
   })
-  it('reads zero/null/undefined as no change', () => {
-    const none = { text: 'no change', dir: 'none', aria: 'No change in rank' }
-    expect(formatRankDelta(0)).toEqual(none)
-    expect(formatRankDelta(null)).toEqual(none)
-    expect(formatRankDelta(undefined)).toEqual(none)
+  it('reads a real zero as no change', () => {
+    expect(formatRankDelta(0)).toEqual({ text: 'no change', dir: 'none', aria: 'No change in rank' })
+  })
+
+  it('reads null/undefined (no prior snapshot) as an en-dash, like the score delta', () => {
+    const missing = { text: '–', dir: 'none', aria: 'No prior rank' }
+    expect(formatRankDelta(null)).toEqual(missing)
+    expect(formatRankDelta(undefined)).toEqual(missing)
+    expect(formatRankDelta(Number.NaN)).toEqual(missing)
   })
 })

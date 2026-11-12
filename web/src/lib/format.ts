@@ -37,9 +37,13 @@ export function formatDelta(value: number | null | undefined): { text: string; d
 const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
-/** Board rank change in words: "▲1 spot" / "▼2 spots" / "no change", plus a screen-reader label. */
+/**
+ * Board rank change in words: "▲1 spot" / "▼2 spots" / "no change", plus a screen-reader label.
+ * A missing delta (no prior snapshot) is unknown, not unchanged: it renders "–" like formatDelta.
+ */
 export function formatRankDelta(value: number | null | undefined): { text: string; dir: DeltaDir; aria: string } {
-  if (!isNum(value) || value === 0) return { text: 'no change', dir: 'none', aria: 'No change in rank' }
+  if (!isNum(value)) return { text: '–', dir: 'none', aria: 'No prior rank' }
+  if (value === 0) return { text: 'no change', dir: 'none', aria: 'No change in rank' }
   const n = Math.abs(value)
   return value > 0
     ? { text: `▲${plural(n, 'spot')}`, dir: 'up', aria: `Up ${plural(n, 'spot')} in rank` }
