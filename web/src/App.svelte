@@ -17,6 +17,7 @@
   import { carryWeek } from './lib/format'
   import { validMyTeam } from './lib/myteam'
   import { myTeam } from './lib/myteam.svelte'
+  import { isActiveFranchise } from './lib/teamNames'
   import { go, replace, route } from './lib/route.svelte'
   import { boardHash, teamHash, type Route } from './lib/router'
   import type { Callout, Meta, Row, SeasonFile, WeekFile } from './lib/types'
@@ -167,16 +168,20 @@
   })
 
   // Keep the previous board (and its callouts) visible, dimmed, while a season file loads.
+  // D-17 (WR-02): drop franchises that did not exist yet (HOU before 2002) once, here, so the heading
+  // count, callout cards, movers strip and board all agree.
   let shown = $state<{ rows: Row[]; callouts: Callout[]; season: number; week: number; latest: boolean } | null>(null)
   $effect(() => {
-    if (currentRows && target)
+    if (currentRows && target) {
+      const season = target.season
       shown = {
-        rows: currentRows,
-        callouts: currentCallouts,
+        rows: currentRows.filter((r) => isActiveFranchise(r.franchise, season)),
+        callouts: currentCallouts.filter((c) => isActiveFranchise(c.franchise, season)),
         season: target.season,
         week: target.week,
         latest: target.latest,
       }
+    }
   })
   // The pinned team's cards come first (orderCallouts).
   const shownCards = $derived(shown ? orderCallouts(cardCallouts(shown.callouts), validMyTeam(myTeam.abbr, meta?.teams)) : [])
