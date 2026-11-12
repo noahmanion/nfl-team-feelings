@@ -133,7 +133,8 @@ export function epaTicks([d0, d1]: [number, number], width: number): number[] {
   let ks: number[] = []
   for (let k = k0; k <= k1; k++) ks.push(k)
   let mult = 2
-  while (width < 640 && ks.length > 6) {
+  // at most 6 ticks below 640px, 5 below 400px (UI review #3: ticks touched at 375)
+  while (width < 640 && ks.length > (width < 400 ? 5 : 6)) {
     const m = mult
     ks = ks.filter((k) => k % m === 0)
     mult *= 2
@@ -163,7 +164,8 @@ export const gapText = (v: number): string => `${signed(v, 1)} pts`
 /** En-dash record: "6–2", "6–2–1" (formatRecord in format.ts keeps its hyphen). */
 export const recordText = (w: number, l: number, t: number): string => (t > 0 ? `${w}${EN}${l}${EN}${t}` : `${w}${EN}${l}`)
 /** clamp(width × 0.8, 320, 560) */
-export const chartHeight = (w: number): number => Math.min(560, Math.max(320, Math.round(w * 0.8)))
+/** width x 0.8 clamped to 320..560; phones (< 400px) get a 380 floor so 32 logos near the mean can separate (UI review #4). */
+export const chartHeight = (w: number): number => Math.min(560, Math.max(w < 400 ? 380 : 320, Math.round(w * 0.8)))
 
 /** Click-through: mouse navigates at once; touch arms on the first tap, navigates on a second tap of the same team. */
 export function tapAction(pointerType: string, armed: string | null, picked: string | null): { go: boolean; armed: string | null } {

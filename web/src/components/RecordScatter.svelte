@@ -99,7 +99,6 @@
         }),
       )
     }
-    let lineLabel: { seg: { x1: number; y1: number; x2: number; y2: number }[] } | null = null
     if (line) {
       const xs = points.map((p) => p.x)
       const x0 = Math.min(...xs)
@@ -117,8 +116,7 @@
           strokeDasharray: '4,3',
         }),
       )
-      // The line label is pushed after the logos (below) with a halo so top-right logos can't hide it.
-      if (width >= 400) lineLabel = { seg }
+      // The line is keyed in HTML above the chart (UI review #1): an in-plot label collided with top logos.
       marks.push(
         Plot.text(['BETTER THAN THEIR RECORD'], {
           text: (d: string) => d,
@@ -147,22 +145,6 @@
       const ring = highlightColor(t?.primary ?? '', t?.secondary ?? '', bg, dark)
       marks.push(
         ...logoMarks([pin], { x: 'x', y: 'y', size: pinSize, opacity: 1, dark, ringColor: ring, colorOf, pinnedText: true }),
-      )
-    }
-    if (lineLabel) {
-      marks.push(
-        Plot.text(lineLabel.seg, {
-          x: 'x2',
-          y: 'y2',
-          text: () => 'Typical score for this record',
-          textAnchor: 'end',
-          dy: -8,
-          fontSize: CHART_FONT_PX,
-          fill: 'var(--text-muted)',
-          stroke: 'var(--bg)',
-          strokeWidth: 4,
-          paintOrder: 'stroke',
-        }),
       )
     }
     marks.push(
@@ -218,9 +200,26 @@
   })
 </script>
 
+{#if line}
+  <p class="key"><svg width="24" height="8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4" /></svg>Typical score for this record</p>
+{/if}
 <div class="chart" bind:clientWidth={width} bind:this={container}></div>
 
 <style>
+  .key {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin: 0 0 var(--space-xs);
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    color: var(--text-muted);
+  }
+  .key line {
+    stroke: var(--text-muted);
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+  }
   .chart {
     font-family: var(--font-mono);
     inline-size: 100%;

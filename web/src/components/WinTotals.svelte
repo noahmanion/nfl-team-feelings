@@ -27,6 +27,11 @@
   const vegas = $derived(byKey('vegas'))
   const model = $derived(byKey('model'))
   const paceRow = $derived(byKey('pace'))
+  // UI review #5: markers within ~0.5 wins (3% of the line) stack; nudge the ring up and the dot down.
+  const near = (a: { pos: number | null } | null, b: { pos: number | null } | null) =>
+    !!a && !!b && a.pos !== null && b.pos !== null && Math.abs(a.pos - b.pos) < 3
+  const ringUp = $derived(near(model, vegas))
+  const dotDown = $derived(near(paceRow, vegas) || near(paceRow, model))
 
   // Track the colour scheme so the pace dot keeps contrast (same pattern as HistoryPage).
   let dark = $state(false)
@@ -64,9 +69,9 @@
   >
     <div class="numline" aria-hidden="true">
       <span class="track"></span>
-      {#if model}<span class="mk ring" style:left="{model.pos}%"></span>{/if}
+      {#if model}<span class="mk ring" class:up={ringUp} style:left="{model.pos}%"></span>{/if}
       {#if vegas}<span class="mk bar" style:left="{vegas.pos}%"></span>{/if}
-      {#if paceRow}<span class="mk dot" style:left="{paceRow.pos}%" style:--dot={color}></span>{/if}
+      {#if paceRow}<span class="mk dot" class:down={dotDown} style:left="{paceRow.pos}%" style:--dot={color}></span>{/if}
       {#each view.ticks as t, i (t)}
         <span class="tick {tickClass(i, view.ticks.length)}" style:left="{(t / view.regGames) * 100}%">{t}</span>
       {/each}
@@ -110,6 +115,12 @@
     top: 12px;
     transform: translate(-50%, -50%);
     box-sizing: border-box;
+  }
+  .mk.up {
+    top: 4px;
+  }
+  .mk.down {
+    top: 20px;
   }
   .ring,
   .g.ring {

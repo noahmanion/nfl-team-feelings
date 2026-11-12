@@ -369,7 +369,7 @@ Still deferred (log in SUMMARY): #5, #6 beyond the win-totals placement, #10, #1
 | Record headline | `Record vs evidence` |
 | Record dek (D-16, generated) | `The {nick A} look better than their {W–L} record; the {nick B} look worse than theirs.` |
 | Record dek fallback (OLS not drawn, or both extreme gaps < 1 pt) | `Win percentage against feel-good score, {season} through {week label}.` |
-| Record notes | `Win % counts ties as half a win. The dashed line is the typical score for each record this week. Shaded bands are the mood labels.` |
+| Record notes | `Win % counts ties as half a win. The dashed line is the typical score for each record this week. Shaded bands are the board’s mood bands.` (UI review #2) |
 | OLS label | `Typical score for this record` |
 | Zone labels (rendered uppercase) | `Better than their record` · `Worse than their record` |
 | Record axis labels | `Win % →` · `↑ Feel-good score` |

@@ -196,7 +196,8 @@ describe('domains, ticks, diagonals, height', () => {
     expect(epaTicks([-0.1, 0.1], 960)).toEqual([-0.1, -0.05, 0, 0.05, 0.1])
     expect(epaTicks([-0.4, 0.4], 960)).toHaveLength(9)
     const narrow = epaTicks([-0.4, 0.4], 343)
-    expect(narrow.length).toBeLessThanOrEqual(6)
+    expect(narrow.length).toBeLessThanOrEqual(5)
+    expect(epaTicks([-0.4, 0.4], 500).length).toBeLessThanOrEqual(6)
     expect(narrow).toContain(0)
   })
   it('diagonals: one slope-1 segment per 0.1 net crossing the frame', () => {
@@ -205,9 +206,10 @@ describe('domains, ticks, diagonals, height', () => {
     for (const s of d) expect((s.y2 - s.y1) / (s.x2 - s.x1)).toBeCloseTo(1)
     expect(d.map((s) => Math.round((s.x1 - s.y1) * 10))).toEqual([-4, -3, -2, -1, 0, 1, 2, 3, 4])
   })
-  it('chartHeight clamps width x 0.8 to 320..560', () => {
+  it('chartHeight clamps width x 0.8 to 320..560, with a 380 floor below 400px', () => {
     expect(chartHeight(960)).toBe(560)
-    expect(chartHeight(343)).toBe(320)
+    expect(chartHeight(343)).toBe(380)
+    expect(chartHeight(420)).toBe(336)
     expect(chartHeight(500)).toBe(400)
   })
 })

@@ -149,7 +149,7 @@
   const EPA_NOTES =
     'EPA per play, season to date, garbage time filtered. Not adjusted for opponents. Defense axis is flipped: higher = fewer points allowed. Regular season only.'
   const RVE_NOTES =
-    'Win % counts ties as half a win. The dashed line is the typical score for each record this week. Shaded bands are the mood labels.'
+    'Win % counts ties as half a win. The dashed line is the typical score for each record this week. Shaded bands are the board’s mood bands.'
   const rveDek = $derived(recordDek(recPts, line, s, wl, meta))
   const epaAria = $derived(
     `Scatter of offensive against defensive EPA per play for ${epaPts.length} teams, ${s} through ${wl}. Full values in the table below.`,
