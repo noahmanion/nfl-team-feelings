@@ -195,7 +195,14 @@ Plans:
   3. The copy-link buttons on team pages and callouts copy the share-page URL where one exists and fall back to the hash link otherwise
   4. Pasting a team share URL and a callout share URL into Slack, iMessage and X (and the Facebook/LinkedIn debuggers) shows the correct card image and title
 
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+
+- [ ] 14-01-PLAN.md — share.ts: share URL scheme, launch gate, share page HTML, copy-URL helpers (+ tsconfig allowImportingTsExtensions)
+- [ ] 14-02-PLAN.md — satori + resvg-js exact pins; og-template.mjs card tokens, fonts, glyph guard, team/callout/site card trees
+- [ ] 14-03-PLAN.md — share.mjs buildShare wired into npm run build; measured build, local dist/redirect checks, ≤4 samples, 14-HUMAN-UAT.md
+- [ ] 14-04-PLAN.md — CopyLinkButton extraction; callout + team header copy links use share URLs; Playwright copy check
 **UI hint**: yes
 
 ## Progress
