@@ -8,7 +8,7 @@
 
 ### Model Integrity (frozen v1 + v2 pre-registration)
 
-- [ ] **INTEG-01**: A golden test pins a hash of every exported composite score and mood label for seasons ≤2025, so any v2.0 change that alters a frozen v1 score fails the test suite
+- [x] **INTEG-01**: A golden test pins a hash of every exported composite score and mood label for seasons ≤2025, so any v2.0 change that alters a frozen v1 score fails the test suite
 - [x] **INTEG-02**: A new `pipeline/PREREGISTRATION_V2.md` (v1's `PREREGISTRATION.md` untouched) commits, before any v2 model code exists, to: the exact definitions of the candidate inputs (MODEL-V2-01 good-loss luck, MODEL-V2-02 free agency, MODEL-V2-03 Vegas win totals into the score), the development-data ceiling (≤2025), the holdout (games kicking off after the v2 freeze commit, with 2027 primary), the comparators (frozen v1 composite and Elo), the metrics, the per-input drop rules, and the verdict wording decided in advance
 - [x] **INTEG-03**: The pre-registration states whether each candidate input can be built without leakage from free data (e.g. whether free-agency data has signing dates), and pre-commits to dropping any that can't
 
@@ -20,7 +20,7 @@
 
 ### Data Loose Ends
 
-- [ ] **DATA-01**: Every entry in the draft-forfeit table (all 24, not only the 18 entered from memory) is checked against a cited public source. Each entry is confirmed, corrected or removed, and supplemental-draft forfeits are labeled separately from penalties
+- [x] **DATA-01**: Every entry in the draft-forfeit table (all 24, not only the 18 entered from memory) is checked against a cited public source. Each entry is confirmed, corrected or removed, and supplemental-draft forfeits are labeled separately from penalties
 - [ ] **DATA-02**: The 2021–2026 Vegas preseason win totals live in a committed, sourced file under `pipeline/inputs/` and are read by a display-only module. They never reach `vs_exp` or the score, and INTEG-01 still passes
 - [ ] **DATA-03**: The team page shows a team's preseason Vegas win total next to its actual pace, labeled "not used in score" for seasons where the model expectation drives the score
 
@@ -68,13 +68,13 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INTEG-01 | Phase 11 | Pending |
+| INTEG-01 | Phase 11 | Complete |
 | INTEG-02 | Phase 9 | Complete |
 | INTEG-03 | Phase 9 | Complete |
 | DEPLOY-01 | Phase 10 | Complete |
 | DEPLOY-02 | Phase 10 | Complete |
 | DEPLOY-03 | Phase 10 | Complete |
-| DATA-01 | Phase 11 | Pending |
+| DATA-01 | Phase 11 | Complete |
 | DATA-02 | Phase 11 | Pending |
 | DATA-03 | Phase 13 | Pending |
 | LOGO-01 | Phase 11 | Pending |
