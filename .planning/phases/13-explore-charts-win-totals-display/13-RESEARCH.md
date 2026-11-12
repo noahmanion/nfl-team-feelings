@@ -440,7 +440,7 @@ export const lineTicks = (reg: number) => [...Array.from({ length: Math.floor((r
 | A3 | CSS subgrid support is adequate for the target browsers | D-22 | Low. Fallback: fixed `grid-template-columns` per row with a `--score-cell` value column. |
 | A4 | The `fgs export` runtime is a few minutes (sim cache warm) | Pipeline recipe | Low. Only affects task timing. |
 
-## Open Questions
+## Open Questions (RESOLVED — see Open Question Resolutions)
 
 1. **REG-only EPA in playoff weeks?** Recommended yes (A2). It keeps both charts and the tooltip consistent.
 2. **Lenient `#/explore/<garbage>` handling.** With the recommended regex, `#/explore/abc` is `invalid` and goes to `#/` with the board notice, while bad numeric season/week goes to `#/explore` silently (D-01). If the planner wants all `/explore…` paths to fall back to `#/explore`, add a catch-all `^\/explore\b` → `{kind:'explore'}` after the strict regex. Either is acceptable; test whichever is chosen.

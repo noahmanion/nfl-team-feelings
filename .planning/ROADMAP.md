@@ -159,8 +159,29 @@ Plans:
   2. The Explore page shows a "record vs evidence" scatter (win% vs feel-good score) where the perception gap is visible, with no "lucky/unlucky" framing, and clicking any mark opens that team's page
   3. The team page shows the team's preseason Vegas win total next to its actual pace, labeled "not used in score" for seasons where the model expectation drives the score
 
-**Plans**: TBD
+**Plans**: 7 plans
 **UI hint**: yes
+
+Plans:
+
+**Wave 1**
+
+- [ ] 13-01-PLAN.md — Display-only `expectation` block in export.py + tests; regenerate site data from cache (golden pin unchanged)
+- [ ] 13-02-PLAN.md — Pure logic: lib/explore.ts (EPA/record joins, OLS, formats, tapAction) and lib/winTotals.ts, test-first
+- [ ] 13-03-PLAN.md — Phase 12 leftovers: readable rank delta, records full width, history logo inset, callout button alignment
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 13-04-PLAN.md — Win totals on the team page: TeamFile/loadTeam, ChartFrame source prop, WinTotals.svelte, TeamPage placement
+- [ ] 13-05-PLAN.md — EpaScatter and RecordScatter Plot components (logos, tips, click/touch, pin, dark, logos-off)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 13-06-PLAN.md — #/explore route + nav, ExplorePage, table views, no-"luck" wording test
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 13-07-PLAN.md — Phase gate: full gates + Playwright sweep (1280/375, light/dark, ≤6 screenshots)
 
 ### Phase 14: Share Cards & Launch Verification
 
