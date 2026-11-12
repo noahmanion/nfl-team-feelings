@@ -7,12 +7,15 @@ import {
   calloutId,
   calloutImagePath,
   calloutShareHash,
+  calloutShareMeta,
   calloutSharePath,
   escapeHtml,
   hasSharePage,
   shareTargets,
+  sharePageHtml,
   teamCopyUrl,
   teamImagePath,
+  teamShareMeta,
   teamSharePath,
 } from './share.ts'
 import { teamHash } from './router.ts'
@@ -140,5 +143,111 @@ describe('copy URL helpers', () => {
     expect(calloutCopyUrl(hou, realMeta, ORIGIN, deep)).toBe('http://localhost:4173/s/c/2026/9/HOU-mover-up/')
     expect(calloutCopyUrl({ ...hou, week: 8 }, realMeta, ORIGIN, deep)).toBe('DEEP#/team/HOU/2026/8')
     expect(calloutCopyUrl({ ...hou, season: 2025, week: 3 }, realMeta, ORIGIN, deep)).toBe('DEEP#/team/HOU/2025/3')
+  })
+})
+
+describe('sharePageHtml', () => {
+  const base = {
+    origin: 'https://example.test',
+    sharePath: '/s/team/BUF/2026-w9/',
+    imagePath: '/og/team/BUF/2026-w9.png',
+    hash: '#/team/BUF/2026/9',
+    title: 'Buffalo Bills: 87, Planning the parade',
+    description: 'Week 9 · 2026. #2 of 32 at 7-1.',
+    imageAlt: 'alt text',
+    linkName: 'Buffalo Bills',
+  }
+  const html = sharePageHtml(base)
+
+  it('emits absolute og/twitter/canonical tags on the given origin', () => {
+    expect(html).toContain('property="og:image" content="https://example.test/og/team/BUF/2026-w9.png"')
+    expect(html).toContain('property="og:url" content="https://example.test/s/team/BUF/2026-w9/"')
+    expect(html).toContain('rel="canonical" href="https://example.test/s/team/BUF/2026-w9/"')
+    expect(html).toContain('name="twitter:card" content="summary_large_image"')
+    expect(html).toContain('name="twitter:image" content="https://example.test/og/team/BUF/2026-w9.png"')
+    expect(html).toContain('property="og:image:width" content="1200"')
+    expect(html).toContain('property="og:image:height" content="630"')
+    expect(html).toContain('<title>Buffalo Bills: 87, Planning the parade | Feel-Good Score</title>')
+    expect(html.startsWith('<!doctype html>')).toBe(true)
+    expect(html).not.toContain('http-equiv')
+  })
+
+  it('puts every og:/twitter: tag before the single script', () => {
+    const script = html.indexOf('<script')
+    expect(script).toBeGreaterThan(0)
+    expect(html.indexOf('<script', script + 1)).toBe(-1)
+    const tagIdx = [...html.matchAll(/(property="og:|name="twitter:|rel="canonical")/g)].map((m) => m.index ?? -1)
+    expect(tagIdx.length).toBeGreaterThanOrEqual(17)
+    for (const i of tagIdx) expect(i).toBeLessThan(script)
+  })
+
+  it('redirects to the root-relative hash and links to it', () => {
+    expect(html).toContain(`location.replace('/' + "#/team/BUF/2026/9")`)
+    expect(html).toContain('href="/#/team/BUF/2026/9"')
+    expect(html).toContain('Open Buffalo Bills on Feel-Good Score →')
+    expect(html).toMatch(/facebookexternalhit/)
+  })
+
+  it('cannot be broken out of by hostile title or hash', () => {
+    const evil = sharePageHtml({
+      ...base,
+      title: '</script><script>alert(1)</script>',
+      description: '"><img src=x onerror=alert(1)>',
+      linkName: "O'Brien <b>",
+      hash: '#/x</script><script>alert(2)</script>',
+    })
+    expect(evil.match(/<script/g)?.length).toBe(1)
+    expect(evil).not.toContain('</script><')
+    expect(evil).not.toContain('<img')
+    expect(evil).toContain('O&#39;Brien &lt;b&gt;')
+    expect(evil).toContain('\\u003c/script>')
+  })
+})
+
+describe('share page meta copy', () => {
+  const row = { score: 87, label: 'Planning the parade', rank: 2, wins: 7, losses: 1, ties: 0 }
+
+  it('teamShareMeta for BUF 2026 week 9', () => {
+    const m = teamShareMeta(row, 'BUF', 2026, 9, realMeta)
+    expect(m.title).toBe('Buffalo Bills: 87, Planning the parade')
+    expect(m.description.startsWith('Week 9 · 2026. #2 of 32 at 7-1.')).toBe(true)
+    expect(m.description).toBe(
+      'Week 9 · 2026. #2 of 32 at 7-1. How Bills fans should feel right now, by the Feel-Good Score.',
+    )
+    expect(m.imageAlt).toBe('Buffalo Bills feel-good score: 87 out of 100, “Planning the parade”. Week 9, 2026.')
+    expect(m.linkName).toBe('Buffalo Bills')
+  })
+
+  it('teamShareMeta renders a non-finite score as an en dash and ties in the record', () => {
+    const m = teamShareMeta({ ...row, score: Number.NaN, ties: 1 }, 'BUF', 2026, 9, realMeta)
+    expect(m.title).toBe('Buffalo Bills: –, Planning the parade')
+    expect(m.description).toContain('at 7-1-1.')
+  })
+
+  it('teamShareMeta uses era names', () => {
+    const m = teamShareMeta(row, 'LV', 2026, 9, { ...realMeta, seasons: [...realMeta.seasons] })
+    expect(m.title.startsWith('Las Vegas Raiders:')).toBe(true)
+    const old = teamShareMeta(row, 'LV', 2015, 3, realMeta)
+    expect(old.title.startsWith('Oakland Raiders:')).toBe(true)
+  })
+
+  const joy = {
+    type: 'joy' as const, season: 2026, week: 9, franchise: 'BUF',
+    headline: 'Bills fans have been buying the jersey for 1,151 straight days',
+    detail: 'Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026.',
+    evidence: null, stat: 1151, start: null, band: 6,
+  }
+
+  it('calloutShareMeta uses the headline alone when it starts with the nickname', () => {
+    const m = calloutShareMeta(joy, realMeta)
+    expect(m.title).toBe('Bills fans have been buying the jersey for 1,151 straight days')
+    expect(m.description).toBe('Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026. Week 9 · 2026, on the Feel-Good Score.')
+    expect(m.imageAlt).toBe('Buffalo Bills: Bills fans have been buying the jersey for 1,151 straight days. Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026.')
+    expect(m.linkName).toBe('Buffalo Bills')
+  })
+
+  it('calloutShareMeta prefixes the era name otherwise', () => {
+    const m = calloutShareMeta({ ...joy, type: 'worried', franchise: 'CLE', headline: '5-4, but you should feel worried', detail: 'The Browns have the 16th-best record but the 25th-best score.' }, realMeta)
+    expect(m.title).toBe('Cleveland Browns: 5-4, but you should feel worried')
   })
 })
