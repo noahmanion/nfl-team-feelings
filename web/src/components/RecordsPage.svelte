@@ -2,13 +2,14 @@
   import Badge from './Badge.svelte'
   import Sep from './Sep.svelte'
   import StatusPanel from './StatusPanel.svelte'
-  import TeamChip from './TeamChip.svelte'
+  import TeamLogo from './TeamLogo.svelte'
   import { findSeason, loadRecords } from '../lib/data'
   import { formatRecord, moodToken, weekLabel } from '../lib/format'
   import { validMyTeam } from '../lib/myteam'
   import { myTeam } from '../lib/myteam.svelte'
   import { dateRange, formatDate, formatDays, seasonsSpan, streakLine } from '../lib/records'
   import { teamHash } from '../lib/router'
+  import { eraName } from '../lib/teamNames'
   import type { ExtremeEntry, Meta, RecordsFile, StreakEntry } from '../lib/types'
 
   let { meta }: { meta: Meta } = $props()
@@ -36,7 +37,9 @@
     }
   })
 
-  const teamName = (abbr: string) => meta.teams[abbr]?.name ?? abbr
+  // Era-correct name for a given season (D-16, D-18); active streaks use the current name.
+  const teamName = (abbr: string, season: number) => eraName(abbr, season, meta)
+  const currentName = (abbr: string) => meta.teams[abbr]?.name ?? abbr
 
   // Stripe from the score's mood band (score-based here: records carry no hysteresis band).
   function scoreStripe(score: number): string {
@@ -66,7 +69,7 @@
   const excludedText = $derived.by(() => {
     const xs = records?.excluded ?? []
     if (xs.length === 0) return ''
-    const names = xs.map((x) => `the ${x.season} ${teamName(x.franchise)}`)
+    const names = xs.map((x) => `the ${x.season} ${teamName(x.franchise, x.season)}`)
     const list = names.length <= 2 ? names.join(' and ') : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
     const sentence = `${list} ${xs.length === 1 ? 'is' : 'are'} left out: as expansion teams they start from an assumed rating, not results.`
     return sentence.charAt(0).toUpperCase() + sentence.slice(1)
@@ -76,8 +79,8 @@
 <article class="records" aria-labelledby="records-heading">
   <header class="intro">
     <h2 id="records-heading">Records</h2>
-    <p>Every team-season since 1999, scored the same way. Streaks count calendar days.</p>
-    {#if records}<p class="muted">As of {formatDate(records.as_of)}</p>{/if}
+    <p class="dek">Every team-season since 1999, scored the same way. Streaks count calendar days.</p>
+    {#if records}<p class="as-of">As of {formatDate(records.as_of)}</p>{/if}
   </header>
 
   {#if failed}
@@ -103,15 +106,17 @@
           {#each list as e, i (`${e.season}-${e.franchise}`)}
             {@const tm = meta.teams[e.franchise]}
             <li class:mine={e.franchise === mine}>
-              <a class="row" href={teamHash(e.franchise, e.season, e.week)} style:--stripe-color={scoreStripe(e.score)}>
+              <a class="row" href={teamHash(e.franchise, e.season, e.week)} style:--band={scoreStripe(e.score)}>
                 <span class="rank">{i + 1}</span>
                 <span class="team">
-                  <TeamChip primary={tm?.primary} secondary={tm?.secondary} />
-                  <span class="name">{e.season} {teamName(e.franchise)}</span>
+                  <TeamLogo franchise={e.franchise} primary={tm?.primary} secondary={tm?.secondary} size={24} />
+                  <span class="name">{e.season} {teamName(e.franchise, e.season)}</span>
                   {#if e.franchise === mine}<span class="mine-badge"><Badge variant="neutral">My team</Badge></span>{/if}
                 </span>
                 <span class="meta">
-                  {formatRecord(e.wins, e.losses, e.ties)}<Sep />{whenLabel(e)}<Sep />{formatDate(e.date)}<Sep />Season avg {e.mean}
+                  <span class="num">{formatRecord(e.wins, e.losses, e.ties)}</span><Sep />{whenLabel(e)}<Sep />{formatDate(
+                    e.date,
+                  )}<Sep />Season avg <span class="num">{e.mean}</span>
                 </span>
                 <span class="big"><span class="visually-hidden">{caption} </span>{e.score}</span>
               </a>
@@ -128,11 +133,13 @@
           {#each list as s, i (`${s.franchise}-${s.start}`)}
             {@const tm = meta.teams[s.franchise]}
             <li class:mine={s.franchise === mine}>
-              <a class="row" href={streakHref(s)} style:--stripe-color={streakStripe(kind)}>
+              <a class="row" href={streakHref(s)} style:--band={streakStripe(kind)}>
                 <span class="rank">{i + 1}</span>
                 <span class="team">
-                  <TeamChip primary={tm?.primary} secondary={tm?.secondary} />
-                  <span class="name">{teamName(s.franchise)} {seasonsSpan(s)}</span>
+                  <TeamLogo franchise={s.franchise} primary={tm?.primary} secondary={tm?.secondary} size={24} />
+                  <span class="name"
+                    >{s.active ? currentName(s.franchise) : teamName(s.franchise, s.start_season)} {seasonsSpan(s)}</span
+                  >
                   {#if s.franchise === mine}<span class="mine-badge"><Badge variant="neutral">My team</Badge></span>{/if}
                 </span>
                 <span class="meta">
@@ -176,20 +183,35 @@
     gap: var(--space-xs);
   }
   h2 {
-    font-size: var(--text-display);
-    line-height: var(--lh-display);
-    font-weight: var(--weight-semibold);
+    font-size: var(--text-heading);
+    line-height: var(--lh-heading);
+    font-weight: var(--weight-bold);
   }
+  .dek {
+    color: var(--text-muted);
+    max-width: var(--prose-max);
+  }
+  .as-of {
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    line-height: var(--lh-micro);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+  /* Rule-topped sections (D-22): no box, background or radius. */
   section {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
     min-width: 0;
+    border-top: 1px solid var(--border);
+    padding-top: var(--space-md);
   }
   h3 {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .muted {
     color: var(--text-muted);
@@ -197,11 +219,12 @@
   .rows {
     display: flex;
     flex-direction: column;
-    gap: var(--space-sm);
+    gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
   }
+  /* Board-row style: bottom rule only, transparent background, radius 0. */
   .row {
     display: grid;
     grid-template-columns: 28px minmax(0, 1fr) auto;
@@ -209,21 +232,18 @@
     column-gap: var(--space-sm);
     row-gap: var(--space-xs);
     align-items: center;
-    padding: var(--space-md);
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: var(--stripe-width) solid var(--stripe-color);
-    border-radius: var(--radius-md);
+    padding: var(--space-sm) 0 var(--space-sm) var(--space-sm);
+    border-bottom: 1px solid var(--border);
     color: inherit;
     text-decoration: none;
   }
   .row:hover {
-    background: var(--bg);
+    background: var(--surface-hover);
   }
-  /* My team (UI-SPEC rule 7): same tint and accent outline as the board row, stripe unchanged
-     (IN-05); before .row:focus-visible so the focus ring still wins. */
+  /* My team (UI-SPEC rule 7): same tint and accent outline as the board row; the shaded value
+     cell keeps its band tint. Before .row:focus-visible so the focus ring still wins. */
   .mine .row {
-    background: color-mix(in srgb, var(--accent) 6%, var(--surface));
+    background: color-mix(in srgb, var(--accent) 6%, var(--bg));
     outline: 2px solid var(--accent);
     outline-offset: -2px;
   }
@@ -232,7 +252,7 @@
     display: inline-flex;
   }
   .mine-line {
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .row:focus-visible {
     outline: 2px solid var(--accent);
@@ -241,6 +261,7 @@
   .rank {
     grid-column: 1;
     grid-row: 1;
+    font-family: var(--font-mono);
     font-size: var(--text-label);
     line-height: var(--lh-label);
     font-weight: var(--weight-semibold);
@@ -257,13 +278,13 @@
   }
   .name {
     min-width: 0;
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .meta {
-    grid-column: 2 / -1;
+    grid-column: 2;
     grid-row: 2;
     min-width: 0;
     font-size: var(--text-label);
@@ -271,18 +292,33 @@
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
   }
+  /* Shaded value cell (12-UI-SPEC Color): band tint with a solid 4px band edge, full row height.
+     No muted text inside. */
   .big {
     grid-column: 3;
-    grid-row: 1;
-    font-size: var(--text-display);
-    line-height: var(--lh-display);
+    grid-row: 1 / span 2;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    box-sizing: border-box;
+    min-inline-size: var(--score-cell);
+    min-block-size: 48px;
+    padding: 0 var(--space-sm);
+    background: color-mix(in srgb, var(--band) var(--cell-tint), var(--bg));
+    /* band edge as a left border (same look as the board's inset edge; this page has no shadows) */
+    border-left: var(--stripe-width) solid var(--band);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: var(--text-heading);
+    line-height: var(--lh-heading);
     font-weight: var(--weight-semibold);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
   .big.days {
-    font-size: var(--text-heading);
-    line-height: var(--lh-heading);
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
   }
   .still {
     margin-left: var(--space-sm);
@@ -290,5 +326,6 @@
   .footnote {
     font-size: var(--text-label);
     line-height: var(--lh-label);
+    max-width: var(--prose-max);
   }
 </style>
