@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Public Site
 status: executing
 stopped_at: Phase 12 UI-SPEC approved
-last_updated: "2026-11-12T04:14:11.669Z"
+last_updated: "2026-11-12T04:16:05.201Z"
 last_activity: 2026-11-12
 progress:
   total_phases: 6
   completed_phases: 3
   total_plans: 15
-  completed_plans: 10
+  completed_plans: 11
   percent: 50
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 ## Current Position
 
 Phase: 12 (Redesign Foundation & Team Identity) — EXECUTING
-Plan: 3 of 7
+Plan: 4 of 7
 Status: Ready to execute
 Last activity: 2026-11-12
 
-Progress: [███████░░░] 67%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -60,6 +60,7 @@ Progress: [███████░░░] 67%
 | Phase 11 P03 | 20min | 2 tasks | 6 files |
 | Phase 11 P05 | 6 min | 2 tasks | 68 files |
 | Phase 12 P01 | 6min | 2 tasks | 6 files |
+| Phase 12 P03 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -85,6 +86,7 @@ Recent decisions affecting current work:
 - [Phase 11]: 11-03: epa/{season}.json def_sr = opponent off_sr; conf/division are current alignment (not era-correct)
 - [Phase 11]: 11-05: site data regenerated once from cache; golden pin 3ac3c2b5 unchanged before/after
 - [Phase ?]: Phase 12-01: brand.test reads CSS via node:fs because vitest stubs CSS ?raw imports
+- [Phase 12]: 12-03: createRawSnippet works under svelte/server SSR for snippet-children tests; withTheme T hides merged theme keys (cast in tests)
 
 ### Pending Todos
 
@@ -108,7 +110,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T04:14:11.665Z
+Last session: 2026-11-12T04:16:02.658Z
 Stopped at: Phase 12 UI-SPEC approved
 Resume file: None
 

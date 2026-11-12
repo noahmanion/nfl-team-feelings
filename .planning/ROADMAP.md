@@ -134,7 +134,7 @@ Plans:
 
 - [x] 12-01-PLAN.md — Self-hosted fonts (exact pins), editorial tokens/palette, .num, Plot grid override, brand guard test
 - [x] 12-02-PLAN.md — teamNames (era names, eraText), logos helpers + 96px derivatives, TeamChip sizes, TeamLogo
-- [ ] 12-03-PLAN.md — plotTheme shared chart theme + ChartFrame (headline/dek/SOURCE-NOTES)
+- [x] 12-03-PLAN.md — plotTheme shared chart theme + ChartFrame (headline/dek/SOURCE-NOTES)
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -194,6 +194,6 @@ Plans:
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
-| 12. Redesign Foundation & Team Identity | v2.0 | 2/7 | In Progress|  |
+| 12. Redesign Foundation & Team Identity | v2.0 | 3/7 | In Progress|  |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |

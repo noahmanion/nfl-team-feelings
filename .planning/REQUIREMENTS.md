@@ -33,7 +33,7 @@
 ### Editorial Redesign (FiveThirtyEight-inspired)
 
 - [x] **DESIGN-01**: The site uses a data-journalism type system: self-hosted Inter for text and IBM Plex Mono for numbers and annotations, with tabular figures
-- [ ] **DESIGN-02**: Every chart follows one shared chart theme: a bold headline and gray dek, light value-axis gridlines only, direct labels instead of legends, the highlighted team in its color with the others in gray, and a SOURCE/NOTES footer
+- [x] **DESIGN-02**: Every chart follows one shared chart theme: a bold headline and gray dek, light value-axis gridlines only, direct labels instead of legends, the highlighted team in its color with the others in gray, and a SOURCE/NOTES footer
 - [x] **DESIGN-03**: The board, team, history, records and methodology pages are restyled into a clean editorial layout (rule-separated tables with small logos, shaded score cells) in light and dark mode, without the FiveThirtyEight name, logo or proprietary fonts
 - [x] **DESIGN-04**: The redesign keeps all v1 behavior: routes, scrubber, my-team pin, callouts, copy-link and mobile layout at 375px all still work, and the existing web tests pass
 
@@ -81,7 +81,7 @@
 | LOGO-02 | Phase 12 | Complete |
 | LOGO-03 | Phase 12 | Complete |
 | DESIGN-01 | Phase 12 | Complete |
-| DESIGN-02 | Phase 12 | Pending |
+| DESIGN-02 | Phase 12 | Complete |
 | DESIGN-03 | Phase 12 | Complete |
 | DESIGN-04 | Phase 12 | Complete |
 | EXPL-01 | Phase 11 | Complete |
