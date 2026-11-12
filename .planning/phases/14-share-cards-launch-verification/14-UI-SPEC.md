@@ -74,7 +74,8 @@ Declared values (multiples of 4). Site tokens are unchanged. Cards use the same 
 Exceptions:
 - Card stripe thickness is 12px (the site's 4px `--stripe-width`, scaled ×3 for a 1200px canvas). Multiple of 4.
 - Card logo boxes are 144px (team card), 80px (callout card) and the chip fallback is the same box. Multiples of 8.
-- Card score cell is 352×192px. Footer rule is 2px (matches the site header's `--rule-strong` treatment, scaled from 1px).
+- Card score cell is 352×192px.
+- **Hairline exceptions (stroke widths, not spacing):** the 2px card footer rule (`--rule-strong`, scaled from the site's 1px) and the 2px chip outline (`--chip-outline`) are border thicknesses. They're deliberately not multiples of 4, and they're the only sub-4px values on the cards.
 - Copy link button keeps `min-block-size: var(--tap-min)` (44px), as in CalloutCard.
 
 ---
@@ -88,7 +89,7 @@ Exceptions:
 | Body | 16px (`--text-body`) | 400 | 1.5 |
 | Label | 14px (`--text-label`) | 400; 700 on the Copy link button | 1.4 |
 | Heading | 20px (`--text-heading`) | 700 | 1.25 |
-| Display | 28px (`--text-display`) | 700 (mono 700 for the score) | 1.1 |
+| Display | 28px (`--text-display`) | 700 (the team-page score stays mono 600 (`--weight-semibold`): existing Phase 12 behavior, unchanged and out of scope; the two-weight rule below applies to the PNG cards only) | 1.1 |
 
 ### Card type scale (1200×630 canvas): exactly 4 sizes
 
@@ -99,7 +100,7 @@ Exceptions:
 | Title | 56px | Inter 700 | 62 (≈1.1) | Team name (team card), callout headline, site-card headline |
 | Score | 160px | IBM Plex Mono 700 | 160 (1.0) | The team score only |
 
-Card weights: exactly TWO weights, 400 (regular) and 700 (bold), in both families: Inter 400/700 and IBM Plex Mono 400/700 (four WOFF files). This amends CONTEXT D-03 (which listed Inter 700 and IBM Plex Mono 400/600) after the UI checker typography gate. The on-site score (IBM Plex Mono 700) is existing Phase 12 behaviour and out of scope here. Numbers (score, rank, record, "#", the date's digits inside the mono stamp) are always mono. Words (team names, labels, headlines, detail) are always Inter.
+Card weights: exactly TWO weights, 400 (regular) and 700 (bold), in both families: Inter 400/700 and IBM Plex Mono 400/700 (four WOFF files). This amends CONTEXT D-03, which originally listed Inter 400/700/800 and IBM Plex Mono 500/600; the change was made after the UI checker's typography gate, and 14-CONTEXT.md is updated to match. Both mono files (`ibm-plex-mono-latin-{400,700}-normal.woff`) were verified present, with the same glyph coverage, on 2026-11-12. The on-site team-page score (IBM Plex Mono 600) is existing Phase 12 behavior and out of scope here. Numbers (score, rank, record, "#", the date's digits inside the mono stamp) are always mono. Words (team names, labels, headlines, detail) are always Inter.
 
 Card text rules:
 - **Team names are never truncated** (D-10). They wrap at word boundaries, up to 2 lines at 56px. If the era name is longer than 28 characters (none today; the guard covers future data), drop it to 36px Inter 700. No ellipsis on names.
