@@ -68,3 +68,32 @@ describe('axes', () => {
     expect(a.tickSize).toBe(0)
   })
 })
+
+// DESIGN-02: every Plot chart builds its options through withTheme, and no chart uses Plot titles.
+const chartSources = import.meta.glob('../components/{HistoryChart,MethodologyChart,Sparkline}.svelte', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+const sourceOf = (name: string) => chartSources[`../components/${name}.svelte`] ?? ''
+
+describe('chart sources use the theme', () => {
+  it('finds all three Plot charts', () => {
+    expect(Object.keys(chartSources)).toHaveLength(3)
+  })
+
+  it.each(['HistoryChart', 'MethodologyChart', 'Sparkline'])('%s uses withTheme and no Plot titles', (name) => {
+    const src = sourceOf(name)
+    expect(src).toContain('withTheme(')
+    expect(src).toMatch(/from '\.\.\/lib\/plotTheme'/)
+    expect(src).not.toMatch(/\b(title|subtitle|caption)\s*:/)
+  })
+
+  it('MethodologyChart sits inside ChartFrame', () => {
+    expect(sourceOf('MethodologyChart')).toContain('<ChartFrame')
+  })
+
+  it('HistoryChart draws exactly one logo image mark', () => {
+    expect(sourceOf('HistoryChart').split('Plot.image(').length - 1).toBe(1)
+  })
+})

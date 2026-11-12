@@ -1,6 +1,7 @@
 <script lang="ts">
   import * as Plot from '@observablehq/plot'
   import { pickHighlight } from '../lib/history'
+  import { CHART_FONT_PX, teamStroke, withTheme } from '../lib/plotTheme'
   import { sparkDomain } from '../lib/team'
 
   let {
@@ -31,7 +32,7 @@
     if (!primary || !secondary) return 'var(--text)'
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg')
     const pick = pickHighlight(primary, secondary, bg, dark)
-    return pick === 'primary' ? primary.trim() : pick === 'secondary' ? secondary.trim() : 'var(--text)'
+    return teamStroke(pick === 'primary' ? primary.trim() : pick === 'secondary' ? secondary.trim() : 'var(--text)')
   })
 
   const label = $derived(
@@ -44,34 +45,35 @@
     const { lo, hi, domain } = sparkDomain(series)
     const x0 = series[0].week
     const extremes = hi === lo ? [{ week: x0, score: hi }] : [{ week: x0, score: hi }, { week: x0, score: lo }]
-    const plot = Plot.plot({
-      width,
-      height: HEIGHT,
-      margin: 6,
-      marginLeft: 28,
-      axis: null,
-      x: { domain: [x0, series[series.length - 1].week] },
-      y: { domain },
-      style: { background: 'transparent' },
-      marks: [
-        // "average team" reference, only when it falls inside the zoomed range
-        ...(baseline >= domain[0] && baseline <= domain[1]
-          ? [Plot.ruleY([baseline], { stroke: 'var(--border)', strokeDasharray: '2,3' })]
-          : []),
-        Plot.lineY(series, { x: 'week', y: 'score', stroke: color, strokeWidth: 2 }),
-        Plot.dot(series.slice(-1), { x: 'week', y: 'score', fill: color, r: 3 }),
-        Plot.text(extremes, {
-          x: 'week',
-          y: 'score',
-          text: (d: { score: number }) => String(d.score),
-          textAnchor: 'end',
-          dx: -6,
-          fill: 'var(--text-muted)',
-          fontSize: 11,
-          fontVariant: 'tabular-nums',
-        }),
-      ],
-    })
+    const plot = Plot.plot(
+      withTheme({
+        width,
+        height: HEIGHT,
+        margin: 6,
+        marginLeft: 28,
+        axis: null,
+        x: { domain: [x0, series[series.length - 1].week] },
+        y: { domain },
+        marks: [
+          // "average team" reference, only when it falls inside the zoomed range
+          ...(baseline >= domain[0] && baseline <= domain[1]
+            ? [Plot.ruleY([baseline], { stroke: 'var(--text-muted)', strokeDasharray: '2,3' })]
+            : []),
+          Plot.lineY(series, { x: 'week', y: 'score', stroke: color, strokeWidth: 2 }),
+          Plot.dot(series.slice(-1), { x: 'week', y: 'score', fill: color, r: 3 }),
+          Plot.text(extremes, {
+            x: 'week',
+            y: 'score',
+            text: (d: { score: number }) => String(d.score),
+            textAnchor: 'end',
+            dx: -6,
+            fill: 'var(--text-muted)',
+            fontSize: CHART_FONT_PX,
+            fontVariant: 'tabular-nums',
+          }),
+        ],
+      }),
+    )
     plot.setAttribute('aria-hidden', 'true')
     container.replaceChildren(plot)
     return () => plot.remove()
