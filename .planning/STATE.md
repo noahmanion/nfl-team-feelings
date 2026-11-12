@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Public Site
 status: executing
 stopped_at: Completed 11-02-PLAN.md
-last_updated: "2026-11-12T02:41:31.862Z"
-last_activity: 2026-11-12 -- Completed 11-02 (display-only 2021+ win totals)
+last_updated: "2026-11-12T02:56:18.746Z"
+last_activity: 2026-11-12
 progress:
   total_phases: 6
   completed_phases: 2
   total_plans: 8
-  completed_plans: 5
+  completed_plans: 6
   percent: 33
 ---
 
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-11-11)
 ## Current Position
 
 Phase: 11
-Plan: 3 of 5
-Status: Executing
-Last activity: 2026-11-12 -- Completed 11-02 (display-only 2021+ win totals)
+Plan: 4 of 5
+Status: Ready to execute
+Last activity: 2026-11-12
 
-Progress: [██████░░░░] 63%
+Progress: [████████░░] 75%
 
 ## Performance Metrics
 
@@ -56,6 +56,7 @@ Progress: [██████░░░░] 63%
 | Phase 9 P01 | 4 min | 3 tasks | 1 files |
 | Phase 10 P01 | 2 min | 3 tasks | 11 files |
 | Phase 11 P02 | 20 min | 3 tasks | 9 files |
+| Phase 11 P03 | 20min | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -78,6 +79,7 @@ Recent decisions affecting current work:
 - [Phase 11-02]: win_totals_2021plus.csv pinned: sha256 338450a3c70cc47b6ec4379dc6d72b0fe343a8a2737b2666e1535a8fc9995449, single commit a3135cb; never edit
 - [Phase 11-02]: 2021+ win totals are display-only via build_export(win_totals=) -> teams/{F}.json vegas_win_totals; cli._cached_vegas raises past 2020
 - [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
+- [Phase 11]: 11-03: epa/{season}.json def_sr = opponent off_sr; conf/division are current alignment (not era-correct)
 
 ### Pending Todos
 
@@ -101,7 +103,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T02:41:31.859Z
+Last session: 2026-11-12T02:56:16.259Z
 Stopped at: Completed 11-02-PLAN.md
 Resume file: None
 
