@@ -52,12 +52,12 @@
   .callouts-heading {
     font-size: var(--text-heading);
     line-height: var(--lh-heading);
-    font-weight: var(--weight-semibold);
+    font-weight: var(--weight-bold);
   }
   .grid {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-md);
+    gap: var(--space-lg);
   }
   .more {
     margin-top: var(--space-md);
