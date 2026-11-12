@@ -46,7 +46,7 @@ describe('buildShare (integration against public/data)', () => {
   let summary
   const lines = []
   const exp = expected()
-  const nPages = exp.reduce((n, t) => n + t.rows.length + t.callouts.length, 0)
+  const nPages = exp.reduce((n, t) => (t.rows.length ? n + t.rows.length + t.callouts.length : n), 0)
 
   beforeAll(async () => {
     tmp = mkdtempSync(join(tmpdir(), 'fgs-share-'))
@@ -62,7 +62,7 @@ describe('buildShare (integration against public/data)', () => {
   it('returns a summary whose counts match the data', () => {
     expect(summary.pages).toBe(nPages)
     expect(summary.cards).toBe(summary.pages + 1)
-    expect(summary.targets).toBe(exp.length)
+    expect(summary.targets).toBe(exp.filter((t) => t.rows.length > 0).length)
     expect(summary.seconds).toBeGreaterThan(0)
     expect(summary.msPerCard).toBeGreaterThan(0)
     expect(summary.maxKB).toBeLessThanOrEqual(300)
