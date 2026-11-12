@@ -101,3 +101,12 @@ export interface Methodology {
 export interface EpaFile { season: number; note: string; game_id: string[]; week: number[]; game_type: string[];
   franchise: string[]; opponent: string[]; off_epa: (number | null)[]; off_plays: number[]; off_sr: (number | null)[];
   def_epa: (number | null)[]; def_plays: number[]; def_sr: (number | null)[] }
+
+/** teams/{F}.json (pipeline/src/fgs/export.py, Phase 13): team meta + columnar history, Vegas lines and expectations. */
+export interface TeamFile extends TeamMeta {
+  franchise: string
+  history: { season: number[]; week: number[]; score: number[]; elo: number[]; label: string[] }
+  vegas_win_totals: { season: number[]; line: number[]; over_odds: (number | null)[]; under_odds: (number | null)[];
+    line_type: string[]; source: string[]; used_in_score: boolean[] }
+  expectation?: { season: number[]; exp_total: (number | null)[]; source: ('vegas' | 'model' | null)[]; reg_games: number[] }
+}

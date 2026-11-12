@@ -9,8 +9,10 @@
     notes,
     level = 3,
     id,
+    source,
     children,
-  }: { headline: string; dek?: string; notes?: string; level?: 2 | 3; id: string; children: Snippet } = $props()
+  }: { headline: string; dek?: string; notes?: string; level?: 2 | 3; id: string; source?: string; children: Snippet } =
+    $props()
 </script>
 
 <figure class="chart-frame" aria-labelledby={id}>
@@ -18,7 +20,7 @@
   {#if dek}<p class="cf-dek">{dek}</p>{/if}
   <div class="cf-body">{@render children()}</div>
   <figcaption class="cf-foot">
-    <span class="cf-source">SOURCE: NFLVERSE · FEEL-GOOD SCORE</span>
+    <span class="cf-source">{source ?? 'SOURCE: NFLVERSE · FEEL-GOOD SCORE'}</span>
     {#if notes}<span class="cf-notes">NOTES: {notes}</span>{/if}
   </figcaption>
 </figure>

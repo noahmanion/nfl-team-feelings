@@ -1,4 +1,4 @@
-import type { Callout, EpaFile, GamesFile, HistoryFile, Meta, Methodology, RecordsFile, SeasonFile, SeasonMeta, WeekFile } from './types'
+import type { Callout, EpaFile, GamesFile, HistoryFile, Meta, Methodology, RecordsFile, SeasonFile, SeasonMeta, TeamFile, WeekFile } from './types'
 
 export const dataUrl = (path: string): string => `${import.meta.env.BASE_URL}data/${path}`
 
@@ -98,6 +98,21 @@ export function loadEpa(meta: Meta, season: number): Promise<EpaFile> {
   epaCache.set(key, p)
   p.catch(() => {
     if (epaCache.get(key) === p) epaCache.delete(key)
+  })
+  return p
+}
+
+// teams/{F}.json (Phase 13): same cache pattern as loadGames (keyed by generated_at + franchise, evicted on failure).
+const teamCache = new Map<string, Promise<TeamFile>>()
+
+export function loadTeam(meta: Meta, franchise: string): Promise<TeamFile> {
+  const key = `${meta.generated_at}|${franchise}`
+  const cached = teamCache.get(key)
+  if (cached) return cached
+  const p = getJson<TeamFile>(`teams/${franchise}.json?v=${encodeURIComponent(meta.generated_at)}`)
+  teamCache.set(key, p)
+  p.catch(() => {
+    if (teamCache.get(key) === p) teamCache.delete(key)
   })
   return p
 }
