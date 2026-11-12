@@ -1,0 +1,309 @@
+{
+ "season": 2022,
+ "source_url": "https://web.archive.org/web/20251206192647/https://www.sportsoddshistory.com/nfl-win/?y=2022&sa=nfl&t=win&o=t",
+ "original_url": "https://www.sportsoddshistory.com/nfl-win/?y=2022&sa=nfl&t=win&o=t",
+ "fetched_on": "2026-11-11",
+ "page_title": "2022 NFL Regular Season Win Totals Odds | SportsOddsHistory.com",
+ "page_source_note": "Lines courtesy of the Westgate Las Vegas Race & Sports SuperBook",
+ "page_line_type_note": null,
+ "page_as_of_note": "As of September 8, 2022",
+ "header": [
+  "Team",
+  "Win Total",
+  "Over Odds",
+  "Under Odds",
+  "Week bet settled",
+  "Actual Wins",
+  "Result"
+ ],
+ "rows": [
+  [
+   "Arizona Cardinals",
+   "8.5",
+   "+110",
+   "-130",
+   "Week 14",
+   "4",
+   "Under"
+  ],
+  [
+   "Atlanta Falcons",
+   "4.5",
+   "-140",
+   "+120",
+   "Week 11",
+   "7",
+   "Over"
+  ],
+  [
+   "Baltimore Ravens",
+   "10.5",
+   "+110",
+   "-130",
+   "Week 18",
+   "10",
+   "Under"
+  ],
+  [
+   "Buffalo Bills",
+   "12",
+   "-110",
+   "-110",
+   "Week 18",
+   "13",
+   "Over"
+  ],
+  [
+   "Carolina Panthers",
+   "6.5",
+   "-130",
+   "+110",
+   "Week 18",
+   "7",
+   "Over"
+  ],
+  [
+   "Chicago Bears",
+   "5.5",
+   "-130",
+   "+100",
+   "Week 16",
+   "3",
+   "Under"
+  ],
+  [
+   "Cincinnati Bengals",
+   "9.5",
+   "-130",
+   "+110",
+   "Week 15",
+   "12",
+   "Over"
+  ],
+  [
+   "Cleveland Browns",
+   "8",
+   "-120",
+   "+100",
+   "Week 18",
+   "7",
+   "Under"
+  ],
+  [
+   "Dallas Cowboys",
+   "10",
+   "+120",
+   "-140",
+   "Week 16",
+   "12",
+   "Over"
+  ],
+  [
+   "Denver Broncos",
+   "10",
+   "+110",
+   "-130",
+   "Week 12",
+   "5",
+   "Under"
+  ],
+  [
+   "Detroit Lions",
+   "6.5",
+   "-150",
+   "+130",
+   "Week 15",
+   "9",
+   "Over"
+  ],
+  [
+   "Green Bay Packers",
+   "11",
+   "-130",
+   "+110",
+   "Week 11",
+   "8",
+   "Under"
+  ],
+  [
+   "Houston Texans",
+   "4.5",
+   "-120",
+   "+100",
+   "Week 15",
+   "3",
+   "Under"
+  ],
+  [
+   "Indianapolis Colts",
+   "10",
+   "-120",
+   "+100",
+   "Week 12",
+   "4",
+   "Under"
+  ],
+  [
+   "Jacksonville Jaguars",
+   "6.5",
+   "-120",
+   "+100",
+   "Week 16",
+   "9",
+   "Over"
+  ],
+  [
+   "Kansas City Chiefs",
+   "10.5",
+   "-150",
+   "+130",
+   "Week 15",
+   "14",
+   "Over"
+  ],
+  [
+   "Las Vegas Raiders",
+   "8.5",
+   "-150",
+   "+130",
+   "Week 16",
+   "6",
+   "Under"
+  ],
+  [
+   "Los Angeles Chargers",
+   "10.5",
+   "+100",
+   "-120",
+   "Week 18",
+   "10",
+   "Under"
+  ],
+  [
+   "Los Angeles Rams",
+   "10.5",
+   "+100",
+   "-120",
+   "Week 11",
+   "5",
+   "Under"
+  ],
+  [
+   "Miami Dolphins",
+   "9",
+   "-130",
+   "+110",
+   "Week 18",
+   "9",
+   "Push"
+  ],
+  [
+   "Minnesota Vikings",
+   "9.5",
+   "-110",
+   "-110",
+   "Week 13",
+   "13",
+   "Over"
+  ],
+  [
+   "New England Patriots",
+   "8.5",
+   "+100",
+   "-120",
+   "Week 18",
+   "8",
+   "Under"
+  ],
+  [
+   "New Orleans Saints",
+   "9",
+   "+100",
+   "-120",
+   "Week 13",
+   "7",
+   "Under"
+  ],
+  [
+   "New York Giants",
+   "7",
+   "+120",
+   "-140",
+   "Week 15",
+   "9",
+   "Over"
+  ],
+  [
+   "New York Jets",
+   "5.5",
+   "-120",
+   "+100",
+   "Week 9",
+   "7",
+   "Over"
+  ],
+  [
+   "Philadelphia Eagles",
+   "10",
+   "+110",
+   "-130",
+   "Week 13",
+   "14",
+   "Over"
+  ],
+  [
+   "Pittsburgh Steelers",
+   "7.5",
+   "-125",
+   "+105",
+   "Week 17",
+   "9",
+   "Over"
+  ],
+  [
+   "San Francisco 49ers",
+   "10",
+   "-110",
+   "-110",
+   "Week 16",
+   "13",
+   "Over"
+  ],
+  [
+   "Seattle Seahawks",
+   "5.5",
+   "-125",
+   "+105",
+   "Week 9",
+   "9",
+   "Over"
+  ],
+  [
+   "Tampa Bay Buccaneers",
+   "11",
+   "+120",
+   "-140",
+   "Week 14",
+   "8",
+   "Under"
+  ],
+  [
+   "Tennessee Titans",
+   "9",
+   "+120",
+   "-140",
+   "Week 17",
+   "7",
+   "Under"
+  ],
+  [
+   "Washington Commanders",
+   "7.5",
+   "-130",
+   "+110",
+   "Week 18",
+   "8",
+   "Over"
+  ]
+ ]
+}

@@ -1,0 +1,840 @@
+{
+ "entries": [
+  {
+   "year": 2001,
+   "round": 5,
+   "team": "SF",
+   "claimed_reason": "cap violations",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "salary cap violations (Druckenmiller et al.)",
+   "citations": [
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2001-02 49ers forfeit 2002 3rd-round pick, 2001 5th-round pick for salary cap violations"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "salary cap violations involving Jim Druckenmiller, Lee Woodall, Brent Jones, and Steve Young"
+    }
+   ],
+   "notes": "2001 Wikipedia article has no forfeited-picks note, but round 5 has no SF row. Same penalty also took SF 2002 R3 (missing from table)."
+  },
+  {
+   "year": 2004,
+   "round": 2,
+   "team": "LV",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "OAK pick traded to HOU; HOU used on T. Hollings",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2004_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "traded a second-round selection to [[2004 Houston Texans|Houston]] in exchange for [[2003 NFL draft|2003]] third- and seventh-round selections.<br>Houston then forfeited the pick by selecting RB [[Tony Hollings]] in the [[2003 NFL Draft#Supplemental draft|2003 supplemental draft]]"
+    },
+    {
+     "url": "https://houstontexans.com/news/texans-snag-hollings-in-supplemental-draft-2682942",
+     "quote": "The Texans will surrender their second of two second-round picks in the 2004 NFL Draft, which they acquired from Oakland on the first day of this year's college draft."
+    }
+   ],
+   "notes": "Not a plain trade: the forfeited slot is Oakland-original, but HOU (owner at the time) spent it in the 2003 supplemental draft. HOU kept its own R2 (traded to TEN, No. 40)."
+  },
+  {
+   "year": 2006,
+   "round": 5,
+   "team": "MIA",
+   "claimed_reason": "2005 supplemental (M. Wright)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2005 supplemental pick (Manuel Wright)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2006_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=Miami Dolphins | note=selection forfeited because of use of fifth-round selection in [[2005 NFL draft#Supplemental draft selections|2005 Supplemental draft]]"
+    },
+    {
+     "url": "https://www.patriots.com/news/wright-taken-by-dolphins-in-supplemental-draft-91381",
+     "quote": "The Dolphins selected Wright with the second pick in the fifth round and thus forego their fifth-round selection in the 2006 NFL Draft."
+    }
+   ]
+  },
+  {
+   "year": 2007,
+   "round": 3,
+   "team": "CIN",
+   "claimed_reason": "2006 supplemental (A. Brooks)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2006 supplemental pick (Ahmad Brooks)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2007_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Cincinnati forfeited their third-round selection to select LB [[Ahmad Brooks]] in the [[2006 NFL draft#Supplemental draft selections|2006 supplemental draft]]."
+    },
+    {
+     "url": "https://web.archive.org/web/20120425112940/http://virginiasports.cstv.com/sports/m-footbl/spec-rel/071306aaa.html",
+     "quote": "The Bengals used the 22nd pick in the third round on Brooks, meaning they will lose the corresponding pick in the 2007 NFL Draft."
+    }
+   ]
+  },
+  {
+   "year": 2008,
+   "round": 1,
+   "team": "NE",
+   "claimed_reason": "videotaping",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "Spygate videotaping penalty",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "the Patriots forfeited their first-round selection as penalty for [[2007 National Football League videotaping controversy|videotaping defensive signals]]"
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2008 Patriots forfeit 1st-round pick for Spygate scandal"
+    }
+   ]
+  },
+  {
+   "year": 2008,
+   "round": 4,
+   "team": "LAC",
+   "claimed_reason": "2007 supplemental (P. Oliver)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2007 supplemental pick (Paul Oliver)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "San Diego used this selection in the [[2007 NFL draft#Supplemental draft selections|2007 Supplemental draft]] to select [[Paul Oliver (American football)|Paul Oliver]]."
+    },
+    {
+     "url": "https://www.nfl.com/news/chargers-pick-oliver-ravens-select-gaither-in-supplemental-draf-09000d5d80013317",
+     "quote": "With the selections, San Diego and Baltimore will forgo the corresponding picks in the 2008 draft."
+    }
+   ]
+  },
+  {
+   "year": 2008,
+   "round": 5,
+   "team": "SF",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering with Lance Briggs",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "As penalty for violating the NFL's anti-tampering rules in an attempt to sign Bears linebacker Lance Briggs, the 49ers forfeited their fifth-round selection"
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2008 49ers forfeit 5th-round pick for tampering with Bears linebacker Lance Briggs"
+    }
+   ],
+   "notes": "Same penalty also swapped SF/CHI third-round picks (not a forfeit)."
+  },
+  {
+   "year": 2010,
+   "round": 3,
+   "team": "WAS",
+   "claimed_reason": "2009 supplemental (J. Jarmon)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2009 supplemental pick (Jeremy Jarmon)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2009_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "note=Washington forfeited their third-round selection in the [[2010 NFL Draft|2010 draft]]."
+    },
+    {
+     "url": "https://web.archive.org/web/20090918155833/http://www.sportingnews.com/nfl/article/2009-07-16/redskins-select-jarmon-nfl-supplemental-draft",
+     "quote": "By selecting Jarmon, the Redskins will be without a third-round pick in the 2010 NFL draft"
+    }
+   ]
+  },
+  {
+   "year": 2011,
+   "round": 7,
+   "team": "CHI",
+   "claimed_reason": "2010 supplemental (H. Unga)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2010 supplemental pick (Harvey Unga)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2011_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Chicago forfeited its seventh-round selection to take RB [[Harvey Unga]] in the 2010 Supplemental Draft."
+    },
+    {
+     "url": "https://web.archive.org/web/20110909011212/http://www.nationalfootballpost.com/2010-supplemental-draft-breakdown.html",
+     "quote": "The Bears will now be forced to forfeit their seventh-round pick in the 2011 draft"
+    }
+   ]
+  },
+  {
+   "year": 2012,
+   "round": 2,
+   "team": "NO",
+   "claimed_reason": "bounty",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "Bountygate penalty",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its second-round selection as well as a [[2013 NFL draft|2013]] second-round selection as part of the punishment for the team's [[New Orleans Saints bounty scandal|bounty scandal]]"
+    },
+    {
+     "url": "https://www.nfl.com/news/nfl-bans-saints-payton-a-year-for-bounties-williams-out-too-09000d5d827c0dd9",
+     "quote": "took away their second-round draft picks this year and next"
+    }
+   ]
+  },
+  {
+   "year": 2012,
+   "round": 3,
+   "team": "LV",
+   "claimed_reason": "2011 supplemental (T. Pryor)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2011 supplemental pick (Terrelle Pryor)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its third-round selection after selecting QB [[Terrelle Pryor]] in the [[2011 NFL draft#Supplemental draft|2011 Supplemental draft]]"
+    },
+    {
+     "url": "https://www.nfl.com/news/raiders-select-pryor-in-third-round-of-nfl-supplemental-draft-09000d5d821a49b2",
+     "quote": "will forfeit their third-round selection in the 2012 NFL Draft"
+    }
+   ]
+  },
+  {
+   "year": 2013,
+   "round": 2,
+   "team": "NO",
+   "claimed_reason": "bounty",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "Bountygate penalty (second year)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2013_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its second-round selection as part of the punishment for the team's [[New Orleans Saints bounty scandal|2012 bounty scandal]]"
+    },
+    {
+     "url": "https://www.nfl.com/news/nfl-bans-saints-payton-a-year-for-bounties-williams-out-too-09000d5d827c0dd9",
+     "quote": "took away their second-round draft picks this year and next"
+    }
+   ]
+  },
+  {
+   "year": 2013,
+   "round": 2,
+   "team": "CLE",
+   "claimed_reason": "2012 supplemental (J. Gordon)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2012 supplemental pick (Josh Gordon)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2013_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its second-round selection after selecting WR [[Josh Gordon]] in the second round of the [[2012 NFL draft|2012 supplemental draft]]"
+    },
+    {
+     "url": "https://www.nfl.com/news/josh-gordon-drafted-by-cleveland-browns-in-round-2-09000d5d82a808c0",
+     "quote": "forfeit their second-round pick in the 2013 NFL Draft"
+    }
+   ]
+  },
+  {
+   "year": 2016,
+   "round": 1,
+   "team": "NE",
+   "claimed_reason": "ball deflation",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "Deflategate penalty",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its first-round selection and a 2017 fourth-round selection as a result of [[Deflategate]]"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "Deflategate"
+    }
+   ]
+  },
+  {
+   "year": 2016,
+   "round": 3,
+   "team": "KC",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering (Jeremy Maclin)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a third-round selection and a 2017 sixth-round selection for violating the NFL's anti-tampering policy"
+    },
+    {
+     "url": "https://www.si.com/nfl/2016/03/09/kansas-city-chiefs-nfl-tampering-forfeit-two-draft-picks",
+     "quote": "The Kansas City Chiefs will forfeit their 2016 third-round pick and 2017 sixth-round pick for violating the NFL’s tampering policy"
+    }
+   ]
+  },
+  {
+   "year": 2016,
+   "round": 5,
+   "team": "ATL",
+   "claimed_reason": "crowd noise",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "piped artificial crowd noise",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its fifth-round selection as punishment for piping [[artificial crowd noise]] into the [[Georgia Dome]]"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/12586639/nfl-expected-take-draft-pick-atlanta-falcons-suspend-team-president-rich-mckay-competition-committee",
+     "quote": "piping crowd noise into the Georgia Dome during home games over the last two seasons",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2016,
+   "round": 5,
+   "team": "LA",
+   "claimed_reason": "2015 supplemental (I. Battle)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2015 supplemental pick (Isaiah Battle)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2016_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its fifth-round selection after selecting OT [[Isaiah Battle]] in the [[2015 NFL draft#Supplemental draft|2015 Supplemental draft]]"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/13228050/st-louis-rams-pick-isaiah-battle-supplemental-draft",
+     "quote": "The Rams now forfeit their fifth-round choice in the 2016 NFL draft.",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2017,
+   "round": 4,
+   "team": "NE",
+   "claimed_reason": "ball deflation",
+   "verdict": "corrected",
+   "kind": "penalty",
+   "corrected_to": "NO",
+   "short_reason": "Deflategate; forfeited R4 was NO-original",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=New England Patriots | note=from [[2017 New Orleans Saints season|New Orleans]];"
+    },
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its highest fourth-round selection due to the [[Deflategate]] scandal"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "originally from the Saints in the Brandin Cooks trade; Patriots had their own subsequently traded pick and another acquired pick, and the penalty moved to their best pick in the round."
+    }
+   ],
+   "notes": "NE was penalized, but the stripped slot was New Orleans-original (acquired in Brandin Cooks trade). NE's own R4 had been traded and was used. Under original-owner keying, the missing slot is NO."
+  },
+  {
+   "year": 2017,
+   "round": 6,
+   "team": "KC",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering (Jeremy Maclin), second year",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a sixth-round selection and a 2016 third-round selection for violating the league's anti-tampering policy"
+    },
+    {
+     "url": "https://www.si.com/nfl/2016/03/09/kansas-city-chiefs-nfl-tampering-forfeit-two-draft-picks",
+     "quote": "2017 sixth-round pick for violating the NFL’s tampering policy"
+    }
+   ]
+  },
+  {
+   "year": 2019,
+   "round": 3,
+   "team": "NYG",
+   "claimed_reason": "2018 supplemental (S. Beal)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2018 supplemental pick (Sam Beal)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2019_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a third-round selection after selecting CB [[Sam Beal]] in the [[2018 NFL draft#Supplemental draft|2018 supplemental draft]]"
+    },
+    {
+     "url": "https://abc7ny.com/post/giants-surrender-2019-third-round-pick-to-take-sam-beal-in-supplemental-draft/3745965/",
+     "quote": "The New York Giants gave up their third-round pick in the 2019 NFL draft by taking Western Michigan cornerback Sam Beal in the supplemental draft"
+    }
+   ]
+  },
+  {
+   "year": 2019,
+   "round": 6,
+   "team": "WAS",
+   "claimed_reason": "2018 supplemental (A. Alexander)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2018 supplemental pick (Adonis Alexander)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2019_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a 2019 sixth-round selection after selecting CB [[Adonis Alexander]] in the [[2018 NFL draft#Supplemental draft|2018 supplemental draft]]"
+    },
+    {
+     "url": "https://www.nfl.com/news/giants-redskins-select-corners-in-supplemental-draft-0ap3000000940026",
+     "quote": "The teams selecting Beal and Alexander in the supplemental draft forfeit their corresponding selection in the 2019 NFL draft."
+    }
+   ]
+  },
+  {
+   "year": 2020,
+   "round": 5,
+   "team": "ARI",
+   "claimed_reason": "2019 supplemental (J. Thompson)",
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2019 supplemental pick (Jalen Thompson)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2020_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a fifth-round selection after selecting [[Jalen Thompson]] in the 2019 supplemental draft"
+    },
+    {
+     "url": "https://spokesman.com/stories/2019/jul/10/arizona-cardinals-spend-fifth-round-pick-on-washin",
+     "quote": "In using a fifth-round pick for the WSU safety, the Cardinals now forfeit a fifth-round selection in the 2020 NFL draft."
+    }
+   ],
+   "notes": "ARI held two R5s (own + MIA's via Rosen trade); MIA-original No. 153 had been traded on (to MIA, then SF) and was used, so the forfeited slot (153.5) is ARI's own."
+  },
+  {
+   "year": 2021,
+   "round": 3,
+   "team": "NE",
+   "claimed_reason": "videotaping",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "2019 Bengals sideline filming",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a third-round selection as punishment for illegal filming of the field and sidelines"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/29380577/new-england-patriots-fined-11-million-lose-draft-pick-film-crew-fallout",
+     "quote": "took away a third-round pick in the 2021 draft",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2023,
+   "round": 1,
+   "team": "MIA",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering (Brady, Payton)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2023_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Miami forfeited a first-round selection and a 2024 third-round selection as punishment for multiple violations of the league's anti-[[Tampering (sport)|tampering]] policy"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/34334514/nfl-strips-miami-dolphins-2023-first-round-pick-fines-stephen-ross-15m-tampering-tom-brady-sean-payton",
+     "quote": "stripped of its 2023 first-round pick",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2024,
+   "round": 3,
+   "team": "MIA",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering (Brady, Payton), second year",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2024_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited a third-round selection as well as a [[2023 NFL draft|2023]] first-round selection for violating the anti-tampering policy"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/34334514/nfl-strips-miami-dolphins-2023-first-round-pick-fines-stephen-ross-15m-tampering-tom-brady-sean-payton",
+     "quote": "the Dolphins also will forfeit their 2024 third-round selection",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2025,
+   "round": 5,
+   "team": "ATL",
+   "claimed_reason": "tampering",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering (Cousins, Mooney, Woerner)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2025_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its fifth-round selection as the punishment for \"improper contact\" with QB [[Kirk Cousins]]"
+    },
+    {
+     "url": "https://www.espn.com/nfl/story/_/id/40341876/nfl-penalizes-falcons-tampering-eagles-cleared",
+     "quote": "docked a fifth-round pick in the 2025 draft and fined $250,000 for violating the NFL's anti-tampering policy",
+     "note": "fetched via WebFetch (rendered/summarized page text)"
+    }
+   ]
+  },
+  {
+   "year": 2025,
+   "round": 5,
+   "team": "SF",
+   "claimed_reason": "payroll accounting",
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "2022 payroll accounting errors",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2025_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its fifth-round selection as the punishment for administrative payroll accounting errors"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "payroll accounting errors that led to a miscalculation of 2022 total player compensation"
+    },
+    {
+     "url": "https://www.nfl.com/news/niners-to-forfeit-2025-fifth-round-pick-as-result-of-administrative-payroll-accounting-errors",
+     "quote": "The San Francisco 49ers will forfeit their original fifth-round selection in the 2025 NFL Draft",
+     "note": "fetched via WebFetch"
+    }
+   ],
+   "notes": "NFL.com also: \"The San Francisco 49ers will forfeit their original fifth-round selection in the 2025 NFL Draft\" (via WebFetch). Same penalty demoted SF 2024 R4 four spots (not a forfeit)."
+  }
+ ],
+ "missing_candidates": [
+  {
+   "year": 2001,
+   "round": 3,
+   "team": "DEN",
+   "claimed_reason": null,
+   "verdict": "remove",
+   "kind": "penalty",
+   "short_reason": "not forfeited; DEN used own R3 (#87)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2001_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "round=3 | picknum=87 | team=Denver Broncos | first=Reggie | last=Hayward"
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2002-05 Broncos forfeit 2005 3rd-round pick, 2002 3rd-round pick for circumventing salary cap between 1996-98"
+    }
+   ],
+   "notes": "DEN made its own 2001 R3 pick. Broncos' forfeits were 2002 R3 and 2005 R3. The 2001 R3 'missing' slot is PIT's."
+  },
+  {
+   "year": 2001,
+   "round": 3,
+   "team": "PIT",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "1998 cap violation (Will Wolford)",
+   "citations": [
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2001 Steelers forfeit 3rd-round pick for exceeding 1998 salary cap"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "salary cap violation involving Will Wolford in 1998; made undisclosed commitment to pay Wolford without including it in his contract"
+    }
+   ]
+  },
+  {
+   "year": 2008,
+   "round": 5,
+   "team": "BAL",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2007 supplemental pick (Jared Gaither)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2008_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Baltimore used this pick in the 2007 Supplemental Draft to select [[Jared Gaither]]."
+    },
+    {
+     "url": "https://www.baltimoreravens.com/news/2008-ravens-draft-release-7745333",
+     "quote": "(Gaither's selection took away the Ravens' fifth-round choice in the 2008 draft.)"
+    },
+    {
+     "url": "https://www.patriots.com/news/oliver-gaither-selected-in-supplemental-draft-100831",
+     "quote": "With these selections, San Diego and Baltimore thus forgo the corresponding picks in the 2008 NFL Draft."
+    }
+   ]
+  },
+  {
+   "year": 2021,
+   "round": 7,
+   "team": "MIN",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "2019 practice-squad cap violation",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Minnesota forfeited a seventh-round selection as punishment for a salary cap violation involving a 2019 practice squad player."
+    },
+    {
+     "url": "https://www.cbsnews.com/minnesota/news/vikings-lose-7th-rounder-execs-fined-for-19-cap-violation/",
+     "quote": "The Minnesota Vikings will forfeit their seventh-round selection in the draft this year for a collective bargaining agreement salary cap violation"
+    },
+    {
+     "url": "https://www.profootballrumors.com/2021/03/draft-pick-updates-vikings-saints-raiders-patriots",
+     "quote": "Vikings have forfeited a seventh-round pick in this year’s draft (No. 242)"
+    }
+   ]
+  },
+  {
+   "year": 2000,
+   "round": 4,
+   "team": "NE",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "1999 supplemental pick (J'Juan Cherry)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2000_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "New England forfeited a fourth-round selection after selecting CB J'Juan Cherry in the [[1999 NFL draft#Supplemental draft|1999 supplemental draft]]."
+    }
+   ]
+  },
+  {
+   "year": 2002,
+   "round": 3,
+   "team": "DEN",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "deferred compensation fund violation",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=Denver Broncos | note=Forfeited due to a salary cap violation"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "failed to submit $22 million in timely fashion to NFL’s deferred compensation fund during 1998 and 1999"
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2002 3rd-round pick for circumventing salary cap between 1996-98"
+    }
+   ]
+  },
+  {
+   "year": 2002,
+   "round": 3,
+   "team": "SF",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "salary cap violations (same as 2001 R5)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=San Francisco 49ers | note=forfeited due to a salary cap violation"
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2001-02 49ers forfeit 2002 3rd-round pick, 2001 5th-round pick for salary cap violations"
+    }
+   ]
+  },
+  {
+   "year": 2003,
+   "round": 6,
+   "team": "HOU",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2002 supplemental pick (Milford Brown)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2003_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "selection forfeited due to use of sixth-round selection to choose [[Milford Brown]] in [[2002 NFL draft#Supplemental draft selections|2002 supplemental draft]]"
+    },
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2002_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=Houston Texans | first=Milford | last=Brown"
+    }
+   ],
+   "notes": "2003 article template mislabels draftyear=2004 but it sits in the 2003 R6 list."
+  },
+  {
+   "year": 2005,
+   "round": 3,
+   "team": "DEN",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "1996-98 salary cap circumvention",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2005_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "team=Denver Broncos | note=selection forfeited due to salary-cap violations."
+    },
+    {
+     "url": "https://www.espn.com/blog/nflnation/post/_/id/55927/history-on-lost-draft-picks",
+     "quote": "2002-05 Broncos forfeit 2005 3rd-round pick"
+    }
+   ]
+  },
+  {
+   "year": 2011,
+   "round": 7,
+   "team": "DAL",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "supplemental",
+   "short_reason": "2010 supplemental pick (Josh Brent)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2011_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Dallas forfeited its seventh-round selection to take DT [[Josh Brent]] in the 2010 Supplemental Draft."
+    },
+    {
+     "url": "https://web.archive.org/web/20110909011212/http://www.nationalfootballpost.com/2010-supplemental-draft-breakdown.html",
+     "quote": "Brent"
+    }
+   ],
+   "notes": "2011 R7 therefore lacks both CHI and DAL originals."
+  },
+  {
+   "year": 2012,
+   "round": 6,
+   "team": "DET",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "tampering with Chiefs players",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2012_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its sixth-round selection due to findings of tampering"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "tampered with Chiefs S Jarrad Page"
+    }
+   ],
+   "notes": "Penalty was \"2012 seventh-round selection, or sixth round if they make the playoffs\" (2011 article); DET made playoffs -> R6."
+  },
+  {
+   "year": 2017,
+   "round": 5,
+   "team": "SEA",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "OTA no-live-contact violation",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2017_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "forfeited its fifth-round selection for violating the league's collective bargaining agreement regarding offseason workout policies"
+    },
+    {
+     "url": "https://www.quirkyresearch.com/2020/04/22/draft-pick-forfeitures-and-penalties/",
+     "quote": "violated “no-live-contact” rule during 2017 OTAs"
+    }
+   ]
+  },
+  {
+   "year": 2022,
+   "round": 6,
+   "team": "NO",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "repeated COVID-19 protocol violations",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2022_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "New Orleans forfeited a sixth-round selection as a penalty for repeated violations of the league's COVID-19 guidelines."
+    },
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2022_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "New Orleans Saints to forfeit 6th-round pick in 2022 draft for COVID-19 violations"
+    }
+   ],
+   "notes": "Quirky Research lists it as \"7 / 196\" (conflict); Wikipedia + cited ESPN headline say R6 (nonpick at 195.5)."
+  },
+  {
+   "year": 2023,
+   "round": 5,
+   "team": "HOU",
+   "claimed_reason": null,
+   "verdict": "confirmed",
+   "kind": "penalty",
+   "short_reason": "salary cap reporting violation (Watson)",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2023_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Houston forfeited a fifth-round selection as punishment for a salary cap reporting violation."
+    },
+    {
+     "url": "https://www.nfl.com/news/texans-forfeit-2023-fifth-round-pick-fined-175k-for-salary-cap-reporting-violati",
+     "quote": "Texans forfeit 2023 fifth-round pick, fined $175K for salary cap reporting violation"
+    }
+   ]
+  },
+  {
+   "year": 2021,
+   "round": 6,
+   "team": "LV",
+   "claimed_reason": null,
+   "verdict": "remove",
+   "kind": "penalty",
+   "short_reason": "forfeit announced then rescinded",
+   "citations": [
+    {
+     "url": "https://en.wikipedia.org/w/api.php?action=parse&page=2021_NFL_draft&prop=wikitext&format=json&formatversion=2&redirects=1",
+     "quote": "Las Vegas originally forfeited a sixth-round selection as punishment for repeated COVID-19 protocol violations during the 2020 season"
+    },
+    {
+     "url": "https://www.profootballrumors.com/2021/03/draft-pick-updates-vikings-saints-raiders-patriots",
+     "quote": "Neither team will lose those picks."
+    }
+   ],
+   "notes": "Do NOT add; also NO 2021 R7 rescinded the same way."
+  }
+ ]
+}
