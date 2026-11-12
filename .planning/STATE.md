@@ -4,8 +4,8 @@ milestone: v2.0
 milestone_name: Public Site
 status: executing
 stopped_at: v2.0 roadmap created
-last_updated: "2026-11-12T00:53:16.142Z"
-last_activity: 2026-11-12 -- Phase 9 planning complete
+last_updated: "2026-11-12T00:53:30.383Z"
+last_activity: 2026-11-12 -- Phase 9 execution started
 progress:
   total_phases: 6
   completed_phases: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-11)
 
 **Core value:** A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
-**Current focus:** Phase 9 — v2 Pre-registration (time-critical: every 2026 week played before it lands is lost to the v2 holdout)
+**Current focus:** Phase 9 — v2 Pre-registration
 
 ## Current Position
 
-Phase: 9 of 14 (v2 Pre-registration) — first of 6 phases in v2.0
-Plan: —
-Status: Ready to execute
-Last activity: 2026-11-12 -- Phase 9 planning complete
+Phase: 9 (v2 Pre-registration) — EXECUTING
+Plan: 1 of 1
+Status: Executing Phase 9
+Last activity: 2026-11-12 -- Phase 9 execution started
 
 Progress: [░░░░░░░░░░] 0%
 
