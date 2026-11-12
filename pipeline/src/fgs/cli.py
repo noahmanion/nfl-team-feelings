@@ -1,4 +1,4 @@
-"""`fgs` command line: ingest, build, elo, draft, check, export, refresh, backtest, freeze, holdout, evidence."""
+"""`fgs` command line: ingest, build, elo, draft, check, export, refresh, backtest, freeze, holdout, evidence, logos."""
 
 import argparse
 import json
@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 
 import polars as pl
 
-from fgs import checks, draft, export, features, freeze, holdout, paths, records, score, sim, wintotals
+from fgs import checks, draft, export, features, freeze, holdout, logos, paths, records, score, sim, wintotals
 from fgs.backtest import (
     draft_gate, draft_walk_forward, format_draft_report, format_proposal, format_report, propose_weights,
     run_backtest,
@@ -820,6 +820,21 @@ def _warn(name: str, warns: list[str], limit: int = 10) -> None:
         print(f"      - ... {len(warns)} in total")
 
 
+def _cmd_logos(args) -> int:
+    """One-shot (LOGO-01): download the 32 ESPN logos into paths.LOGOS_DIR; commit them. Not run by refresh."""
+    urls: list[str] = []
+
+    def fetch(url: str) -> bytes:
+        urls.append(url)
+        return logos._http_get(url)  # module attribute read at call time
+
+    manifest = logos.fetch_logos(out_dir=paths.LOGOS_DIR, force=args.force, fetch=fetch)
+    total = sum(m["bytes"] for m in manifest.values())
+    print(f"logos: {len(urls)} fetched, {len(manifest) - len(urls)} skipped; {len(manifest)} in "
+          f"{paths.LOGOS_DIR} ({total / 1e6:.2f} MB)")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="fgs", description="Feel-good score pipeline")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -882,6 +897,11 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("evidence", help="dev-only: recompute the perception-gap base rates on 1999–2021 and write "
                                         "pipeline/callout_evidence.json; commit it")
     p.set_defaults(func=_cmd_evidence)
+
+    p = sub.add_parser("logos", help="one-shot: download the 32 ESPN team logos into web/public/logos (commit them); "
+                                     "not part of refresh")
+    p.add_argument("--force", action="store_true", help="re-download logos that already exist")
+    p.set_defaults(func=_cmd_logos)
 
     args = parser.parse_args(argv)
     return args.func(args)

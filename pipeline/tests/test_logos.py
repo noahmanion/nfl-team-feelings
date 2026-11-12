@@ -42,7 +42,8 @@ def test_mapping_matches_cached_teams():
     espn = dict(zip(teams["team_abbr"].to_list(), teams["team_logo_espn"].to_list()))
     for f in sorted(CANONICAL):
         assert f in espn, f
-        assert logos.logo_url(f).split("/500/")[1] == espn[f].split("/500/")[1], f
+        # compare the ESPN code (filename): the cache uses /500-dark/ for CAR
+        assert logos.logo_url(f).rsplit("/", 1)[1] == espn[f].rsplit("/", 1)[1], f
 
 
 def test_validate_png():

@@ -7,6 +7,8 @@ DATA_DIR = PIPELINE_ROOT / "data"
 CACHE_DIR = DATA_DIR / "cache"
 DERIVED_DIR = DATA_DIR / "derived"
 WEB_DATA_DIR = PIPELINE_ROOT.parent / "web" / "public" / "data"
+# Phase 11 (LOGO-01): committed team logos from `fgs logos`; write_export never touches it
+LOGOS_DIR = PIPELINE_ROOT.parent / "web" / "public" / "logos"
 WEIGHTS_PATH = PIPELINE_ROOT / "weights.yaml"
 # Phase 11: committed, sourced 2021+ Vegas win totals. Display only: never read by the score
 # (vegas_expectations / vs_exp stop at the nflverse 2003-2020 file).
