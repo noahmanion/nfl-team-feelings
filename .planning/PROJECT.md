@@ -8,6 +8,19 @@ A visualization of how NFL fans *should* be feeling about their team — a momen
 
 A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
 
+## Current Milestone: v2.0 Public Site
+
+**Goal:** Take the site public. Deploy it, restyle it as FiveThirtyEight-inspired data journalism with team logos, make callouts shareable, add exploratory EPA charts, and close the v1 data loose ends. The frozen v1 model stays untouched, and the v2 model is pre-registered against a fresh 2026–27 holdout.
+
+**Target features:**
+- Deploy to Vercel as a static site (from github.com/noahmanion/nfl-team-feelings)
+- Editorial redesign inspired by FiveThirtyEight (typography, chart styling, clean layout), without copying its branding
+- Team logos from a free source (nflverse `load_teams` logo URLs), with a graceful fallback
+- Auto-generated share images (OG cards) for callouts and team pages
+- EPA scatter and other exploratory charts
+- Loose ends: verify the 18 draft-forfeit entries entered from memory; hand-entered 2021+ Vegas win totals as display-only data
+- v2 model pre-registration (good-loss luck, free agency, win totals into the score), holdout 2026–2027, written up front with no model changes this milestone
+
 ## Requirements
 
 ### Validated
@@ -22,7 +35,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 ### Active
 
-(None — v1.0 shipped. Candidates for next milestone: v2 items in milestones/v1.0-REQUIREMENTS.md.)
+(Defined in REQUIREMENTS.md for v2.0.)
 
 ### Out of Scope
 
@@ -48,7 +61,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 - **Stack**: Python (nflreadpy/pandas) to compute scores → static JSON; lightweight static frontend for the viz — chosen by Claude, user deferred
 - **Data**: free sources only — nflverse primary
-- **Hosting**: local first; may deploy to Vercel as a static site later
+- **Hosting**: Vercel static site (v2.0); repo at github.com/noahmanion/nfl-team-feelings
 - **Scope**: self-contained within `feel-good-scorew/`; no shared deps with other repo projects
 - **Process**: light — no heavy CI/test suites beyond backtest validation of the model
 
@@ -83,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11 after v1.0 milestone*
+*Last updated: 2026-11-11, v2.0 milestone started*
