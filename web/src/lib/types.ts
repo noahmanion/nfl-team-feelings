@@ -1,14 +1,17 @@
 // Mirror of the pipeline JSON contract (pipeline/src/fgs/export.py, D-06).
 
 export interface Band { min: number; max: number; label: string; emoji: string }
-export interface TeamMeta { name: string; nick: string; primary: string; secondary: string }
+/** conf/division: current alignment, not era-correct (11-03). Optional so older JSON still types. */
+export interface TeamMeta { name: string; nick: string; primary: string; secondary: string; conf?: string; division?: string }
 export interface SeasonMeta { season: number; max_week: number; reg_weeks: number; n_teams: number; week_labels: Record<string, string> }
 export interface FactorMeta { key: string; label: string; weight: number; description: string }
 export interface Meta { version: number; score_kind: string; generated_at: string; data_through: string;
   latest: { season: number; week: number }; partial_week: boolean; seasons: SeasonMeta[];
   bands: Band[]; hysteresis: number; teams: Record<string, TeamMeta>; factors?: FactorMeta[]; baseline?: number
   /** Offseason (draft) settings (07-04). */
-  offseason?: { draft: { weight: number; display_only: boolean; chart: string; decay: number[] } } }
+  offseason?: { draft: { weight: number; display_only: boolean; chart: string; decay: number[] } }
+  /** Seasons with an epa/{season}.json file (11-03). */
+  epa_seasons?: number[] }
 /** Draft capital vs original slots, week-0 rows only (07-04). */
 export interface DraftInfo {
   /** Stuart chart points vs original slots, 1 dp (signed). */
@@ -91,3 +94,8 @@ export interface Methodology {
   holdout: HoldoutBlock | null
   notes: Note[]
 }
+
+/** epa/{season}.json: columnar, one row per played team-game with pbp (11-03). def_* = the opponent's off_*. */
+export interface EpaFile { season: number; note: string; game_id: string[]; week: number[]; game_type: string[];
+  franchise: string[]; opponent: string[]; off_epa: number[]; off_plays: number[]; off_sr: number[];
+  def_epa: number[]; def_plays: number[]; def_sr: number[] }
