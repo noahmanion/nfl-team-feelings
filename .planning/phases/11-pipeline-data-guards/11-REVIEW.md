@@ -1,195 +1,148 @@
 ---
 phase: 11-pipeline-data-guards
-reviewed: 2026-11-12T03:10:08Z
+reviewed: 2026-11-12T04:30:00Z
 depth: standard
-files_reviewed: 17
+iteration: 3
+files_reviewed: 6
 files_reviewed_list:
-  - pipeline/src/fgs/cli.py
-  - pipeline/src/fgs/draft.py
-  - pipeline/src/fgs/export.py
-  - pipeline/src/fgs/logos.py
-  - pipeline/src/fgs/paths.py
   - pipeline/src/fgs/wintotals.py
-  - pipeline/tests/test_cli.py
-  - pipeline/tests/test_draft.py
-  - pipeline/tests/test_export.py
-  - pipeline/tests/test_golden_scores.py
-  - pipeline/tests/test_logos.py
+  - pipeline/src/fgs/cli.py
+  - pipeline/src/fgs/logos.py
   - pipeline/tests/test_wintotals.py
-  - web/src/lib/data.ts
-  - web/src/lib/epa.test.ts
-  - web/src/lib/epa.ts
-  - web/src/lib/nohotlink.test.ts
-  - web/src/lib/types.ts
+  - pipeline/tests/test_export.py
+  - pipeline/tests/test_logos.py
 findings:
   critical: 0
-  warning: 5
-  info: 8
-  total: 13
-status: issues_found
+  warning: 0
+  info: 11
+  total: 11
+status: clean
 ---
 
-# Phase 11: Code Review Report
+# Phase 11: Code Review Report (iteration 3)
 
-**Reviewed:** 2026-11-12T03:10:08Z
+**Reviewed:** 2026-11-12T04:30:00Z
 **Depth:** standard
-**Files Reviewed:** 17
-**Status:** issues_found
+**Files Reviewed:** 6
+**Status:** clean (0 critical, 0 warning; Info items carried forward)
 
 ## Summary
 
-I reviewed the phase-11 diff (`97e1f33..HEAD`): the golden score pin, the forfeit audit in `draft.py`, the display-only 2021+ win totals (`wintotals.py`, the `_cached_vegas` guard, and `_display_win_totals`), the per-team-game EPA export and the web helper for it, and the one-shot logo downloader.
+This re-review covers the three fix commits in `ca1c84b..HEAD`: 312c36a (WR-01), 31c3a18 (IN-09) and 26378ff (IN-08).
 
-The phase-11 tests pass locally: `pytest tests/test_{wintotals,logos,export,cli,draft,golden_scores}.py` gives 154 passed against the real cache. Checks against the cached data:
-- The nflverse `win_totals.csv` has 576 rows covering 2003-2020. Every code maps to a canonical franchise, and there are no duplicate team-seasons.
-- The committed `web/public/data/epa/*.json` files contain no nulls or NaN.
-- Every game appears exactly twice in the EPA files.
+Tests run locally:
+- `uv run pytest -q tests/test_wintotals.py tests/test_logos.py`: 43 passed.
+- `uv run pytest -q tests/test_export.py` (real data): 43 passed.
 
-The display-only win totals don't reach the score. The score's input stays behind `_cached_vegas`, which only reads `vegas_norm` from the nflverse file. The import and AST guards in `test_wintotals.py` cover this.
+Status of the iteration-2 findings:
 
-I found no blockers. The warnings are about robustness:
-- A failure in a display-only feature can stop the weekly score refresh.
-- The `<=2020` guard raises an error where it could filter.
-- The logo manifest can record the wrong provenance for an image.
-- The TypeScript EPA contract says values are never null, but the pipeline can emit null.
+| ID | Status | Notes |
+|----|--------|-------|
+| WR-01 | Resolved | `_load_display` validates each file in `FILES` on its own. The lenient path keeps every file that validates and reports each one that fails. `_display_win_totals` prints one stderr WARNING per skip and returns `(frame, skipped)`. Both `_cmd_refresh` and `_cmd_export` add the skip count to their final summary line. The strict loader still raises, so the tests on the committed files keep full strictness. The new test appends a 3-team 2027 season to 2026plus and confirms that all 5 x 32 rows for 2021-2025 survive. The one call site outside the CLI (the `test_export.py` fixture) was updated to `[0]`. Refresh still exits 0. That was the optional part of the suggested fix, so this is not a regression; see IN-13. |
+| IN-09 | Resolved | The test now allows null rates and play counts `>= 0`, and adds a cap of at most 2 nulls per rate column per season. The `assert sum(...)` sits inside the `for k` loop, so the cap applies to every column. |
+| IN-08 | Resolved, with a narrow gap | Invalid JSON, a top-level manifest that isn't a dict, and an entry that isn't a dict now all re-fetch instead of crashing. The parametrized test covers all three. A non-UTF-8 manifest still crashes (IN-12). |
 
-**Fingerprint note:** `draft.py` is in `fingerprint.CODE_FILES`. Any edit to it, including IN-01 below, changes `code_fingerprint`, so `fgs evidence` must be rerun and `callout_evidence.json` recommitted. `cli.py` counts only through `derive_games` and `draft_winsor`, so the fixes suggested below for `_cached_vegas`, `_display_win_totals` and `_cmd_refresh` do not change the fingerprint. Nothing below touches `pipeline/inputs/win_totals_2021plus.csv`.
+The fixes introduced no Critical or Warning issues. No fingerprinted code was touched: `draft.py`, `cli.derive_games` and `cli.draft_winsor` are unchanged.
 
 ## Narrative Findings (AI reviewer)
 
-## Warnings
-
-### WR-01: A display-only win-totals failure aborts the whole weekly refresh/export
-
-**File:** `pipeline/src/fgs/cli.py:146-152, 462-463, 519-520`
-**Issue:** `_display_win_totals` runs inside `_cmd_refresh` and `_cmd_export`, and that path has no error handling. `wintotals.load_display_win_totals()` raises `ValueError` on any validation problem. The docstring of `wintotals.py:9` invites future appends, and an append could trigger one: a 2027 season with fewer than 32 rows as books release lines, a sum outside ±8, an `http://` source, or a missing file. When that happens, `fgs refresh` exits before writing anything, so a data-entry slip in a feature that is explicitly display-only blocks the weekly score update. The display data's validation should not be able to take down the scored pipeline.
-**Fix:** Keep strict validation in tests, and degrade gracefully at runtime:
-```python
-def _display_win_totals(cache_dir) -> pl.DataFrame | None:
-    wt = cache_dir / "win_totals.csv"
-    raw = pl.read_csv(wt) if wt.exists() else None
-    try:
-        return wintotals.display_frame(raw, wintotals.load_display_win_totals())
-    except (ValueError, OSError) as e:
-        print(f"WARNING: display win totals skipped ({e}); team files get empty vegas_win_totals",
-              file=sys.stderr)
-        return None
-```
-Alternatively, add a `checks.py` entry so the failure shows up through the same "checks failed" path with a clear message. (`cli.py` is fingerprinted only through `derive_games` and `draft_winsor`, so this edit needs no evidence rerun.)
-
-### WR-02: The `<=2020` guard hard-fails where it could safely filter, so a fresh clone breaks if upstream nflverse ever extends the file
-
-**File:** `pipeline/src/fgs/cli.py:136-141`
-**Issue:** `_cached_vegas(download=True)` fetches `WIN_TOTALS_URL`, which points at the nflverse `master` branch, whenever the cache file is missing (a fresh clone or a cleared cache). If nfldata ever adds 2021+ rows upstream, the guard raises and `fgs refresh` / `fgs export` / `fgs build` can never succeed on a new machine. Raising adds no safety here: `vegas_expectations` normalizes per season (`mean().over("season")`), so dropping seasons above 2020 cannot change any 2003-2020 `vegas_norm`, and the golden scores stay intact. Filtering keeps the intent of D-12 without the brittleness. The same file feeds `_display_win_totals`, which already filters with `season <= 2020` (`wintotals.py:118`), so the two paths currently handle this case inconsistently.
-**Fix:**
-```python
-raw = pl.read_csv(wt)
-if raw.height and int(raw["season"].max()) > 2020:
-    print(f"WARNING: {wt} has seasons > 2020; ignoring them (2021+ win totals are display-only)",
-          file=sys.stderr)
-    raw = raw.filter(pl.col("season") <= 2020)
-frame = vegas_expectations(raw)
-assert_le_2020(frame)  # keep the ValueError as a post-condition on the filtered frame
-```
-Update `test_guard_cached_vegas_refuses_post_2020` to assert that the output stops at 2020 and is unchanged for 2020. Pinning a hash of the frozen file would also guard against upstream edits to 2003-2020 rows.
-
-### WR-03: The logo skip path writes the current URL into the manifest, not the URL the file was fetched from
-
-**File:** `pipeline/src/fgs/logos.py:69-79`
-**Issue:** If a file already exists and `force` is false, the code re-validates the PNG but always records `"url": logo_url(f)`. If `CODE_OVERRIDES` is ever corrected (the comment on lines 20-21 notes that `/500/la.png` and `/500/was.png` are valid PNGs of the wrong team), rerunning `fgs logos` without `--force` keeps the wrong image. The manifest then claims it came from the corrected URL, and `test_committed_logos` (`manifest[f]["url"] == logos.logo_url(f)`) passes. That is the silent-wrong-logo failure the mapping test was written to prevent.
-**Fix:** Re-fetch when the recorded URL differs:
-```python
-prev = old.get(f, {})
-if path.exists() and not force and prev.get("url") == url:
-    data = path.read_bytes(); validate_png(data); when = prev.get("fetched", today)
-else:
-    data = fetch(url); validate_png(data); _atomic_write(path, data); when = today
-```
-
-### WR-04: A mid-run download failure leaves the PNGs and `manifest.json` out of sync
-
-**File:** `pipeline/src/fgs/logos.py:67-81`
-**Issue:** Each PNG is written as soon as it validates, and the manifest is written only after the loop. With `--force`, if team 15 raises (network error, 403, or an HTML error page), teams 1-14 are overwritten on disk while the committed `manifest.json` still holds their old `sha256` and `bytes`. The tree is then inconsistent until someone reruns. `test_invalid_download_raises_without_partial` only covers a failure on the first team, so it doesn't catch this. The docstring says "An invalid download raises before anything is written for that team", which is true per team but not for the set.
-**Fix:** Fetch and validate all 32 into memory first (about 1-2 MB), and write only after every download succeeds:
-```python
-staged = {}
-for f in sorted(CANONICAL):
-    ...  # fetch + validate into staged[f] = (path, data, when)
-for f, (path, data, when) in staged.items():
-    if data is not None: _atomic_write(path, data)
-```
-Add a test where the fake fetch fails on the Nth team after a full first run, and assert that the files and manifest are unchanged.
-
-### WR-05: The `EpaFile` TypeScript contract says values are never null, but the export can emit `null`
-
-**File:** `web/src/lib/types.ts:99-101`, `pipeline/src/fgs/export.py:46-47, 77`, `web/src/lib/epa.ts:21-32`
-**Issue:**
-- `pbp.team_game_epa` builds its rows with a full outer join of offense and defense (`pbp.py:129`). A team-game with defensive plays but no qualifying offensive plays therefore gets `off_epa`, `off_plays` and `off_sr` as null.
-- `_epa_files` passes those nulls through: `_r4(None)` returns `None`, and the plays column becomes `[None if v is None ...]`.
-- `def_sr` comes from a left join (`how="left"`, line 64), so it can also be null.
-- `EpaFile` declares every one of these columns as `number[]`.
-- In `seasonToDate`, a null in `off_plays` is skipped harmlessly (`null > 0` is false). But a null `off_sr` or `def_sr` alongside a positive play count evaluates as `null * op === 0` in JS. That silently lowers the success rate while the plays still count in the denominator.
-
-The current committed data has no nulls, so this is latent. `test_contract_epa_files` only asserts non-null against today's real cache. Nothing in the exporter enforces it.
-**Fix:** Pick one of these:
-1. Enforce non-null in the exporter by dropping or raising on null rows before the export:
-   ```python
-   epa = epa.drop_nulls(["off_epa", "off_plays", "off_sr", "def_epa", "def_plays", "def_sr"])
-   ```
-2. Make the types honest (`(number | null)[]`) and guard in `seasonToDate` with `if (op > 0 && f.off_sr[i] != null)` (and the same for defense), keeping a separate sr denominator.
-
 ## Info
 
-### IN-01: `FORFEIT_KIND` is dead at runtime and duplicates the `FORFEITS` keys inside a fingerprinted file
+### IN-01: `FORFEIT_KIND` is dead at runtime and duplicates the `FORFEITS` keys inside a fingerprinted file (carried forward)
 
 **File:** `pipeline/src/fgs/draft.py:196-232`
-**Issue:** Only `test_draft.py` reads `FORFEIT_KIND`. It repeats every `FORFEITS` team-line by hand, and the comments above each `FORFEITS` entry repeat it a third time. A test keeps the keys in sync, but because the table lives in `draft.py`, even a label-only fix to it changes `code_fingerprint` and forces an `fgs evidence` rerun.
-**Fix:** If it stays display/audit metadata, move it out of `draft.py`, for example into a small non-fingerprinted `draft_audit.py` or the existing `forfeit_audit.json`. Note that this move is itself a `draft.py` edit, so it needs one `fgs evidence` rerun. Batch it with any other `draft.py` change.
+**Issue:** Only `test_draft.py` reads `FORFEIT_KIND`, and it repeats every `FORFEITS` key by hand. Because `draft.py` is fingerprinted, even a label-only edit changes `code_fingerprint` and forces an `fgs evidence` rerun.
+**Fix:** Move it to a non-fingerprinted module or to `forfeit_audit.json` the next time `draft.py` changes.
 
-### IN-02: The `used_in_score` docstring overstates what the score consumed
+### IN-02: The `used_in_score` docstrings overstate what the score consumed (carried forward)
 
-**File:** `pipeline/src/fgs/wintotals.py:113-115`, `pipeline/src/fgs/export.py:411-413`
-**Issue:** The docstrings say the nflverse rows are "the lines the score actually used". The score uses `vegas_norm`, which is each line re-centered so the league mean equals `reg_games/2` (`expectation.py:56`), not the raw `line` exported here. A UI that labels the raw number "used in score" would be slightly misleading.
-**Fix:** Reword the docstrings to "the score used these lines (league-mean normalized)", or also export `vegas_norm` for 2003-2020.
+**File:** `pipeline/src/fgs/wintotals.py:138-140`, `pipeline/src/fgs/export.py:414-416`
+**Issue:** The docstrings say "the lines the score actually used". The score uses `vegas_norm`, which is the line re-centered to the league mean, not the raw `line` that gets exported.
+**Fix:** Reword to "the score used these lines (league-mean normalized)", or export `vegas_norm` as well.
 
-### IN-03: The win-totals tests hard-code today's season span and will fail on the next legitimate append
+### IN-03: The win-totals tests hard-code today's season span (carried forward)
 
 **File:** `pipeline/tests/test_wintotals.py:45-46`, `pipeline/tests/test_export.py:687`
-**Issue:** `d.height == 192`, the season list `[2021..2026]`, and `list(range(2003, 2027))` will all fail the moment 2027 lines are appended to `win_totals_display_2026plus.csv`, which the module docstring says is the intended workflow.
-**Fix:** Assert structure, not a count: 32 rows per season, contiguous seasons starting at 2021, and the last season at least 2026.
+**Issue:** The assertions `d.height == 192`, `[2021..2026]` and `range(2003, 2027)` all fail on the first legitimate 2027 append.
+**Fix:** Assert the structure instead: 32 rows per season, contiguous seasons starting at 2021, and the latest season at least 2026.
 
-### IN-04: The `wintotals.validate` odds and `entered_on` checks are loose
+### IN-04: The `validate` odds and `entered_on` checks are loose (carried forward)
 
-**File:** `pipeline/src/fgs/wintotals.py:35-40, 79`
-**Issue:** `_odds` accepts any integer, including American odds that can't exist such as `0`, `50` or `-99`. `entered_on` isn't validated at all, so an empty or garbage value passes even though it is part of the provenance.
+**File:** `pipeline/src/fgs/wintotals.py:39-44, 83`
+**Issue:** `_odds` accepts American odds that cannot exist (`0`, `50`, `-99`). `entered_on` is not validated at all.
 **Fix:** Reject `-100 < odds < 100`, and parse `entered_on` with `date.fromisoformat`.
 
-### IN-05: `nohotlink.test.ts` covers only `.ts` and `.svelte` sources and can be evaded by string concatenation
+### IN-05: `nohotlink.test.ts` has narrow coverage and can be evaded (carried forward)
 
 **File:** `web/src/lib/nohotlink.test.ts:5, 17`
-**Issue:** The glob skips `.css`, `.js`, `public/**` and JSON. The regex requires the host and the `.png`/`.svg` extension in one run of characters with no whitespace, so `'https://a.espncdn.com/.../' + code + '.png'` is not caught.
-**Fix:** Also match bare hosts (`/(espncdn\.com|wikipedia\.org|wikimedia\.org)/i`) and widen the glob to include `*.{js,css}`.
+**Issue:** The test only scans `.ts` and `.svelte` files. Its regex needs the host and the extension in one run of characters, so a URL built by concatenation slips through.
+**Fix:** Match the bare hosts (`espncdn\.com|wikipedia\.org|wikimedia\.org`) and widen the glob to `*.{js,css}`.
 
-### IN-06: The golden pin covers only `snapshots/*.json`
+### IN-06: The golden pin covers only `snapshots/*.json` (carried forward)
 
 **File:** `pipeline/tests/test_golden_scores.py:54-64`
-**Issue:** Frozen scores and labels are also published in `history.json` (`score` and `label` per team) and `latest.json`. A divergence in how those are built would leave the snapshots unchanged and the golden test green, while the site showed different v1 numbers.
-**Fix:** Add a cheap consistency test: for every season up to 2025, check that the `history.json` score and label match the snapshot rows.
+**Issue:** `history.json` and `latest.json` also publish the frozen scores and labels, but the golden test does not check them.
+**Fix:** Add a consistency test comparing `history.json` scores and labels against the snapshot rows for every season through 2025.
 
-### IN-07: `loadEpa` copies the `loadGames` cache pattern
+### IN-07: `loadEpa` duplicates the `loadGames` cache pattern (carried forward)
 
 **File:** `web/src/lib/data.ts:90-103`
-**Issue:** The memo-plus-evict-on-failure logic is now duplicated. It also never checks `meta.epa_seasons`, so asking for a season without pbp makes a doomed request.
-**Fix:** Extract a `cachedJson<T>(cache, key, path)` helper, and return early with a rejected promise when `season` isn't in `meta.epa_seasons`.
+**Issue:** The memoize-and-evict-on-failure logic is copied from `loadGames`. `loadEpa` also never checks `meta.epa_seasons`, so asking for a season without play-by-play data makes a request that is certain to fail.
+**Fix:** Extract a `cachedJson<T>` helper, and return early when the season is not in `meta.epa_seasons`.
 
-### IN-08: `fetch_logos` crashes with a raw `JSONDecodeError` on a corrupt manifest
+### IN-10: The WR-04 staging protects the fetch phase, not the write phase (carried forward)
 
-**File:** `pipeline/src/fgs/logos.py:65`
-**Issue:** `json.loads(manifest_path.read_text())` has no error handling. A truncated or hand-edited manifest makes `fgs logos` fail with a traceback, even with `--force`, which ignores the old manifest's contents anyway.
-**Fix:** Catch `json.JSONDecodeError` there, and treat a corrupt manifest as `{}` with a warning.
+**File:** `pipeline/src/fgs/logos.py:62-64, 92-94`
+**Issue:** The docstring says "a mid-run failure leaves files and manifest untouched". Each `_atomic_write` is atomic, but the 32 writes plus the manifest are not atomic as a set. An I/O failure partway through leaves new PNGs next to the old manifest.
+**Fix:** Soften the docstring to "a failed download writes nothing", or write to a sibling temp directory and swap it in.
+
+### IN-11: The `_display_win_totals` fallback misreports what failed and how many files were skipped (new)
+
+**File:** `pipeline/src/fgs/cli.py:164-170`
+**Issue:**
+- The `except` is labelled "cross-file overlap guard", but it wraps `display_frame(raw, display)` as well. A `PolarsError` from casting a malformed cached nflverse `win_totals.csv` lands there too.
+- In that case the message blames "all display files". The fallback then calls `display_frame(raw, empty_display())`, which raises the same error again, uncaught. The run still aborts loudly, so nothing is lost, but the stderr WARNING just before the traceback points at the wrong file.
+- On that path, `skipped` is replaced with a single entry. Any per-file problems already collected by the lenient loader are dropped, and `_skipped_msg` reports "1 display win-totals file(s) skipped" when every display file was dropped.
+- Line 164 (`pl.read_csv(wt)`) sits outside the `try`, so it is unaffected. That is correct, since a broken frozen score input should abort.
+
+**Fix:** Narrow the `try` to the step it guards, and keep the earlier problems:
+```python
+display, skipped = wintotals.load_display_win_totals_lenient()  # per-file problems never raise
+try:
+    frame = wintotals.display_frame(raw, display)
+except ValueError as e:  # nflverse/display overlap only
+    skipped = skipped + [f"{f}: dropped ({e})" for f in wintotals.FILES]
+    frame = wintotals.display_frame(raw, wintotals.empty_display())
+```
+The cross-file overlap `ValueError` inside `_load_display` (`wintotals.py:126-127`) would then propagate. That is acceptable because the check is documented as unreachable. Alternatively, catch it in `_load_display` and return `empty_display()` with a problem entry for every file.
+
+### IN-12: A non-UTF-8 logo manifest still crashes `fetch_logos` (new, residual from IN-08)
+
+**File:** `pipeline/src/fgs/logos.py:70-74`
+**Issue:**
+- `manifest_path.read_text()` raises `UnicodeDecodeError` on binary garbage, such as a manifest truncated mid-write by another tool or a stray file. That error is a `ValueError` subclass, but not a `json.JSONDecodeError`, so it escapes the new handler.
+- I confirmed this with a probe: writing `b'\xff\xfe\x00garbage'` to `manifest.json` makes `fetch_logos` raise `UnicodeDecodeError` before any fetch.
+- `read_text()` with no `encoding` also depends on the locale.
+
+**Fix:** Use `read_text(encoding="utf-8")` and catch `(json.JSONDecodeError, UnicodeDecodeError)`, or simply `ValueError`. Add `b"\xff\xfe"` to the parametrized cases in `test_odd_manifest_refetches_instead_of_crashing`.
+
+### IN-13: Per-file degradation still drops the current season's lines on a partial future append, and refresh exits 0 (new, residual from WR-01)
+
+**File:** `pipeline/src/fgs/wintotals.py:91-93, 117-123`, `pipeline/src/fgs/cli.py:489, 512-518`
+**Issue:**
+- The fix works at file granularity. All 2026+ seasons share one file, and `validate` requires 32 teams per season.
+- So the realistic trigger, a partial 2027 append, still drops the valid 2026 lines along with 2027. The test confirms this: its expected output contains only 2021-2025.
+- The skip now shows up in stderr and on the summary line, but `_cmd_refresh` still returns 0 and `checks.run_warnings` doesn't see it, so a scripted or cron refresh won't notice.
+- This is acceptable for a prototype and matches the fix iteration 2 suggested, so it is Info only.
+
+**Fix:** Pick either option:
+- Validate per season inside the open-ended file: group by season, keep the seasons that pass, and report the ones that fail.
+- Allow a trailing season with fewer than 32 teams in the open-ended file, behind a `partial_ok` flag for the last season only.
+
+Separately, add a `run_warnings` entry, or a non-zero exit code after writing, when `skipped` is non-empty.
 
 ---
 
-_Reviewed: 2026-11-12T03:10:08Z_
+_Reviewed: 2026-11-12T04:30:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
