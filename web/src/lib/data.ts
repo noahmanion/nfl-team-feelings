@@ -13,16 +13,18 @@ export const loadLatest = (): Promise<WeekFile> => getJson<WeekFile>('latest.jso
 /** callouts.json: the latest week's callouts (same freshness rule as latest.json). */
 export const loadCallouts = (): Promise<Callout[]> => getJson<Callout[]>('callouts.json', { cache: 'no-store' })
 
-// Session cache of season files. Rejected fetches are evicted so "Try again" refetches.
-const seasonCache = new Map<number, Promise<SeasonFile>>()
+// Session cache of season files, keyed by meta.generated_at + season (a new export must not be
+// served a stale season). Rejected fetches are evicted so "Try again" refetches.
+const seasonCache = new Map<string, Promise<SeasonFile>>()
 
 export function loadSeason(meta: Meta, season: number): Promise<SeasonFile> {
-  const cached = seasonCache.get(season)
+  const key = `${meta.generated_at}|${season}`
+  const cached = seasonCache.get(key)
   if (cached) return cached
   const p = getJson<SeasonFile>(`snapshots/${season}.json?v=${encodeURIComponent(meta.generated_at)}`)
-  seasonCache.set(season, p)
+  seasonCache.set(key, p)
   p.catch(() => {
-    if (seasonCache.get(season) === p) seasonCache.delete(season)
+    if (seasonCache.get(key) === p) seasonCache.delete(key)
   })
   return p
 }
