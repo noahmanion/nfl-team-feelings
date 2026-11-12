@@ -36,6 +36,13 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 - ✓ Site is public at https://nfl-team-feelings.vercel.app/. Vercel builds it from `web/` on Node 24.x, and a push to main redeploys it. The ignored-build step skips commits that don't touch `web/`. Pages carry a "data through" stamp, site-wide og/twitter share tags and a "not affiliated with the NFL" footer. Validated in Phase 10: Deploy (DEPLOY-01, DEPLOY-02, DEPLOY-03)
 - ✓ Pipeline data & guards: a golden test pins every exported score and mood label for seasons ≤2025 (hash 3ac3c2b5…, unchanged through the phase). The draft-forfeit table was audited against fetched sources: 26 confirmed, 1 corrected (2017 R4 to NO) and 8 added, with supplemental vs penalty labels; 5 sourced forfeits the pick data can't place are documented but not applied. Sourced 2021–2026 Vegas win totals live in `pipeline/inputs/` and are display-only; `_cached_vegas` drops anything past 2020. The export adds per-game EPA (`epa/{season}.json`), conference/division and `vegas_win_totals`. 32 ESPN logos are committed to `web/public/logos/` via `fgs logos`. Validated in Phase 11: Pipeline Data & Guards (INTEG-01, DATA-01, DATA-02, EXPL-01, LOGO-01)
 - ✓ Editorial redesign and team identity: self-hosted Inter + IBM Plex Mono (Fontsource 5.3.0, tabular figures), a restrained light/dark token palette, one shared Plot theme (`plotTheme.ts`) plus `ChartFrame` (bold head, gray dek, value-axis gridlines, SOURCE/NOTES footer), standings-style board with shaded score cells, and `TeamLogo` (96px local derivatives, light disc in dark mode, chip fallback, `VITE_LOGOS=off` strips `dist/logos`) on board, team header, records, callouts, movers, recent games and the history end mark. Era-correct names (Oakland/San Diego/St. Louis, Washington by era, no HOU before 2002) with current logos. All v1 behavior intact (Playwright sweep at 1280/375, light/dark). Validated in Phase 12: Redesign Foundation & Team Identity (DESIGN-01..04, LOGO-02, LOGO-03)
+- ✓ Explore page and win totals:
+  - New `#/explore` page with a season/week scrubber.
+  - Offense-vs-defense EPA/play scatter: team logos as marks, defense axis flipped (data not negated), regular-season and season-to-date, play-weighted, net-EPA diagonals, league crosshairs, plain-word quadrants. Notes say it is garbage-time filtered and not opponent-adjusted.
+  - "Record vs evidence" scatter: win % vs score over the mood bands, with an OLS "typical score" line and "better/worse than their record" zones. A test guards against any "luck" wording.
+  - Both scatters: marks click (or double-tap) through to team pages, a my-team ring, and a "Show as table" fallback.
+  - Team page shows Vegas preseason vs model preseason vs pace on a number line. Labels say "used in score" (2003–2020) or "display only, not used in score" (2021+), and the 2026 line is marked as the opener. The model expectation comes from a new display-only `expectation` block in the team files; golden pin unchanged.
+  - Validated in Phase 13: Explore Charts & Win Totals Display (EXPL-02, EXPL-03, DATA-03)
 
 ### Active
 
@@ -105,4 +112,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-12, after Phase 12 (redesign foundation & team identity)*
+*Last updated: 2026-11-12, after Phase 13 (explore charts & win totals display)*
