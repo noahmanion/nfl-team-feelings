@@ -397,6 +397,7 @@ def build_export(
                 "label": part["label"].to_list(),
             },
             "vegas_win_totals": _vegas_win_totals(win_totals, fid),
+            "expectation": _expectation(scored, fid),
         }
     files["history.json"] = {"keys": keys, "teams": hist}
     files["callouts.json"] = by_week.get((int(s), int(w)), [])  # the flat list for meta.latest
@@ -426,6 +427,27 @@ def _vegas_win_totals(win_totals: pl.DataFrame | None, fid: str) -> dict[str, li
         "line_type": part["line_type"].to_list(),
         "source": part["source"].to_list(),
         "used_in_score": [bool(v) for v in part["used_in_score"]],
+    }
+
+
+EXPECTATION_KEYS = ("season", "exp_total", "source", "reg_games")
+
+
+def _expectation(scored: pl.DataFrame, fid: str) -> dict[str, list]:
+    """Display-only preseason expectation per team-season (D-17): the week-0 exp_total (1 dp) and its
+    source ('vegas' 2003-2020, 'model' otherwise), plus the team-season's REG game count
+    (EXPECTED_GAME_EXCEPTIONS, e.g. 2022 BUF/CIN = 16). Never read back into the score. Synthetic
+    frames without a sim keep the same shape with nulls."""
+    w0 = scored.filter((pl.col("week") == 0) & (pl.col("franchise_id") == fid)).sort("season")
+    seasons = [int(s) for s in w0["season"]]
+    exp = w0["exp_total"].to_list() if "exp_total" in w0.columns else [None] * len(seasons)
+    src = w0["expectation_source"].to_list() if "expectation_source" in w0.columns else [None] * len(seasons)
+    return {
+        "season": seasons,
+        "exp_total": [None if v is None else round(float(v), 1) + 0.0 for v in exp],
+        "source": src,
+        "reg_games": [season_config.EXPECTED_GAME_EXCEPTIONS.get((s, fid), season_config.reg_games(s))
+                      for s in seasons],
     }
 
 

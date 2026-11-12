@@ -710,7 +710,8 @@ EXP_KEYS = ("season", "exp_total", "source", "reg_games")
 
 
 def test_expectation_shape_without_sim(monkeypatch):
-    """Synthetic frames have no sim: the block still exists with a stable shape and null exp_total."""
+    """Synthetic 2023-2024 export (no market lines): every team file carries the block with a stable
+    shape; the synthetic derive still yields a model expectation, so source is 'model' throughout."""
     files, _ = _draft_export(monkeypatch, {**LIVE_CFG, "weight": 0.0, "display_only": True})
     teams = [p for p in files if p.startswith("teams/")]
     assert teams
@@ -718,8 +719,17 @@ def test_expectation_shape_without_sim(monkeypatch):
         e = files[p]["expectation"]
         assert tuple(e) == EXP_KEYS, p
         assert len({len(c) for c in e.values()}) == 1, p
-        assert all(v is None for v in e["exp_total"]), p
+        assert e["season"] == [2023, 2024], p
+        assert e["source"] == ["model", "model"], p
+        assert all(v is None or round(v, 1) == v for v in e["exp_total"]), p
         assert json.dumps(e, allow_nan=False)
+
+
+def test_expectation_nulls_without_columns():
+    """A scored frame lacking exp_total/expectation_source keeps the shape with nulls."""
+    scored = pl.DataFrame({"season": [2022, 2021, 2022], "week": [0, 0, 1], "franchise_id": ["BUF"] * 3})
+    e = export._expectation(scored, "BUF")
+    assert e == {"season": [2021, 2022], "exp_total": [None, None], "source": [None, None], "reg_games": [17, 16]}
 
 
 def test_expectation_real(real_files):
