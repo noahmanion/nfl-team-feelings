@@ -59,7 +59,7 @@ The site is live at **https://nfl-team-feelings.vercel.app/**. It builds from `w
 ## DEPLOY-02 live evidence
 - An auto-redeploy on push was observed: the a533993 push created a deployment without any manual trigger.
 - A non-web commit was skipped (CANCELED, above).
-- No `web/` commit had been pushed after the ignore command was set when this summary was written. So far, "a web change builds" rests on the local simulation (exit 1) and the READY pre-ignore deploy. The phase-completion record adds the state of the first later `web/` push, if one happens.
+- **A `web/` change builds after the ignore command is set:** the push of 5a41881..4179b76 included the code-review fixes 3919854 (SiteFooter) and aa34d86 (siteOrigin). The HEAD commit 4179b76 itself is docs-only. That push produced production deployment **dpl_EzQueyJyy9ovpuBEkuPytZqbsgAg, state READY**. So diffing against `VERCEL_GIT_PREVIOUS_SHA` (the last deployed SHA, 1602905) catches web changes in earlier commits of a multi-commit push, as D-03 intended.
 
 ## Deviations from Plan
 - **[Rule 2] Deployment protection.** Changed to Standard so the production domain is public (see decisions).
