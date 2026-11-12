@@ -132,6 +132,16 @@ export function teamShareMeta(
   }
 }
 
+/**
+ * Text to put before a callout headline so the team is named exactly once: "Minnesota " before
+ * "Vikings −17" (headline already leads with the nickname), "" when the name is the nickname
+ * (pre-2020 "Washington"), otherwise "Cleveland Browns: ".
+ */
+export function calloutNamePrefix(name: string, nick: string, headline: string): string {
+  if (!nick || !headline.startsWith(nick)) return `${name}: `
+  return name.endsWith(nick) ? name.slice(0, name.length - nick.length) : ''
+}
+
 /** Callout share page copy. Headlines already led by the nickname are used alone. */
 export function calloutShareMeta(
   c: Pick<Callout, 'season' | 'week' | 'franchise' | 'headline' | 'detail'>,
@@ -146,7 +156,7 @@ export function calloutShareMeta(
     title: headline.startsWith(nick) ? headline : `${name}: ${headline}`,
     // UI review fix 1: mover details have no terminal period; add one so the week doesn't run on.
     description: `${/[.?!]$/.test(detail) ? detail : `${detail}.`} ${wl} · ${c.season}, on the Feel-Good Score.`,
-    imageAlt: `${name}: ${headline}. ${detail}`,
+    imageAlt: `${calloutNamePrefix(name, nick, headline)}${headline}. ${detail}`,
     linkName: name,
   }
 }

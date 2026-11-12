@@ -11,14 +11,26 @@
   let manualInput = $state<HTMLInputElement | null>(null)
   const status = $derived(result === 'copied' ? 'Link copied' : result === 'manual' ? 'Copy the link below' : '')
 
+  // "Link copied" clears after ~2s; a new click restarts the timer. The manual
+  // fallback field stays until the next click, since the user still has to copy from it.
+  const RESET_MS = 2000
+  let resetTimer: ReturnType<typeof setTimeout> | undefined
+  $effect(() => () => clearTimeout(resetTimer))
+
   // WR-05: clear the live region first and let it render empty, so a repeated click re-announces
   // the same message; in the manual case move focus to the link field for keyboard users.
   async function copy() {
+    clearTimeout(resetTimer)
     result = 'idle'
     await tick()
     url = getUrl()
     const r = await copyText(url)
     result = r
+    if (r === 'copied') {
+      resetTimer = setTimeout(() => {
+        if (result === 'copied') result = 'idle'
+      }, RESET_MS)
+    }
     if (r === 'manual') {
       await tick()
       manualInput?.focus()

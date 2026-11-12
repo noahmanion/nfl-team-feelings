@@ -6,6 +6,7 @@ import {
   calloutCopyUrl,
   calloutId,
   calloutImagePath,
+  calloutNamePrefix,
   calloutShareHash,
   calloutShareMeta,
   calloutSharePath,
@@ -287,7 +288,7 @@ describe('share page meta copy', () => {
     const m = calloutShareMeta(joy, realMeta)
     expect(m.title).toBe('Bills fans have been buying the jersey for 1,151 straight days')
     expect(m.description).toBe('Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026. Week 9 · 2026, on the Feel-Good Score.')
-    expect(m.imageAlt).toBe('Buffalo Bills: Bills fans have been buying the jersey for 1,151 straight days. Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026.')
+    expect(m.imageAlt).toBe('Buffalo Bills fans have been buying the jersey for 1,151 straight days. Score 80 or higher since Sep 18, 2023, as of Nov 12, 2026.')
     expect(m.linkName).toBe('Buffalo Bills')
   })
 
@@ -300,5 +301,16 @@ describe('share page meta copy', () => {
   it('calloutShareMeta ends an unpunctuated (mover) detail with a period before the week', () => {
     const mover = { ...joy, type: 'mover_down' as const, franchise: 'MIN', headline: 'Vikings −17', detail: 'Buying the jersey → Cautiously smug' }
     expect(calloutShareMeta(mover, realMeta).description).toBe('Buying the jersey → Cautiously smug. Week 9 · 2026, on the Feel-Good Score.')
+  })
+
+  it('calloutShareMeta names a mover team once in the image alt', () => {
+    const mover = { ...joy, type: 'mover_down' as const, franchise: 'MIN', headline: 'Vikings −17', detail: 'Buying the jersey → Cautiously smug' }
+    expect(calloutShareMeta(mover, realMeta).imageAlt).toBe('Minnesota Vikings −17. Buying the jersey → Cautiously smug')
+  })
+
+  it('calloutNamePrefix', () => {
+    expect(calloutNamePrefix('Minnesota Vikings', 'Vikings', 'Vikings −17')).toBe('Minnesota ')
+    expect(calloutNamePrefix('Washington', 'Washington', 'Washington +9')).toBe('')
+    expect(calloutNamePrefix('Cleveland Browns', 'Browns', '5-4, but you should feel worried')).toBe('Cleveland Browns: ')
   })
 })

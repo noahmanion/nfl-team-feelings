@@ -5,7 +5,7 @@
   import { deepLink } from '../lib/copyLink'
   import { bandIndex, moodToken } from '../lib/format'
   import { eraName, eraText } from '../lib/teamNames'
-  import { calloutCopyUrl } from '../lib/share'
+  import { calloutCopyUrl, calloutNamePrefix } from '../lib/share'
   import type { Band, Callout, Meta, TeamMeta } from '../lib/types'
 
   let {
@@ -19,6 +19,8 @@
   // Era-correct name and copy for the callout's season (D-16, D-26).
   const name = $derived(eraName(callout.franchise, callout.season, { teams: team ? { [callout.franchise]: team } : {} }))
   const headline = $derived(eraText(callout.headline, callout.franchise, callout.season))
+  // Name the team once: "Minnesota Vikings −17", not "Minnesota Vikings: Vikings −17".
+  const prefix = $derived(calloutNamePrefix(name, eraText(team?.nick ?? '', callout.franchise, callout.season), headline))
   const detail = $derived(eraText(callout.detail, callout.franchise, callout.season))
   const evidence = $derived(callout.evidence ? eraText(callout.evidence, callout.franchise, callout.season) : null)
   const href = $derived(calloutHref(callout))
@@ -34,7 +36,7 @@
   <!-- the team is part of the accessible heading: headlines like "5-4, but better days are coming"
        repeat across teams (WR-07) -->
   <svelte:element this={`h${level}`} class="headline"
-    ><span class="visually-hidden">{name}: </span>{headline}</svelte:element
+    ><span class="visually-hidden">{prefix}</span>{headline}</svelte:element
   >
   <p class="detail">{detail}</p>
   {#if evidence}<p class="evidence">{evidence}</p>{/if}
@@ -46,7 +48,7 @@
     <CopyLinkButton
       getUrl={() => calloutCopyUrl(callout, meta, location.origin, deepLink)}
       {name}
-      ariaLabel="Copy link to {name}: {headline}"
+      ariaLabel="Copy link to {prefix}{headline}"
     />
   </div>
 </article>
