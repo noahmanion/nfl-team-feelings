@@ -35,4 +35,16 @@ describe('ChartFrame', () => {
     expect(body).toContain('<h2')
     expect(body).not.toContain('<h3')
   })
+
+  it('renders the default source line when no source is given', () => {
+    const { body } = render(ChartFrame, { props: { id: 'cf4', headline: 'H', children } })
+    expect(body).toContain('SOURCE: NFLVERSE · FEEL-GOOD SCORE')
+  })
+
+  it('renders a custom source line instead of the default', () => {
+    const source = 'SOURCE: NFLVERSE (2003–2020) · COVERS / DRAFTKINGS (2021+)'
+    const { body } = render(ChartFrame, { props: { id: 'cf5', headline: 'H', source, children } })
+    expect(body).toContain(source)
+    expect(body).not.toContain('SOURCE: NFLVERSE · FEEL-GOOD SCORE')
+  })
 })
