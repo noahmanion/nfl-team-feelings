@@ -1,11 +1,16 @@
 <script lang="ts">
-  import { formatDelta } from '../lib/format'
+  import { formatDelta, formatRankDelta } from '../lib/format'
 
   let { value, kind = 'score' }: { value: number | null; kind?: 'score' | 'rank' } = $props()
   const d = $derived(formatDelta(value))
+  const r = $derived(formatRankDelta(value))
 </script>
 
-<span class="delta {d.dir}">{kind === 'rank' ? '#' : ''}{d.text}</span>
+{#if kind === 'rank'}
+  <span class="delta {r.dir}" aria-label={r.aria}>{r.text}</span>
+{:else}
+  <span class="delta {d.dir}">{d.text}</span>
+{/if}
 
 <style>
   .delta {

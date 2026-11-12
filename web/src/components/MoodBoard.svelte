@@ -137,7 +137,7 @@
   @media (min-width: 1024px) {
     .columns {
       display: grid;
-      grid-template-columns: 32px minmax(0, 1fr) 80px var(--score-cell) minmax(0, 280px) 72px;
+      grid-template-columns: 32px minmax(0, 1fr) 80px var(--score-cell) minmax(0, 280px) 88px;
       column-gap: var(--space-md);
       /* align with BoardRow content; the right side reserves the pin button slot */
       padding: 0 calc(var(--tap-min) + var(--space-sm)) var(--space-sm) var(--space-md);

@@ -37,6 +37,15 @@ export function formatDelta(value: number | null | undefined): { text: string; d
 const isNum = (n: unknown): n is number => typeof n === 'number' && Number.isFinite(n)
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
+/** Board rank change in words: "▲1 spot" / "▼2 spots" / "no change", plus a screen-reader label. */
+export function formatRankDelta(value: number | null | undefined): { text: string; dir: DeltaDir; aria: string } {
+  if (!isNum(value) || value === 0) return { text: 'no change', dir: 'none', aria: 'No change in rank' }
+  const n = Math.abs(value)
+  return value > 0
+    ? { text: `▲${plural(n, 'spot')}`, dir: 'up', aria: `Up ${plural(n, 'spot')} in rank` }
+    : { text: `▼${plural(n, 'spot')}`, dir: 'down', aria: `Down ${plural(n, 'spot')} in rank` }
+}
+
 /**
  * Board change sentence (screen-reader text). In season: vs last week. At week 0 the deltas
  * are vs the franchise's last snapshot of the prior season (07-04); null there (first season,
