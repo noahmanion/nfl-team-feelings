@@ -1,8 +1,8 @@
 ---
 phase: 11
 slug: pipeline-data-guards
-status: draft
-nyquist_compliant: false
+status: approved
+nyquist_compliant: true
 wave_0_complete: false
 created: 2026-11-11
 ---
@@ -56,10 +56,10 @@ created: 2026-11-11
 
 ## Wave 0 Requirements
 
-- [ ] `pipeline/tests/test_golden_scores.py` + `pipeline/tests/golden/v1_scores_le2025.json` (first execution commit)
-- [ ] `pipeline/tests/test_wintotals.py`
-- [ ] `pipeline/tests/test_logos.py`
-- [ ] `web/src/lib/epa.test.ts`, `web/src/lib/nohotlink.test.ts`
+- [x] `pipeline/tests/test_golden_scores.py` + `pipeline/tests/golden/v1_scores_le2025.json` (first execution commit)
+- [x] `pipeline/tests/test_wintotals.py`
+- [x] `pipeline/tests/test_logos.py`
+- [x] `web/src/lib/epa.test.ts`, `web/src/lib/nohotlink.test.ts`
 
 No framework installs needed.
 
@@ -75,11 +75,11 @@ No framework installs needed.
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 150s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 150s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-11 (plan-checker passed)

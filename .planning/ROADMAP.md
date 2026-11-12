@@ -93,10 +93,24 @@ Plans:
 **Plans**: 5 plans
 
 Plans:
+**Wave 1**
+
 - [ ] 11-01-PLAN.md — Golden frozen-score test (first commit), forfeit audit + FORFEIT_KIND, one fgs evidence rerun
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
 - [ ] 11-02-PLAN.md — Write-once 2021-2025 win totals file, 2026 display file, wintotals.py validator, <=2020 guards, team-file vegas_win_totals
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
 - [ ] 11-03-PLAN.md — EPA per team-game export, conf/division + epa_seasons in meta, web loadEpa + seasonToDate
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
 - [ ] 11-04-PLAN.md — fgs logos command, 32 committed ESPN logos + manifest, no-hotlink tests
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
 - [ ] 11-05-PLAN.md — Regenerate site data once, golden re-check, full pipeline + web gates
 
 ### Phase 12: Redesign Foundation & Team Identity

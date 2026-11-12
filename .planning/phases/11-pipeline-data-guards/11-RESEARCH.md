@@ -503,7 +503,7 @@ def test_win_totals_2021plus_single_commit():
 | A2 | The trailing pick that becomes "comp" when a forfeit is added (e.g. 2008 R5 pick 166 LAC) really is a compensatory pick. Not verifiable from nflverse, which has no comp flag. | Pattern 2 | LAC 2008 surplus off by 2.0 (display only) |
 | A3 | ESPN CDN keeps serving these URLs at execution time. Checked today only. | Pattern 6 | `fgs logos` fails loudly (PNG validation); re-run later |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should the 5 unsupported audit candidates be recorded anywhere besides the SUMMARY?**
    - Recommendation: add a comment block `# Sourced but not applied (pick data shows no slot gap): ...` with citations in `draft.py`. It's fingerprint-free and keeps DATA-01's audit trail in the code.
