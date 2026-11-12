@@ -28,7 +28,7 @@ ROW_KEYS = {"franchise", "rank", "score", "elo", "band", "label", "emoji",
             "playoff_prob", "expectation_source", "qb", "draft"}
 DRAFT_KEYS = {"surplus", "z", "equiv_pick", "rank", "text", "moves_score"}
 META_KEYS = {"version", "score_kind", "generated_at", "data_through", "latest", "partial_week",
-             "seasons", "bands", "hysteresis", "teams", "factors", "baseline", "offseason"}
+             "seasons", "bands", "hysteresis", "teams", "factors", "baseline", "offseason", "epa_seasons"}
 GEN = "2026-11-11T18:40:00+00:00"
 CALLOUT_KEYS = {"type", "season", "week", "franchise", "headline", "detail", "evidence", "stat", "start", "band"}
 
@@ -50,6 +50,8 @@ def _fake_teams() -> pl.DataFrame:
         "team_nick": [f"{c} Nick" for c in codes],
         "team_color": ["#ffc20e"] * len(codes),
         "team_color2": ["#00338d"] * len(codes),
+        "team_conf": ["AFC"] * len(codes),
+        "team_division": ["AFC East"] * len(codes),
     })
 
 
@@ -65,7 +67,8 @@ def test_team_meta_filters_and_uppercases():
     meta = team_meta(_fake_teams())
     assert set(meta) == set(CANONICAL) and len(meta) == 32
     assert not {"LAR", "OAK", "SD", "STL"} & set(meta)
-    assert meta["BUF"] == {"name": "BUF Name", "nick": "BUF Nick", "primary": "#FFC20E", "secondary": "#00338D"}
+    assert meta["BUF"] == {"name": "BUF Name", "nick": "BUF Nick", "primary": "#FFC20E", "secondary": "#00338D",
+                           "conf": "AFC", "division": "AFC East"}
 
 
 # --- real cache ----------------------------------------------------------------------------
@@ -783,3 +786,67 @@ def test_records_contract(real_files):
     for e in r["misery"] + r["joy"]:
         assert e["active"] == (e["end"] is None) and e["days"] > 0 and e["seasons"]
     json.dumps(r, allow_nan=False)
+
+
+# --- Phase 11 (EXPL-01): per-team-game EPA files + conf/division -----------------------------
+
+EPA_LISTS = ("game_id", "week", "game_type", "franchise", "opponent",
+             "off_epa", "off_plays", "off_sr", "def_epa", "def_plays", "def_sr")
+
+
+def _epa_real(real_files):
+    derived, files = real_files
+    if derived.get("team_game_epa") is None:
+        pytest.skip("no cached pbp")
+    return derived, files
+
+
+def test_contract_epa_files(real_files):
+    derived, files = _epa_real(real_files)
+    epa = {int(p[4:-5]): f for p, f in files.items() if p.startswith("epa/")}
+    scored = set(derived["snapshots"]["season"].unique().to_list())
+    pbp = set(derived["team_game_epa"]["season"].unique().to_list())
+    assert files["meta.json"]["epa_seasons"] == sorted(epa) == sorted(scored & pbp)
+    assert min(epa) == 1999
+    for season, f in epa.items():
+        assert set(f) == {"season", "note", *EPA_LISTS} and f["season"] == season and "Garbage time" in f["note"]
+        n = len(f["game_id"])
+        assert n > 0 and all(len(f[k]) == n for k in EPA_LISTS)
+        assert all(1 <= w <= 22 for w in f["week"]) and f["week"] == sorted(f["week"])
+        for k in ("off_epa", "off_sr", "def_epa", "def_sr"):
+            for v in f[k]:
+                assert v is not None and math.isfinite(v)
+                assert round(v, 4) == v
+                assert not (v == 0.0 and math.copysign(1.0, v) < 0), "negative zero"
+        assert all(isinstance(v, int) and v > 0 for v in f["off_plays"] + f["def_plays"])
+        json.dumps(f, allow_nan=False)
+    assert "1999_01_BAL_STL" not in epa[1999]["game_id"]  # KNOWN_NO_PBP drops out
+
+
+def test_epa_def_sr_is_opponent_off_sr(real_files):
+    _, files = _epa_real(real_files)
+    for p, f in files.items():
+        if not p.startswith("epa/"):
+            continue
+        idx = {(g, t): i for i, (g, t) in enumerate(zip(f["game_id"], f["franchise"]))}
+        for i, (g, o) in enumerate(zip(f["game_id"], f["opponent"])):
+            j = idx[(g, o)]
+            assert f["def_sr"][i] == f["off_sr"][j], (p, g, o)
+            assert f["def_epa"][i] == f["off_epa"][j] and f["def_plays"][i] == f["off_plays"][j], (p, g, o)
+
+
+def test_meta_teams_conf_division(real_files):
+    _, files = real_files
+    teams = files["meta.json"]["teams"]
+    assert teams["LA"]["conf"] == "NFC" and teams["LA"]["division"] == "NFC West"
+    assert {t["conf"] for t in teams.values()} == {"AFC", "NFC"}
+    assert len({t["division"] for t in teams.values()}) == 8
+    assert files["teams/KC.json"]["division"] == "AFC West"
+
+
+def test_no_pbp_no_epa_files(monkeypatch):
+    """Synthetic league without pbp: the export still works, with no epa files and epa_seasons []."""
+    files, _ = _draft_export(monkeypatch, {**LIVE_CFG, "weight": 0.0, "display_only": True})
+    assert not [p for p in files if p.startswith("epa/")]
+    assert files["meta.json"]["epa_seasons"] == []
+    assert files["meta.json"]["teams"]["BUF"]["division"] == "AFC East"

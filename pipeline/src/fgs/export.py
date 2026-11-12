@@ -24,14 +24,58 @@ _HEX = re.compile(r"^#[0-9A-F]{6}$")
 
 
 def team_meta(teams: pl.DataFrame) -> dict[str, dict]:
-    """Display metadata for the 32 canonical franchises (D-07). Drops LAR/OAK/SD/STL."""
+    """Display metadata for the 32 canonical franchises (D-07). Drops LAR/OAK/SD/STL.
+
+    conf/division are the current alignment from teams.parquet, not era-correct (e.g. HOU, SEA)."""
     rows = teams.filter(pl.col("team_abbr").is_in(sorted(CANONICAL))).sort("team_abbr")
     assert rows.height == 32 and rows["team_abbr"].n_unique() == 32, f"expected 32 teams, got {rows.height}"
     out = {}
     for r in rows.iter_rows(named=True):
         primary, secondary = str(r["team_color"]).upper(), str(r["team_color2"]).upper()
         assert _HEX.match(primary) and _HEX.match(secondary), (r["team_abbr"], primary, secondary)
-        out[r["team_abbr"]] = {"name": r["team_name"], "nick": r["team_nick"], "primary": primary, "secondary": secondary}
+        out[r["team_abbr"]] = {"name": r["team_name"], "nick": r["team_nick"], "primary": primary, "secondary": secondary,
+                                "conf": r["team_conf"], "division": r["team_division"]}
+    return out
+
+
+EPA_NOTE = "Garbage time (WP outside 5-95%) excluded; not opponent-adjusted."
+EPA_FLOATS = ("off_epa", "off_sr", "def_epa", "def_sr")
+
+
+def _r4(x: float | None) -> float | None:
+    return None if x is None else round(float(x), 4) + 0.0  # + 0.0: never -0.0
+
+
+def _epa_files(derived: dict, seasons) -> dict[str, dict]:
+    """Columnar per-team-game efficiency, one file per scored season that has pbp (D-14). def_sr is the
+    opponent's off_sr in the same game (same scrimmage filter as def_epa/def_plays). Games without pbp
+    (KNOWN_NO_PBP, lagging current-season games) drop out through the inner join."""
+    tge = derived.get("team_game_epa")
+    if tge is None:
+        return {}
+    opp = tge.select("game_id", pl.col("franchise_id").alias("opponent_id"), pl.col("off_sr").alias("def_sr"))
+    epa = (
+        derived["team_games"].filter(pl.col("played"))
+        .select("game_id", "season", "asof_week", "game_type", "franchise_id", "opponent_id")
+        .join(tge.select("game_id", "franchise_id", "off_epa", "off_plays", "off_sr", "def_epa", "def_plays"),
+              on=["game_id", "franchise_id"], how="inner")
+        .join(opp, on=["game_id", "opponent_id"], how="left")
+        .sort("season", "asof_week", "game_id", "franchise_id")
+    )
+    wanted = {int(s) for s in seasons}
+    out: dict[str, dict] = {}
+    for (season,), part in epa.group_by("season", maintain_order=True):
+        if int(season) not in wanted:
+            continue
+        f: dict[str, object] = {
+            "season": int(season), "note": EPA_NOTE,
+            "game_id": part["game_id"].to_list(), "week": [int(v) for v in part["asof_week"]],
+            "game_type": part["game_type"].to_list(), "franchise": part["franchise_id"].to_list(),
+            "opponent": part["opponent_id"].to_list(),
+        }
+        for c in ("off_epa", "off_plays", "off_sr", "def_epa", "def_plays", "def_sr"):
+            f[c] = [_r4(v) for v in part[c]] if c in EPA_FLOATS else [None if v is None else int(v) for v in part[c]]
+        out[f"epa/{int(season)}.json"] = f
     return out
 
 
@@ -316,6 +360,9 @@ def build_export(
         files[f"snapshots/{season}.json"] = {"season": int(season), "weeks": weeks, "callouts": callouts}
         files[f"games/{season}.json"] = _games_file(games, int(season))
 
+    epa_files = _epa_files(derived, scored["season"].unique().to_list())
+    files.update(epa_files)
+
     s, w = latest
     files["latest.json"] = {"season": s, "week": w, "rows": files[f"snapshots/{s}.json"]["weeks"][str(w)]}
 
@@ -324,6 +371,7 @@ def build_export(
         "data_through": asof.data_through(games, s, w),
         "latest": {"season": s, "week": w}, "partial_week": played < total,
         "seasons": seasons_meta, "bands": bands_meta(), "hysteresis": HYSTERESIS, "teams": teams,
+        "epa_seasons": sorted(f["season"] for f in epa_files.values()),
         "offseason": {"draft": {
             "weight": cfg["weight"], "display_only": cfg["display_only"], "chart": cfg["chart"],
             "decay": [float(d) for d in cfg["decay"]],  # weeks 0-3: [1, 0.75, 0.5, 0.25]
