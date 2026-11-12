@@ -75,13 +75,13 @@ export function winTotalsView(file: WinTotalsInput, season: number,
     const w = winsText(rec.wins, rec.ties)
     rows.push({ key: 'pace', label: `Finished ${recordText(rec.wins, rec.losses, rec.ties)}`, value: w,
       pos: markerPos(rec.wins + 0.5 * rec.ties, regGames) })
-    tail = `They finished with ${w}.`
+    tail = `They finished with ${w} ${w === '1' ? 'win' : 'wins'}.`
   } else {
     const p = pace(rec.wins, rec.losses, rec.ties, regGames)!
     rows.push({ key: 'pace',
       label: `On pace for ${p.toFixed(1)} wins (${recordText(rec.wins, rec.losses, rec.ties)} after ${plural(gp, 'game')})`,
       value: p.toFixed(1), pos: markerPos(p, regGames) })
-    tail = `They’re on pace for ${p.toFixed(1)}.`
+    tail = `They’re on pace for ${p.toFixed(1)} wins.`
   }
 
   const notes = vi < 0

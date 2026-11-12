@@ -75,7 +75,7 @@ describe('winTotalsView', () => {
   it('2001: model only', () => {
     const v = winTotalsView(file, 2001, { wins: 4, losses: 4, ties: 0 })!
     expect(v.rows.map((r) => r.key)).toEqual(['model', 'pace'])
-    expect(v.dek).toBe('The model expected 7.6 wins. They’re on pace for 8.0.')
+    expect(v.dek).toBe('The model expected 7.6 wins. They’re on pace for 8.0 wins.')
     expect(v.notes).toBe('No Vegas line on file before 2003. The score uses the model’s preseason expectation.')
     expect(v.source).toBeUndefined()
   })
@@ -95,14 +95,14 @@ describe('winTotalsView', () => {
     const mid = winTotalsView(file, 2023, { wins: 6, losses: 2, ties: 0 })!
     expect(mid.rows[2]).toMatchObject({ key: 'pace', label: 'On pace for 12.8 wins (6–2 after 8 games)', value: '12.8' })
     expect(mid.rows[2].pos).toBeCloseTo((12.8 / 17) * 100)
-    expect(mid.dek).toBe('Vegas set the line at 11.5 wins. They’re on pace for 12.8.')
+    expect(mid.dek).toBe('Vegas set the line at 11.5 wins. They’re on pace for 12.8 wins.')
 
     const tie = winTotalsView(file, 2023, { wins: 6, losses: 1, ties: 1 })!
     expect(tie.rows[2].label).toBe('On pace for 13.8 wins (6–1–1 after 8 games)')
 
     const done = winTotalsView(file, 2022, { wins: 13, losses: 3, ties: 1 })!
     expect(done.rows[2]).toMatchObject({ label: 'Finished 13–3–1', value: '13.5' })
-    expect(done.dek).toBe('Vegas set the line at 11.5 wins. They finished with 13.5.')
+    expect(done.dek).toBe('Vegas set the line at 11.5 wins. They finished with 13.5 wins.')
 
     const pre = winTotalsView(file, 2023, { wins: 0, losses: 0, ties: 0 })!
     expect(pre.rows[2]).toMatchObject({ label: 'No games yet.', value: '–', pos: null })
