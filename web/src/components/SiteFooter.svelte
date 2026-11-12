@@ -31,7 +31,7 @@
     margin-top: var(--space-xs);
   }
   .disclaimer.solo {
-    margin-top: revert;
+    margin-top: 0;
   }
   .part {
     display: block;
