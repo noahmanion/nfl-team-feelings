@@ -7,12 +7,14 @@ export type Route =
   | { kind: 'team'; team: string; season?: number; week?: number }
   | { kind: 'methodology' }
   | { kind: 'records' }
+  | { kind: 'explore'; season?: number; week?: number }
   | { kind: 'reserved' } // later-phase routes: fall back to #/ silently
   | { kind: 'invalid' }
 
 const BOARD = /^\/board\/(\d{4})\/(\d{1,2})\/?$/
 const HISTORY = /^\/history(?:\/([A-Za-z]{2,3}))?\/?$/
 const TEAM = /^\/team\/([A-Za-z]{2,3})(?:\/(\d{4})(?:\/(\d{1,2}))?)?\/?$/
+const EXPLORE = /^\/explore(?:\/(\d{4})(?:\/(\d{1,2}))?)?\/?$/
 const METHODOLOGY = /^\/methodology\/?$/
 const RECORDS = /^\/records\/?$/
 // No routes are reserved right now; kept so a future placeholder route can fall back to #/.
@@ -32,6 +34,12 @@ export function parseHash(hash: string): Route {
     // '/team/ABBR/season' (no week) parses with season only; App sends it to the team's latest page
     return tm[3] ? { kind: 'team', team, season: Number(tm[2]), week: Number(tm[3]) } : { kind: 'team', team, season: Number(tm[2]) }
   }
+  const em = EXPLORE.exec(h)
+  if (em) {
+    if (!em[1]) return { kind: 'explore' }
+    // '/explore/season' (no week) parses with season only; App sends it to #/explore
+    return em[2] ? { kind: 'explore', season: Number(em[1]), week: Number(em[2]) } : { kind: 'explore', season: Number(em[1]) }
+  }
   if (METHODOLOGY.test(h)) return { kind: 'methodology' }
   if (RECORDS.test(h)) return { kind: 'records' }
   if (RESERVED.some((re) => re.test(h))) return { kind: 'reserved' }
@@ -48,6 +56,10 @@ export const teamHash = (team: string, season?: number, week?: number): string =
   season === undefined || week === undefined
     ? `#/team/${team.toUpperCase()}`
     : `#/team/${team.toUpperCase()}/${season}/${week}`
+
+/** '#/explore' (latest) or '#/explore/season/week'. Validated against meta by App. */
+export const exploreHash = (season?: number, week?: number): string =>
+  season === undefined || week === undefined ? '#/explore' : `#/explore/${season}/${week}`
 
 export const methodologyHash = '#/methodology'
 export const recordsHash = '#/records'
