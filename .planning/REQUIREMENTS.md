@@ -40,8 +40,8 @@
 ### Explore Charts
 
 - [x] **EXPL-01**: The pipeline exports per-team-season EPA (offense and defense EPA/play, success rate, play counts), and the web computes play-weighted season-to-date values for any week
-- [ ] **EXPL-02**: A new Explore page shows an offense-vs-defense EPA/play scatter with team logos as marks, for the selected season and week
-- [ ] **EXPL-03**: The Explore page shows a "record vs evidence" scatter (win% vs feel-good score) that makes the perception gap visible, and each mark links to its team page
+- [x] **EXPL-02**: A new Explore page shows an offense-vs-defense EPA/play scatter with team logos as marks, for the selected season and week
+- [x] **EXPL-03**: The Explore page shows a "record vs evidence" scatter (win% vs feel-good score) that makes the perception gap visible, and each mark links to its team page
 
 ### Share Cards
 
@@ -85,8 +85,8 @@
 | DESIGN-03 | Phase 12 | Complete |
 | DESIGN-04 | Phase 12 | Complete |
 | EXPL-01 | Phase 11 | Complete |
-| EXPL-02 | Phase 13 | Pending |
-| EXPL-03 | Phase 13 | Pending |
+| EXPL-02 | Phase 13 | Complete |
+| EXPL-03 | Phase 13 | Complete |
 | SHARE-01 | Phase 14 | Pending |
 | SHARE-02 | Phase 14 | Pending |
 | SHARE-03 | Phase 14 | Pending |
