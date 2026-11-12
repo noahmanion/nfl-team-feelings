@@ -35,6 +35,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 - ✓ v2 model pre-registered before any v2 code (`pipeline/PREREGISTRATION_V2.md` + closed pre-data errata in `PREREGISTRATION_V2_DEVIATIONS.md`): holdout = games kicking off after the v2 freeze commit, 2027 primary (2028 if the freeze misses 2027 Week 1); dev data ≤2025; free agency DROPPED (no signing dates in `load_contracts`) — Validated in Phase 9: v2 Pre-registration (INTEG-02, INTEG-03)
 - ✓ Site is public at https://nfl-team-feelings.vercel.app/. Vercel builds it from `web/` on Node 24.x, and a push to main redeploys it. The ignored-build step skips commits that don't touch `web/`. Pages carry a "data through" stamp, site-wide og/twitter share tags and a "not affiliated with the NFL" footer. Validated in Phase 10: Deploy (DEPLOY-01, DEPLOY-02, DEPLOY-03)
 - ✓ Pipeline data & guards: a golden test pins every exported score and mood label for seasons ≤2025 (hash 3ac3c2b5…, unchanged through the phase). The draft-forfeit table was audited against fetched sources: 26 confirmed, 1 corrected (2017 R4 to NO) and 8 added, with supplemental vs penalty labels; 5 sourced forfeits the pick data can't place are documented but not applied. Sourced 2021–2026 Vegas win totals live in `pipeline/inputs/` and are display-only; `_cached_vegas` drops anything past 2020. The export adds per-game EPA (`epa/{season}.json`), conference/division and `vegas_win_totals`. 32 ESPN logos are committed to `web/public/logos/` via `fgs logos`. Validated in Phase 11: Pipeline Data & Guards (INTEG-01, DATA-01, DATA-02, EXPL-01, LOGO-01)
+- ✓ Editorial redesign and team identity: self-hosted Inter + IBM Plex Mono (Fontsource 5.3.0, tabular figures), a restrained light/dark token palette, one shared Plot theme (`plotTheme.ts`) plus `ChartFrame` (bold head, gray dek, value-axis gridlines, SOURCE/NOTES footer), standings-style board with shaded score cells, and `TeamLogo` (96px local derivatives, light disc in dark mode, chip fallback, `VITE_LOGOS=off` strips `dist/logos`) on board, team header, records, callouts, movers, recent games and the history end mark. Era-correct names (Oakland/San Diego/St. Louis, Washington by era, no HOU before 2002) with current logos. All v1 behavior intact (Playwright sweep at 1280/375, light/dark). Validated in Phase 12: Redesign Foundation & Team Identity (DESIGN-01..04, LOGO-02, LOGO-03)
 
 ### Active
 
@@ -104,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-11, after Phase 11 (pipeline data & guards)*
+*Last updated: 2026-11-12, after Phase 12 (redesign foundation & team identity)*
