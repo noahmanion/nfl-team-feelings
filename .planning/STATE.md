@@ -4,13 +4,13 @@ milestone: v2.0
 milestone_name: Public Site
 status: executing
 stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-11-12T05:21:29.440Z"
-last_activity: 2026-11-12 -- Phase 13 planning complete
+last_updated: "2026-11-12T05:27:07.100Z"
+last_activity: 2026-11-12
 progress:
   total_phases: 6
   completed_phases: 4
   total_plans: 22
-  completed_plans: 15
+  completed_plans: 16
   percent: 67
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-11)
 
 **Core value:** A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
-**Current focus:** Phase 13 — explore charts & win totals display
+**Current focus:** Phase 13 — Explore Charts & Win Totals Display
 
 ## Current Position
 
-Phase: 13
-Plan: Not started
+Phase: 13 (Explore Charts & Win Totals Display) — EXECUTING
+Plan: 2 of 7
 Status: Ready to execute
-Last activity: 2026-11-12 -- Phase 13 planning complete
+Last activity: 2026-11-12
 
-Progress: [██████████] 100%
+Progress: [███████░░░] 73%
 
 ## Performance Metrics
 
@@ -62,6 +62,7 @@ Progress: [██████████] 100%
 | Phase 11 P05 | 6 min | 2 tasks | 68 files |
 | Phase 12 P01 | 6min | 2 tasks | 6 files |
 | Phase 12 P03 | 3min | 2 tasks | 4 files |
+| Phase 13 P01 | 12m | 2 tasks | 38 files |
 
 ## Accumulated Context
 
@@ -91,6 +92,7 @@ Recent decisions affecting current work:
 
 - [Phase 12]: Vercel ignored-build command hardened (project setting): `P=${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}; git cat-file -e "$P^{commit}" && git diff --quiet "$P" HEAD -- . || exit 1`; the old one exited 128 (deploy ERROR) when the previous SHA was outside Vercel's shallow clone (pushes of >10 commits)
 - [Phase 12]: Editorial redesign shipped: Inter + IBM Plex Mono via Fontsource, shared plotTheme/ChartFrame, TeamLogo (96px derivatives, light disc in dark, chip fallback, VITE_LOGOS=off strips dist/logos), era names in lib/teamNames.ts; highlightColor tints low-contrast team colors instead of falling back to --text
+- [Phase 13]: 13-01: teams/*.json expectation block is display-only (week-0 exp_total, source, reg_games); never read back into the score
 
 ### Pending Todos
 
@@ -114,9 +116,9 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-11-12T05:02:03.726Z
+Last session: 2026-11-12T05:27:01.386Z
 Stopped at: Phase 13 UI-SPEC approved
-Resume file: .planning/phases/13-explore-charts-win-totals-display/13-UI-SPEC.md
+Resume file: None
 
 ## Operator Next Steps
 

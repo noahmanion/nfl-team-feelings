@@ -166,7 +166,7 @@ Plans:
 
 **Wave 1**
 
-- [ ] 13-01-PLAN.md — Display-only `expectation` block in export.py + tests; regenerate site data from cache (golden pin unchanged)
+- [x] 13-01-PLAN.md — Display-only `expectation` block in export.py + tests; regenerate site data from cache (golden pin unchanged)
 - [ ] 13-02-PLAN.md — Pure logic: lib/explore.ts (EPA/record joins, OLS, formats, tapAction) and lib/winTotals.ts, test-first
 - [ ] 13-03-PLAN.md — Phase 12 leftovers: readable rank delta, records full width, history logo inset, callout button alignment
 
@@ -216,5 +216,5 @@ Plans:
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete    | 2026-11-12 |
-| 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
+| 13. Explore Charts & Win Totals Display | v2.0 | 1/7 | In Progress|  |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
