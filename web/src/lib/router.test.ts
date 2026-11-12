@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardHash, historyHash, methodologyHash, parseHash, recordsHash, teamHash } from './router'
+import { boardHash, exploreHash, historyHash, methodologyHash, parseHash, recordsHash, teamHash } from './router'
 
 describe('parseHash', () => {
   it('empty and root hashes are the latest board', () => {
@@ -105,5 +105,31 @@ describe('records route', () => {
   it('round-trips recordsHash', () => {
     expect(recordsHash).toBe('#/records')
     expect(parseHash(recordsHash)).toEqual({ kind: 'records' })
+  })
+})
+
+describe('explore route', () => {
+  it('parses #/explore with and without a trailing slash', () => {
+    expect(parseHash('#/explore')).toEqual({ kind: 'explore' })
+    expect(parseHash('#/explore/')).toEqual({ kind: 'explore' })
+  })
+  it('parses an explicit season/week and a season alone', () => {
+    expect(parseHash('#/explore/2025/10')).toEqual({ kind: 'explore', season: 2025, week: 10 })
+    expect(parseHash('#/explore/2025/10/')).toEqual({ kind: 'explore', season: 2025, week: 10 })
+    expect(parseHash('#/explore/2025')).toEqual({ kind: 'explore', season: 2025 })
+  })
+  it('flags malformed explore routes as invalid', () => {
+    expect(parseHash('#/explore/abc')).toEqual({ kind: 'invalid' })
+    expect(parseHash('#/explore/2025/123')).toEqual({ kind: 'invalid' })
+  })
+  it('builds explore hashes (latest unless both season and week are given)', () => {
+    expect(exploreHash()).toBe('#/explore')
+    expect(exploreHash(2025)).toBe('#/explore')
+    expect(exploreHash(2025, 10)).toBe('#/explore/2025/10')
+    expect(exploreHash(1999, 0)).toBe('#/explore/1999/0')
+  })
+  it('round-trips through parseHash', () => {
+    expect(parseHash(exploreHash())).toEqual({ kind: 'explore' })
+    expect(parseHash(exploreHash(2025, 10))).toEqual({ kind: 'explore', season: 2025, week: 10 })
   })
 })
