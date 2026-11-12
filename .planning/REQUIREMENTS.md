@@ -21,7 +21,7 @@
 ### Data Loose Ends
 
 - [x] **DATA-01**: Every entry in the draft-forfeit table (all 24, not only the 18 entered from memory) is checked against a cited public source. Each entry is confirmed, corrected or removed, and supplemental-draft forfeits are labeled separately from penalties
-- [ ] **DATA-02**: The 2021–2026 Vegas preseason win totals live in a committed, sourced file under `pipeline/inputs/` and are read by a display-only module. They never reach `vs_exp` or the score, and INTEG-01 still passes
+- [x] **DATA-02**: The 2021–2026 Vegas preseason win totals live in a committed, sourced file under `pipeline/inputs/` and are read by a display-only module. They never reach `vs_exp` or the score, and INTEG-01 still passes
 - [ ] **DATA-03**: The team page shows a team's preseason Vegas win total next to its actual pace, labeled "not used in score" for seasons where the model expectation drives the score
 
 ### Team Identity
@@ -75,7 +75,7 @@
 | DEPLOY-02 | Phase 10 | Complete |
 | DEPLOY-03 | Phase 10 | Complete |
 | DATA-01 | Phase 11 | Complete |
-| DATA-02 | Phase 11 | Pending |
+| DATA-02 | Phase 11 | Complete |
 | DATA-03 | Phase 13 | Pending |
 | LOGO-01 | Phase 11 | Pending |
 | LOGO-02 | Phase 12 | Pending |

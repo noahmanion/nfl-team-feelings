@@ -99,7 +99,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 11-02-PLAN.md — Write-once 2021-2025 win totals file, 2026 display file, wintotals.py validator, <=2020 guards, team-file vegas_win_totals
+- [x] 11-02-PLAN.md — Write-once 2021-2025 win totals file, 2026 display file, wintotals.py validator, <=2020 guards, team-file vegas_win_totals
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -174,7 +174,7 @@ Plans:
 | 8. Callouts, Records & My Team | v1.0 | 5/5 | Complete | 2026-11-11 |
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
-| 11. Pipeline Data & Guards | v2.0 | 1/5 | In Progress|  |
+| 11. Pipeline Data & Guards | v2.0 | 2/5 | In Progress|  |
 | 12. Redesign Foundation & Team Identity | v2.0 | 0/TBD | Not started | - |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
