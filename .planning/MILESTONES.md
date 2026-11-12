@@ -1,5 +1,26 @@
 # Milestones
 
+## v2.0 Public Site (Shipped: 2026-11-12)
+
+**Phases completed:** 6 phases (9–14), 26 plans. Git range: v1.0..v2.0, about 200 commits. Code: +8.5k/−0.6k lines, excluding generated data.
+
+**Live:** https://nfl-team-feelings.vercel.app/ (Vercel project `nfl-team-feelings`, auto-deploys on `web/` changes)
+
+**Key accomplishments:**
+
+- Pre-registered the v2 model (good-loss luck, free agency, Vegas win totals) and a fresh 2026–27 holdout in `pipeline/PREREGISTRATION_V2.md`, in a single commit (9c32319) before any v2 code. v1's holdout guard still passes.
+- Deployed the site to Vercel production with a Node 24 pin, an ignored-build step for pipeline-only commits, a "data through" freshness stamp, site-wide share tags and an unofficial fan-project disclaimer.
+- Pipeline guards: a golden test pins frozen v1 scores for seasons ≤2025. Audited all 24 draft forfeits with sources. Added write-once 2021–2025 Vegas win totals (a3135cb) plus a display-only 2026 file, an EPA per team-game export, and 32 local team logos (no hotlinking).
+- Editorial redesign: self-hosted Inter and IBM Plex Mono, one shared Plot chart theme with ChartFrame, rule-separated tables, shaded score cells, logos everywhere with era-correct names. Light and dark modes, 375px layouts.
+- New `#/explore` page with offense-vs-defense EPA and record-vs-evidence scatters, and Vegas win totals vs actual pace on the team page.
+- Share cards: build-time 1200×630 satori/resvg images and static `/s/` share pages for all 32 teams and current-season callouts, with crawler-guarded redirects to the hash route. Copy-link buttons use share URLs from 2026 week 9 on.
+
+**Audit:** tech_debt accepted (22/22 requirements, integration wired). See `milestones/v2.0-MILESTONE-AUDIT.md`.
+
+**Known deferred items at close:** 4 (human UAT for Phases 12 and 14; see STATE.md Deferred Items)
+
+---
+
 ## v1.0 Feel-Good Score v1 (Shipped: 2026-11-12)
 
 **Phases completed:** 8 phases, 34 plans, 14 tasks

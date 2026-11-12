@@ -8,18 +8,21 @@ A visualization of how NFL fans *should* be feeling about their team — a momen
 
 A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
 
-## Current Milestone: v2.0 Public Site
+## Current State
 
-**Goal:** Take the site public. Deploy it, restyle it as FiveThirtyEight-inspired data journalism with team logos, make callouts shareable, add exploratory EPA charts, and close the v1 data loose ends. The frozen v1 model stays untouched, and the v2 model is pre-registered against a fresh 2026–27 holdout.
+**v2.0 Public Site shipped 2026-11-12.** The site is live at https://nfl-team-feelings.vercel.app/. It has an editorial redesign with team logos, an Explore page (EPA and record-vs-evidence scatters), Vegas win totals on team pages, and share cards and pages for teams and current-season callouts. The frozen v1 score is unchanged, guarded by a golden test. The v2 model is pre-registered against a 2027 holdout.
 
-**Target features:**
-- Deploy to Vercel as a static site (from github.com/noahmanion/nfl-team-feelings)
-- Editorial redesign inspired by FiveThirtyEight (typography, chart styling, clean layout), without copying its branding
-- Team logos from a free source (nflverse `load_teams` logo URLs), with a graceful fallback
-- Auto-generated share images (OG cards) for callouts and team pages
-- EPA scatter and other exploratory charts
-- Loose ends: verify the 18 draft-forfeit entries entered from memory; hand-entered 2021+ Vegas win totals as display-only data
-- v2 model pre-registration (good-loss luck, free agency, win totals into the score), holdout 2026–2027, written up front with no model changes this milestone
+## Next Milestone Goals (not yet started)
+
+- Build and freeze the v2 model per `pipeline/PREREGISTRATION_V2.md` and its errata (MODEL-V2-01 good-loss luck, MODEL-V2-03 Vegas win totals into the score; MODEL-V2-02 free agency is dropped). The freeze commit must land before 2027 Week 1, or the primary holdout moves to 2028.
+- Optional site polish: share cards for historical callouts, era-specific logos, and deferred UI-review items (see `milestones/v2.0-MILESTONE-AUDIT.md`).
+
+<details>
+<summary>v2.0 milestone goal (archived)</summary>
+
+Take the site public. Deploy it, restyle it as FiveThirtyEight-inspired data journalism with team logos, make callouts shareable, add exploratory EPA charts, and close the v1 data loose ends. The frozen v1 model stays untouched, and the v2 model is pre-registered against a fresh 2026–27 holdout.
+
+</details>
 
 ## Requirements
 
@@ -47,14 +50,19 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 ### Active
 
-(Defined in REQUIREMENTS.md for v2.0.)
+(None. The next milestone defines fresh requirements via `/gsd:new-milestone`.) Carried candidates:
+- [ ] MODEL-V2-01/03 build and freeze per PREREGISTRATION_V2.md, before 2027 Week 1
+- [ ] Share cards for historical callouts
+- [ ] Era-specific historical logos
 
 ### Out of Scope
 
 - Fan sentiment inputs (Reddit, Google Trends, polls) — the whole point is to correct fan perception, not mirror it
-- "Good loss" / deserved-to-win luck modeling — deferred to v2
+- "Good loss" / deserved-to-win luck modeling in v1. Pre-registered as v2 MODEL-V2-01 (next milestone).
 - Tanking "hope" bump for bad teams with high draft picks — explicitly don't reward tanking
-- Free-agency reaction in offseason — deferred to v2 (data is messy)
+- Free-agency reaction in offseason. Dropped from v2: `load_contracts` has no signing dates. Re-entry only through a v3 pre-registration.
+- Changing frozen v1 weights or scores. The holdout was consumed, and the golden test enforces this.
+- History-mode router, SSR or Vercel OG edge functions. Static share pages solve sharing.
 - Live/in-game updates — weekly refresh is enough
 - User-tunable weight sliders — fixed, backtested weights instead
 - Paid data (PFF WAR etc.) — free data only
@@ -62,6 +70,8 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 ## Context
 
 - **v1.0 shipped 2026-11-11:** 8 phases, ~30 plans; 584 pipeline tests + 149 web tests. Holdout 2022–25: composite ≈ Elo (+0.004 Spearman, CI includes 0); Vegas still best on single games. The product's value is explanation (record vs evidence), backed by callout base rates (worried teams −3.5 pts/game vs record peers).
+
+- **v2.0 shipped 2026-11-12:** 6 phases, 26 plans. 642 pipeline tests and 367 web tests. Public on Vercel (Hobby plan, non-commercial only). Audit result: tech_debt accepted. Human UAT for real-platform unfurls and the editorial look is still pending (12/14-HUMAN-UAT.md in `milestones/v2.0-phases/`).
 
 - Inspiration: fans perceiving their team as worse than it really is. The score is a reality check grounded in predictive evidence.
 - Think "Elo, but momentum": a slow strength term plus faster recent-form/trajectory terms.
@@ -94,6 +104,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 | 2021+ win totals display-only, from one public source per season | 2021–25 from Sports Odds History (closing lines, via Wayback); 2026 is the DraftKings opener (`preseason_open`), because no closing-line page was reachable; never fed to v1 `vs_exp` | ✓ Good |
 | Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | ✓ Good |
 | Deploy via Vercel Git integration, root web, Node 24.x, ignore step diffs web/ against last deployed SHA | Zero-config static hosting; pipeline/docs-only commits don't rebuild; Standard deployment protection keeps the production domain public | ✓ Good |
+| Close v2.0 with tech debt accepted, human UAT deferred | All 22 requirements are satisfied and wired. The remaining items are real-platform unfurl checks and aesthetic sign-off, which no automated run can do | — Pending (UAT) |
 | Share cards rendered at build time (satori + resvg in a post-build Node script), share pages regenerated every build, season+week in every path/filename, generated for every week from launch forward | Crawlers can't see hash routes; durable links all season; Vercel build ~5 s with share step (~24 s projected at season end) | ✓ Good |
 
 ## Evolution
@@ -114,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-11-12, after Phase 14 (share cards & launch verification)*
+*Last updated: 2026-11-12 after v2.0 milestone*
