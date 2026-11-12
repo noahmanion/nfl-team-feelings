@@ -1,9 +1,9 @@
 ---
 phase: 12
 slug: redesign-foundation-team-identity
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: complete
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-11-11
 ---
 
@@ -36,22 +36,34 @@ created: 2026-11-11
 
 ## Per-Task Verification Map
 
-Filled in by the planner per PLAN task `<automated>` blocks. Requirement → test map:
+Per-plan automated commands (all green at 12-07):
+
+| Plan | Automated command | Status |
+|------|-------------------|--------|
+| 12-01 | `npx vitest run src/lib/brand.test.ts src/lib/plotTheme.test.ts && npm run check` | ✅ green |
+| 12-02 | `npx vitest run src/lib/logos.test.ts src/lib/teamNames.test.ts src/lib/teamLogo.test.ts` | ✅ green |
+| 12-03 | `npx vitest run src/lib/chartFrame.test.ts src/lib/plotTheme.test.ts` | ✅ green |
+| 12-04 | `npm test && npm run check && npm run build` (charts in ChartFrame + plotTheme) | ✅ green |
+| 12-05 | `npm test && npm run check && npm run build` (board + chrome) | ✅ green |
+| 12-06 | `npm test && npm run check && npm run build` (team, records, methodology) | ✅ green |
+| 12-07 | `npm test && npm run check && npm run build`; `VITE_LOGOS=off npm run build` + `verify_ui.py --logos-off`; `npm run build` + `verify_ui.py` | ✅ green |
+
+Requirement → test map:
 
 | Requirement | Behavior | Test Type | Automated Command | File Exists | Status |
 |-------------|----------|-----------|-------------------|-------------|--------|
-| DESIGN-01 | Fontsource imports, `--font-mono`, no font CDN, no 538 marks in web/src | unit (raw scan) | `npx vitest run src/lib/brand.test.ts` | ❌ W0 | ⬜ pending |
-| DESIGN-01 | Build bundles Inter woff2 | build smoke | `npm run build && ls dist/assets/*.woff2` | n/a | ⬜ pending |
-| DESIGN-02 | plotTheme contract + all Plot charts use it, no Plot `title` | unit | `npx vitest run src/lib/plotTheme.test.ts` | ❌ W0 | ⬜ pending |
-| DESIGN-02 | ChartFrame headline/dek/SOURCE/NOTES | unit (SSR) | `npx vitest run src/lib/chartFrame.test.ts` | ❌ W0 | ⬜ pending |
-| DESIGN-03 | Editorial look, 5 pages, light+dark, 1280+375 | manual-visual (Playwright) | screenshots in `screenshots/` | ❌ W0 | ⬜ pending |
-| DESIGN-04 | Existing 167 tests still pass | regression | `npm test` | ✅ | ⬜ pending |
-| DESIGN-04 | 375px no h-scroll; pin, scrubber, copy-link | e2e (Playwright) | Playwright script | ❌ W0 | ⬜ pending |
-| LOGO-02 | `logoSrc`/`logosEnabled`, 32 sm derivatives | unit | `npx vitest run src/lib/logos.test.ts` | ❌ W0 | ⬜ pending |
-| LOGO-02 | TeamLogo branches (img / chip) | unit (SSR) | `npx vitest run src/lib/teamLogo.test.ts` | ❌ W0 | ⬜ pending |
-| LOGO-02 | Real image-error → chip | e2e | Playwright route 404 for one logo | ❌ W0 | ⬜ pending |
-| LOGO-03 | Era boundaries, WAS eras, HOU guard, eraText | unit | `npx vitest run src/lib/teamNames.test.ts` | ❌ W0 | ⬜ pending |
-| LOGO-03 | "San Diego Chargers" on LAC 2010 team page | e2e | Playwright text assertion | ❌ W0 | ⬜ pending |
+| DESIGN-01 | Fontsource imports, `--font-mono`, no font CDN, no 538 marks in web/src | unit (raw scan) | `npx vitest run src/lib/brand.test.ts` | ✅ | ✅ green |
+| DESIGN-01 | Build bundles Inter woff2 | build smoke | `npm run build && ls dist/assets/*.woff2` | n/a | ✅ green |
+| DESIGN-02 | plotTheme contract + all Plot charts use it, no Plot `title` | unit | `npx vitest run src/lib/plotTheme.test.ts` | ✅ | ✅ green |
+| DESIGN-02 | ChartFrame headline/dek/SOURCE/NOTES | unit (SSR) | `npx vitest run src/lib/chartFrame.test.ts` | ✅ | ✅ green |
+| DESIGN-03 | Editorial look, 5 pages, light+dark, 1280+375 | manual-visual (Playwright) | `verify_ui.py` -> 24 PNGs in `screenshots/` | ✅ | ✅ green |
+| DESIGN-04 | Existing 167 tests still pass | regression | `npm test` (212/212, 19 files) | ✅ | ✅ green |
+| DESIGN-04 | 375px no h-scroll; pin, scrubber, copy-link | e2e (Playwright) | `python3 verify_ui.py` | ✅ | ✅ green |
+| LOGO-02 | `logoSrc`/`logosEnabled`, 32 sm derivatives | unit | `npx vitest run src/lib/logos.test.ts` | ✅ | ✅ green |
+| LOGO-02 | TeamLogo branches (img / chip) | unit (SSR) | `npx vitest run src/lib/teamLogo.test.ts` | ✅ | ✅ green |
+| LOGO-02 | Real image-error → chip | e2e | `verify_ui.py` (route 404 KC.png) | ✅ | ✅ green |
+| LOGO-03 | Era boundaries, WAS eras, HOU guard, eraText | unit | `npx vitest run src/lib/teamNames.test.ts` | ✅ | ✅ green |
+| LOGO-03 | "San Diego Chargers" on LAC 2010 team page | e2e | `verify_ui.py` (text assertion) | ✅ | ✅ green |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -59,13 +71,13 @@ Filled in by the planner per PLAN task `<automated>` blocks. Requirement → tes
 
 ## Wave 0 Requirements
 
-- [ ] `web/src/lib/plotTheme.test.ts`
-- [ ] `web/src/lib/logos.test.ts`
-- [ ] `web/src/lib/teamNames.test.ts`
-- [ ] `web/src/lib/teamLogo.test.ts`
-- [ ] `web/src/lib/chartFrame.test.ts`
-- [ ] `web/src/lib/brand.test.ts` (fonts, no CDN, no 538)
-- [ ] Playwright check (MCP or Python) for screenshots, 375px overflow, behaviors, logo 404
+- [x] `web/src/lib/plotTheme.test.ts`
+- [x] `web/src/lib/logos.test.ts`
+- [x] `web/src/lib/teamNames.test.ts`
+- [x] `web/src/lib/teamLogo.test.ts`
+- [x] `web/src/lib/chartFrame.test.ts`
+- [x] `web/src/lib/brand.test.ts` (fonts, no CDN, no 538)
+- [x] Playwright check (MCP or Python) for screenshots, 375px overflow, behaviors, logo 404
 
 ---
 
@@ -73,17 +85,17 @@ Filled in by the planner per PLAN task `<automated>` blocks. Requirement → tes
 
 | Behavior | Requirement | Why Manual | Test Instructions |
 |----------|-------------|------------|-------------------|
-| Editorial look & dark-mode logo legibility | DESIGN-03 | Aesthetic judgment | Review screenshots at 1280/375 × light/dark for board, team, history, records, methodology |
+| Editorial look & dark-mode logo legibility | DESIGN-03 | Aesthetic judgment | Done in 12-07 (week-nav dot fix 00d2a74). Review screenshots at 1280/375 × light/dark for board, team, history, records, methodology |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 60s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-11-11 (12-07 sweep: verify_ui.py ALL PASS in both modes)
