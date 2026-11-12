@@ -90,7 +90,14 @@ Plans:
   4. The exported data includes per-team-season offense and defense EPA/play, success rate and play counts, and the web can compute play-weighted season-to-date values for any week
   5. Running the logo command once puts all 32 team logos in `web/public/logos/` (committed), and the site makes no runtime requests to external logo hosts
 
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 11-01-PLAN.md — Golden frozen-score test (first commit), forfeit audit + FORFEIT_KIND, one fgs evidence rerun
+- [ ] 11-02-PLAN.md — Write-once 2021-2025 win totals file, 2026 display file, wintotals.py validator, <=2020 guards, team-file vegas_win_totals
+- [ ] 11-03-PLAN.md — EPA per team-game export, conf/division + epa_seasons in meta, web loadEpa + seasonToDate
+- [ ] 11-04-PLAN.md — fgs logos command, 32 committed ESPN logos + manifest, no-hotlink tests
+- [ ] 11-05-PLAN.md — Regenerate site data once, golden re-check, full pipeline + web gates
 
 ### Phase 12: Redesign Foundation & Team Identity
 
