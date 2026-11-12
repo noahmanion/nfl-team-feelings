@@ -7,9 +7,9 @@
  ],
  "weights_fingerprint": "57fdb0045b4e",
  "elo_fingerprint": "34cda18ee391",
- "code_fingerprint": "6e1958f91b8a",
+ "code_fingerprint": "07c33dd92639",
  "data_fingerprint": "4d7816b00f21",
- "generated_at": "2026-11-11T23:40:55+00:00",
+ "generated_at": "2026-11-12T02:32:05+00:00",
  "note": "In-sample: 1999-2021 is also the weight-fit window; describes history, not an out-of-sample test.",
  "hopeful": {
   "n": 594,
