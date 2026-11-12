@@ -95,3 +95,8 @@ Out of scope: the Explore page and scatters (Phase 13), win totals display (Phas
 - Source Serif 4 for long-form prose.
 - Explore page, EPA scatter, win totals (Phase 13); share cards (Phase 14).
 </deferred>
+
+## Post-research resolutions (autonomous, 2026-11-11)
+- D-26 Washington copy: add a web-side `eraText(text, franchise, season)` helper in `lib/teamNames.ts`, scoped to WAS only, that rewrites "Commanders" in pipeline-generated blurbs/headlines to "Washington" (≤2019) or "Washington Football Team"/"Football Team" (2020–2021). Other relocated teams' copy uses nicknames that are era-neutral. Pipeline untouched.
+- D-27 README (web or project) gains one line crediting Inter and IBM Plex Mono (SIL OFL 1.1).
+- D-28 Gridlines: Plot `grid: true` on the value axis plus one CSS rule giving Plot's grid group full opacity in `--grid` color (Plot 0.6.19 hard-codes 10% opacity).
