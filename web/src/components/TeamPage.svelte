@@ -351,6 +351,15 @@
     align-items: center;
     min-block-size: var(--tap-min);
   }
+  /* Narrow screens: links wrap, so drop the dots and space with a gap (no line starts with "·"). */
+  @media (max-width: 639px) {
+    .week-nav {
+      column-gap: var(--space-md);
+    }
+    .week-nav :global(.sep) {
+      display: none;
+    }
+  }
   .streak {
     font-size: var(--text-body);
     line-height: var(--lh-body);

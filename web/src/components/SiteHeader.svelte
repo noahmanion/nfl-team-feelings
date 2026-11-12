@@ -85,6 +85,15 @@
     outline: 2px solid var(--accent);
     outline-offset: 2px;
   }
+  /* Narrow screens: the nav wraps, so drop the dots and space with a gap (no line starts with "·"). */
+  @media (max-width: 639px) {
+    nav {
+      column-gap: var(--space-md);
+    }
+    nav :global(.sep) {
+      display: none;
+    }
+  }
   @media (min-width: 1024px) {
     h1 {
       margin-top: var(--space-2xl);
