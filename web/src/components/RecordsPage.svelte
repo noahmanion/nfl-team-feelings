@@ -169,7 +169,6 @@
 
 <style>
   .records {
-    max-width: 680px;
     display: flex;
     flex-direction: column;
     gap: var(--space-xl);
@@ -217,17 +216,26 @@
     color: var(--text-muted);
   }
   .rows {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
+    /* Full content width (12-UI-REVIEW #4): the list owns the columns and every row subgrids
+       into them, so the value column is one width per list (its widest value). */
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) max-content;
+    column-gap: var(--space-sm);
+    row-gap: 0;
     margin: 0;
     padding: 0;
     list-style: none;
   }
+  .rows > li {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: subgrid;
+  }
   /* Board-row style: bottom rule only, transparent background, radius 0. */
   .row {
+    grid-column: 1 / -1;
     display: grid;
-    grid-template-columns: 28px minmax(0, 1fr) auto;
+    grid-template-columns: subgrid;
     grid-template-rows: auto auto;
     column-gap: var(--space-sm);
     row-gap: var(--space-xs);

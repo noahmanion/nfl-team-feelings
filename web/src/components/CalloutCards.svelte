@@ -58,6 +58,8 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-lg);
+    /* cards fill the row height so .actions (margin-top: auto) line up along the bottom (12-UI-REVIEW #9) */
+    align-items: stretch;
   }
   .more {
     margin-top: var(--space-md);

@@ -84,6 +84,7 @@
     flex-direction: column;
     gap: var(--space-xs);
     min-width: 0;
+    block-size: 100%;
     /* editorial block (D-22): rule-topped in the band color, no box */
     padding-top: var(--space-md);
     border-top: 2px solid var(--stripe-color);

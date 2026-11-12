@@ -195,6 +195,8 @@
         height: wide ? 400 : 280,
         marginLeft: 32,
         marginRight: teamCol + bandCol,
+        // room for the end-of-line logo when the team ends at y=100 (12-UI-REVIEW #7)
+        marginTop: drawLogo ? 24 : undefined,
         x: baseAxis({
           domain: [0, xMax],
           ticks: ticks.map((d) => d.x),
