@@ -31,7 +31,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 10: Deploy** - The existing site is live on a Vercel production URL with auto-redeploys, a freshness stamp, site-level share tags and a disclaimer (completed 2026-11-12)
 - [x] **Phase 11: Pipeline Data & Guards** - Golden frozen-score test first, then forfeit audit, display-only 2021+ win totals, EPA export and local logos in one pass (completed 2026-11-12)
 - [x] **Phase 12: Redesign Foundation & Team Identity** - Editorial type system, shared chart theme, restyled pages and logos everywhere, with all v1 behavior intact (completed 2026-11-12)
-- [ ] **Phase 13: Explore Charts & Win Totals Display** - A new Explore page with the EPA and record-vs-evidence scatters, and Vegas win totals on the team page
+- [x] **Phase 13: Explore Charts & Win Totals Display** - A new Explore page with the EPA and record-vs-evidence scatters, and Vegas win totals on the team page (completed 2026-11-12)
 - [ ] **Phase 14: Share Cards & Launch Verification** - Build-time share images and static share pages, copy-link wired to them, verified on real platforms
 
 ## Phase Details
@@ -181,7 +181,7 @@ Plans:
 
 **Wave 4** *(blocked on Wave 3 completion)*
 
-- [ ] 13-07-PLAN.md — Phase gate: full gates + Playwright sweep (1280/375, light/dark, ≤6 screenshots)
+- [x] 13-07-PLAN.md — Phase gate: full gates + Playwright sweep (1280/375, light/dark, ≤6 screenshots)
 
 ### Phase 14: Share Cards & Launch Verification
 
@@ -216,5 +216,5 @@ Plans:
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
 | 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete    | 2026-11-12 |
-| 13. Explore Charts & Win Totals Display | v2.0 | 6/7 | In Progress|  |
+| 13. Explore Charts & Win Totals Display | v2.0 | 7/7 | Complete   | 2026-11-12 |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
