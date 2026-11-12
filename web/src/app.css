@@ -1,4 +1,4 @@
-/* Design tokens (02-UI-SPEC). Components use only var(--token). */
+/* Design tokens (02-UI-SPEC, 12-UI-SPEC). Components use only var(--token). */
 :root {
   color-scheme: light dark;
 
@@ -18,31 +18,42 @@
   --stripe-width: 4px;
   --tap-min: 44px;
   --content-max: 960px;
+  --prose-max: 680px;
+  --score-cell: 56px;
 
-  /* type: 4 sizes, 2 weights */
-  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* type (12-UI-SPEC): self-hosted Inter Variable for text, IBM Plex Mono for numbers */
+  --font-sans: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  --text-micro: 12px;
   --text-label: 14px;
   --text-body: 16px;
   --text-heading: 20px;
   --text-display: 28px;
+  --lh-micro: 1.4;
   --lh-label: 1.4;
   --lh-body: 1.5;
   --lh-heading: 1.25;
   --lh-display: 1.1;
   --weight-regular: 400;
   --weight-semibold: 600;
+  --weight-bold: 700;
 
-  /* color (light) */
-  --bg: #f6f6f3;
+  /* color (light, editorial) */
+  --bg: #ffffff;
   --surface: #ffffff;
-  --border: #deded9;
-  --text: #1b1b1f;
-  --text-muted: #5b5d63;
-  --accent: #3446d4;
+  --surface-hover: #f5f5f5;
+  --text: #222222;
+  --text-muted: #6b6b6b;
+  --border: #e3e3e3;
+  --rule-strong: #222222;
+  --grid: #e6e6e6;
+  --accent: #1f5fbf;
   --on-accent: #ffffff;
-  --up: #18794e;
-  --down: #b42318;
-  --danger: #b42318;
+  --up: #1e7a4c;
+  --down: #b3362c;
+  --danger: #b3362c;
+  --logo-disc: transparent;
+  --cell-tint: 16%;
   --chip-outline: rgba(0, 0, 0, 0.18);
 
   /* mood bands (index 0 = lowest), non-text graphics only */
@@ -57,16 +68,21 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #121316;
-    --surface: #1b1d21;
-    --border: #30333a;
-    --text: #ecedef;
-    --text-muted: #a1a4ab;
-    --accent: #8f9cff;
-    --on-accent: #121316;
-    --up: #4ade80;
-    --down: #ff8a7a;
-    --danger: #ff8a7a;
+    --bg: #141414;
+    --surface: #1c1c1c;
+    --surface-hover: #222222;
+    --text: #ededed;
+    --text-muted: #a3a3a3;
+    --border: #333333;
+    --rule-strong: #ededed;
+    --grid: #2e2e2e;
+    --accent: #8db4ff;
+    --on-accent: #141414;
+    --up: #5fbf8a;
+    --down: #f2877b;
+    --danger: #f2877b;
+    --logo-disc: #f2f2f2;
+    --cell-tint: 20%;
     --chip-outline: rgba(255, 255, 255, 0.28);
 
     --mood-0: #f87171;
@@ -109,6 +125,7 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
+  font-synthesis: none;
   font-size: var(--text-body);
   font-weight: var(--weight-regular);
   line-height: var(--lh-body);
@@ -152,6 +169,18 @@ a {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* Numbers: mono, tabular figures. */
+.num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* D-28: Plot 0.6.19 hard-codes grid stroke-opacity 0.1; draw gridlines solid in --grid instead. */
+svg g[aria-label$='-grid'] {
+  stroke: var(--grid);
+  stroke-opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

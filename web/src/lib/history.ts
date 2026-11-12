@@ -118,7 +118,7 @@ export function contrastRatio(a: string, b: string): number {
 }
 
 // Mirrors --bg in app.css; used when the computed token can't be parsed as hex.
-export const FALLBACK_BG = { light: '#f6f6f3', dark: '#121316' } as const
+export const FALLBACK_BG = { light: '#ffffff', dark: '#141414' } as const
 
 /**
  * Which colour to draw the highlighted team in: primary, else secondary, else the
