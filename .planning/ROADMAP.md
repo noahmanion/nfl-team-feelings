@@ -30,7 +30,7 @@ Full details: `.planning/milestones/v1.0-ROADMAP.md`
 - [x] **Phase 9: v2 Pre-registration** - Commit the v2 model plan and holdout before any v2 model code or more 2026 weeks are spent (docs only, time-critical) (completed 2026-11-12)
 - [x] **Phase 10: Deploy** - The existing site is live on a Vercel production URL with auto-redeploys, a freshness stamp, site-level share tags and a disclaimer (completed 2026-11-12)
 - [x] **Phase 11: Pipeline Data & Guards** - Golden frozen-score test first, then forfeit audit, display-only 2021+ win totals, EPA export and local logos in one pass (completed 2026-11-12)
-- [ ] **Phase 12: Redesign Foundation & Team Identity** - Editorial type system, shared chart theme, restyled pages and logos everywhere, with all v1 behavior intact
+- [x] **Phase 12: Redesign Foundation & Team Identity** - Editorial type system, shared chart theme, restyled pages and logos everywhere, with all v1 behavior intact (completed 2026-11-12)
 - [ ] **Phase 13: Explore Charts & Win Totals Display** - A new Explore page with the EPA and record-vs-evidence scatters, and Vegas win totals on the team page
 - [ ] **Phase 14: Share Cards & Launch Verification** - Build-time share images and static share pages, copy-link wired to them, verified on real platforms
 
@@ -144,7 +144,7 @@ Plans:
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
-- [ ] 12-07-PLAN.md — README credits, VITE_LOGOS=off check, Playwright screenshots + behavior sweep
+- [x] 12-07-PLAN.md — README credits, VITE_LOGOS=off check, Playwright screenshots + behavior sweep
 
 **UI hint**: yes
 
@@ -194,6 +194,6 @@ Plans:
 | 9. v2 Pre-registration | v2.0 | 1/1 | Complete    | 2026-11-12 |
 | 10. Deploy | v2.0 | 2/2 | Complete    | 2026-11-12 |
 | 11. Pipeline Data & Guards | v2.0 | 5/5 | Complete    | 2026-11-12 |
-| 12. Redesign Foundation & Team Identity | v2.0 | 6/7 | In Progress|  |
+| 12. Redesign Foundation & Team Identity | v2.0 | 7/7 | Complete   | 2026-11-12 |
 | 13. Explore Charts & Win Totals Display | v2.0 | 0/TBD | Not started | - |
 | 14. Share Cards & Launch Verification | v2.0 | 0/TBD | Not started | - |
