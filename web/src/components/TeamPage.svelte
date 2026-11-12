@@ -155,8 +155,12 @@
 {#snippet weekNav()}
   {#if !latest}
     <nav class="week-nav" aria-label="Weeks">
-      {#if prevHash}<a href={prevHash}>← Prev week</a><Sep />{/if}{#if nextHash}<a href={nextHash}>Next week →</a
-        ><Sep />{/if}<a href={boardHash(season, week)}>See the board for this week</a>
+      <!-- each separator travels with the link after it, so a wrapped 375px line never ends in "·" -->
+      {#if prevHash}<a href={prevHash}>← Prev week</a>{/if}{#if nextHash}<span class="item"
+          >{#if prevHash}<Sep />{/if}<a href={nextHash}>Next week →</a></span
+        >{/if}<span class="item"
+        >{#if prevHash || nextHash}<Sep />{/if}<a href={boardHash(season, week)}>See the board for this week</a></span
+      >
     </nav>
   {/if}
 {/snippet}
@@ -336,6 +340,11 @@
     align-items: center;
     font-size: var(--text-label);
     line-height: var(--lh-label);
+  }
+  .week-nav .item {
+    display: inline-flex;
+    align-items: center;
+    white-space: nowrap;
   }
   .week-nav a {
     display: inline-flex;
