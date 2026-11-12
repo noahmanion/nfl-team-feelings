@@ -81,7 +81,7 @@ Recent decisions affecting current work:
 - [Phase 11-02]: 2021+ win totals are display-only via build_export(win_totals=) -> teams/{F}.json vegas_win_totals; cli._cached_vegas raises past 2020
 - [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
 - [Phase 11]: 11-03: epa/{season}.json def_sr = opponent off_sr; conf/division are current alignment (not era-correct)
-- [Phase ?]: 11-05: site data regenerated once from cache; golden pin 3ac3c2b5 unchanged before/after
+- [Phase 11]: 11-05: site data regenerated once from cache; golden pin 3ac3c2b5 unchanged before/after
 
 ### Pending Todos
 
