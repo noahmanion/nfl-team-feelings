@@ -62,7 +62,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 
 - **Stack**: Python (nflreadpy/pandas) to compute scores → static JSON; lightweight static frontend for the viz — chosen by Claude, user deferred
 - **Data**: free sources only — nflverse primary
-- **Hosting**: Vercel static site (v2.0); repo at github.com/noahmanion/nfl-team-feelings
+- **Hosting**: Vercel static site at https://nfl-team-feelings.vercel.app/ (project nfl-team-feelings, root web, Node 24.x, ignored-build step scoped to web/); repo at github.com/noahmanion/nfl-team-feelings
 - **Scope**: self-contained within `feel-good-scorew/`; no shared deps with other repo projects
 - **Process**: light — no heavy CI/test suites beyond backtest validation of the model
 
@@ -81,6 +81,7 @@ A single, honest, momentum-weighted "feel-good score" per team that is backteste
 | Free agency dropped from v2 | `load_contracts` has no signing date (year-level only), current-team only, UFA coverage complete only from 2012 | ✓ Good |
 | Pre-registration fixes go to closed errata, never the prereg file | The prereg must stay at one commit; errata route is in its section 1.3 | ✓ Good |
 | Python pipeline → static JSON → static frontend | Simple, weekly cadence, free hosting | ✓ Good |
+| Deploy via Vercel Git integration, root web, Node 24.x, ignore step diffs web/ against last deployed SHA | Zero-config static hosting; pipeline/docs-only commits don't rebuild; Standard deployment protection keeps the production domain public | ✓ Good |
 
 ## Evolution
 

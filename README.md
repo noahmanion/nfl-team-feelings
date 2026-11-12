@@ -1,5 +1,7 @@
 # NFL Team Feelings: the Feel-Good Score
 
+**Live site:** https://nfl-team-feelings.vercel.app/
+
 **How should NFL fans *actually* feel about their team?**
 
 Fans routinely think their team is worse (or better) than the evidence says. This project builds a momentum-weighted, Elo-like **feel-good score (0–100)** for every team, every week since 1999, and backtests it against future results. The score is a weighted blend of eleven factors: Elo, current record, the last 16 games across season boundaries, margins, close-game luck, efficiency (EPA), QB play, preseason expectations, playoff odds, and more. A playful mood label sits on top of serious charts.
