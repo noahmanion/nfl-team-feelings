@@ -813,12 +813,16 @@ def test_contract_epa_files(real_files):
         n = len(f["game_id"])
         assert n > 0 and all(len(f[k]) == n for k in EPA_LISTS)
         assert all(1 <= w <= 22 for w in f["week"]) and f["week"] == sorted(f["week"])
+        # WR-05 contract: rates may be null (a side with no qualifying plays), play counts are ints >= 0
         for k in ("off_epa", "off_sr", "def_epa", "def_sr"):
             for v in f[k]:
-                assert v is not None and math.isfinite(v)
+                if v is None:
+                    continue
+                assert math.isfinite(v)
                 assert round(v, 4) == v
                 assert not (v == 0.0 and math.copysign(1.0, v) < 0), "negative zero"
-        assert all(isinstance(v, int) and v > 0 for v in f["off_plays"] + f["def_plays"])
+            assert sum(v is None for v in f[k]) <= 2, (season, k)  # nulls must stay rare
+        assert all(isinstance(v, int) and v >= 0 for v in f["off_plays"] + f["def_plays"])
         json.dumps(f, allow_nan=False)
     assert "1999_01_BAL_STL" not in epa[1999]["game_id"]  # KNOWN_NO_PBP drops out
 
