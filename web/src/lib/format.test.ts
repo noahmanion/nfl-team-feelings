@@ -137,18 +137,18 @@ describe('changeText', () => {
 
 describe('formatRankDelta', () => {
   it('reads upward moves as spots with singular/plural', () => {
-    expect(formatRankDelta(1)).toEqual({ text: '▲1 spot', dir: 'up', aria: 'Up 1 spot in rank' })
-    expect(formatRankDelta(3)).toEqual({ text: '▲3 spots', dir: 'up', aria: 'Up 3 spots in rank' })
+    expect(formatRankDelta(1)).toEqual({ text: '▲1 spot', dir: 'up' })
+    expect(formatRankDelta(3)).toEqual({ text: '▲3 spots', dir: 'up' })
   })
   it('reads downward moves', () => {
-    expect(formatRankDelta(-2)).toEqual({ text: '▼2 spots', dir: 'down', aria: 'Down 2 spots in rank' })
+    expect(formatRankDelta(-2)).toEqual({ text: '▼2 spots', dir: 'down' })
   })
   it('reads a real zero as no change', () => {
-    expect(formatRankDelta(0)).toEqual({ text: 'no change', dir: 'none', aria: 'No change in rank' })
+    expect(formatRankDelta(0)).toEqual({ text: 'no change', dir: 'none' })
   })
 
   it('reads null/undefined (no prior snapshot) as an en-dash, like the score delta', () => {
-    const missing = { text: '–', dir: 'none', aria: 'No prior rank' }
+    const missing = { text: '–', dir: 'none' }
     expect(formatRankDelta(null)).toEqual(missing)
     expect(formatRankDelta(undefined)).toEqual(missing)
     expect(formatRankDelta(Number.NaN)).toEqual(missing)

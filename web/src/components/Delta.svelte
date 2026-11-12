@@ -7,7 +7,7 @@
 </script>
 
 {#if kind === 'rank'}
-  <span class="delta {r.dir}" aria-label={r.aria}>{r.text}</span>
+  <span class="delta {r.dir}">{r.text}</span>
 {:else}
   <span class="delta {d.dir}">{d.text}</span>
 {/if}
