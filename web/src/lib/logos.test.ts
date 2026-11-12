@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { logosOff } from './logoSwitch'
 import { FRANCHISES, logoSrc, logosEnabled } from './logos'
 
 const pngs = Object.keys(import.meta.glob('/public/logos/sm/*.png'))
@@ -15,6 +16,11 @@ describe('logosEnabled', () => {
     expect(logosEnabled('off')).toBe(false)
     expect(logosEnabled('OFF')).toBe(false)
     expect(logosEnabled(' off ')).toBe(false)
+  })
+  it('shares one predicate with the build-time logo stripper', () => {
+    for (const v of [undefined, '', 'on', 'off', 'OFF', ' off ', 0, null]) {
+      expect(logosOff(v)).toBe(!logosEnabled(v))
+    }
   })
 })
 

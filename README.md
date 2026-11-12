@@ -25,7 +25,7 @@ The site has:
 
 Fonts: Inter and IBM Plex Mono, self-hosted via Fontsource, both under the SIL OFL 1.1.
 
-Team logos are nominative identifiers served from local files in `web/public/logos/` (nothing is hotlinked). To take them down, set `VITE_LOGOS=off` in the build environment (for example the Vercel project env) and redeploy; every logo then renders as the team's color chip.
+Team logos are nominative identifiers served from local files in `web/public/logos/` (nothing is hotlinked). To take them down, set `VITE_LOGOS=off` in the build environment (for example the Vercel project env) and redeploy; every logo then renders as the team's color chip, and the build deletes `dist/logos/` so no logo file is deployed or served. The source files stay in `web/public/logos/`.
 
 ## Repository layout
 
