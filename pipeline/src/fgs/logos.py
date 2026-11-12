@@ -55,8 +55,11 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
                 fetch: Callable[[str], bytes] | None = None, today: str | None = None) -> dict:
     """Download missing (or, with force, all) logos; return and write the manifest.
 
-    Skipped files keep their manifest entry (fetched date) when one exists. An invalid download
-    raises before anything is written for that team; the manifest is written last."""
+    Skipped files keep their manifest entry (fetched date). A file is only skipped when the manifest
+    records it as fetched from the current logo_url (WR-03): a changed URL (e.g. a corrected
+    CODE_OVERRIDES entry) or a missing entry re-fetches, so the manifest never claims a URL the file
+    did not come from. An invalid download raises before anything is written for that team; the
+    manifest is written last."""
     out = Path(paths.LOGOS_DIR if out_dir is None else out_dir)
     fetch = _http_get if fetch is None else fetch
     today = date.today().isoformat() if today is None else today
@@ -67,10 +70,11 @@ def fetch_logos(out_dir: Path | None = None, force: bool = False,
     manifest = {}
     for f in sorted(CANONICAL):
         path, url = out / f"{f}.png", logo_url(f)
-        if path.exists() and not force:
+        prev = old.get(f, {})
+        if path.exists() and not force and prev.get("url") == url:
             data = path.read_bytes()
             validate_png(data)
-            when = old.get(f, {}).get("fetched", today)
+            when = prev.get("fetched", today)
         else:
             data = fetch(url)
             validate_png(data)

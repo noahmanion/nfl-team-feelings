@@ -82,6 +82,21 @@ def test_fetch_writes_skips_and_forces(tmp_path):
     assert json.loads((tmp_path / "manifest.json").read_text())["KC"]["fetched"] == "2026-12-01"
 
 
+def test_changed_url_refetches(tmp_path):
+    """WR-03: a file whose manifest URL differs from logo_url (or has no entry) is re-fetched."""
+    calls: list[str] = []
+    logos.fetch_logos(out_dir=tmp_path, fetch=_fake(calls), today="2026-11-11")
+    manifest = json.loads((tmp_path / "manifest.json").read_text())
+    manifest["LA"]["url"] = logos.ESPN_BASE + "la.png"  # the old, wrong-team URL
+    del manifest["WAS"]
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    calls.clear()
+    m = logos.fetch_logos(out_dir=tmp_path, fetch=_fake(calls), today="2026-12-01")
+    assert sorted(calls) == sorted([logos.logo_url("LA"), logos.logo_url("WAS")])
+    assert m["LA"]["url"] == logos.logo_url("LA") and m["LA"]["fetched"] == "2026-12-01"
+    assert m["KC"]["fetched"] == "2026-11-11"
+
+
 def test_invalid_download_raises_without_partial(tmp_path):
     def bad(url: str) -> bytes:
         return b"<html>nope</html>"
