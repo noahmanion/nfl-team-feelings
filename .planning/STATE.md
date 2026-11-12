@@ -79,7 +79,7 @@ Recent decisions affecting current work:
 - [Phase 10-01]: Site origin resolves SITE_ORIGIN, then https:// + VERCEL_PROJECT_PRODUCTION_URL, then https://nfl-team-feelings.vercel.app (never VERCEL_URL); Vite plugin order 'pre'
 - [Phase 10-01]: SiteFooter always renders (incl. error page); data stamp only when ready; nflverse source folded into the disclaimer
 - [Phase 11-02]: win_totals_2021plus.csv pinned: sha256 338450a3c70cc47b6ec4379dc6d72b0fe343a8a2737b2666e1535a8fc9995449, single commit a3135cb; never edit
-- [Phase 11-02]: 2021+ win totals are display-only via build_export(win_totals=) -> teams/{F}.json vegas_win_totals; cli._cached_vegas raises past 2020
+- [Phase 11-02]: 2021+ win totals are display-only via build_export(win_totals=) -> teams/{F}.json vegas_win_totals; cli._cached_vegas drops seasons past 2020 with a warning (review WR-02)
 - [Phase 9]: v2 primary holdout = full 2027 if freeze lands before first 2027 REG kickoff, else full 2028
 - [Phase 11]: 11-03: epa/{season}.json def_sr = opponent off_sr; conf/division are current alignment (not era-correct)
 - [Phase 11]: 11-05: site data regenerated once from cache; golden pin 3ac3c2b5 unchanged before/after
@@ -91,8 +91,8 @@ None yet.
 ### Blockers/Concerns
 
 - Phase 9: free-agency input may be infeasible without leakage (`load_contracts` lacks signing dates) — pre-commit to dropping it if so.
-- Phase 11 (from Phase 9 review): `pipeline/inputs/win_totals_2021plus.csv` must hold 2021–2025 only and be write-once (one commit); put 2026+ display-only lines in a separate file, or the v2 pre-registration's input pin (DEVIATIONS.md A3.4) breaks. See 09-REVIEW-FIX.md.
-- Phase 11: 2004 Raiders R2 forfeit may be a trade; DEN 2001 R3 and BAL 2008 R5 may be missing. 2021+ win totals must be hand-entered (covers.com only loads in a browser). Any real forfeit correction means a deliberate `fgs evidence` rerun.
+- RESOLVED in Phase 11: `win_totals_2021plus.csv` holds 2021–2025 only, single commit a3135cb (sha256 338450a3…); 2026+ lives in `win_totals_display_2026plus.csv`. Never edit the 2021plus file (A3.4 pin).
+- RESOLVED in Phase 11: 2004 LV R2 is a real forfeit (supplemental, used by HOU); DEN 2001 R3 was not a forfeit (PIT's was); BAL 2008 R5 was added. One `fgs evidence` rerun (code fingerprint 07c33dd92639); scores unchanged.
 - Phase 14: confirm crawlers handle the JS-redirect share pages, the emoji strategy for satori, and whether `VERCEL_PROJECT_PRODUCTION_URL` is available at build time. Test on the production domain (preview deploys sit behind Vercel login).
 - Vercel Hobby plan is non-commercial only (no ads or affiliate links).
 
