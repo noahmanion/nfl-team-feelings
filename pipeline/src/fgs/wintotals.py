@@ -29,6 +29,10 @@ SUM_TOLERANCE = 8.0
 TEAMS_PER_SEASON = 32
 _INT = re.compile(r"^[+-]?\d+$")
 _NUM = re.compile(r"^\d+(\.\d+)?$")
+VALIDATED_SCHEMA = {
+    "season": pl.Int32, "franchise_id": pl.Utf8, "line": pl.Float64, "over_odds": pl.Int64,
+    "under_odds": pl.Int64, "source": pl.Utf8, "entered_on": pl.Utf8, "line_type": pl.Utf8,
+}
 DISPLAY_COLUMNS = ["franchise_id", "season", "line", "over_odds", "under_odds", "line_type", "source", "used_in_score"]
 
 
@@ -80,10 +84,7 @@ def validate(df: pl.DataFrame, file_seasons: tuple[int, int | None], name: str =
         })
     if not rows:
         raise ValueError(f"{name}: no rows")
-    out = pl.DataFrame(rows, schema={
-        "season": pl.Int32, "franchise_id": pl.Utf8, "line": pl.Float64, "over_odds": pl.Int64,
-        "under_odds": pl.Int64, "source": pl.Utf8, "entered_on": pl.Utf8, "line_type": pl.Utf8,
-    })
+    out = pl.DataFrame(rows, schema=VALIDATED_SCHEMA)
     dup = out.group_by(["season", "franchise_id"]).len().filter(pl.col("len") > 1)
     if dup.height:
         raise ValueError(f"{name}: duplicate (season, team) {dup.select('season', 'franchise_id').rows()[:3]}")
@@ -107,6 +108,12 @@ def load_display_win_totals(inputs_dir=None) -> pl.DataFrame:
     if dup.height:
         raise ValueError(f"display win totals overlap across files: {dup.rows()[:3]}")
     return out
+
+
+def empty_display() -> pl.DataFrame:
+    """A zero-row frame shaped like load_display_win_totals() (the runtime fallback when the committed
+    display files fail validation: the export then carries only the nflverse 2003-2020 lines)."""
+    return pl.DataFrame(schema=VALIDATED_SCHEMA)
 
 
 def display_frame(nflverse_raw: pl.DataFrame | None, display: pl.DataFrame) -> pl.DataFrame:

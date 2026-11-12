@@ -146,10 +146,19 @@ def _cached_vegas(cache_dir, download: bool = False) -> pl.DataFrame | None:
 def _display_win_totals(cache_dir) -> pl.DataFrame:
     """Export-only Vegas win totals (D-13): the cached nflverse 2003-2020 file (used_in_score=True)
     plus the committed, display-only 2021+ lines in pipeline/inputs/ (used_in_score=False).
-    Never passed to derive(); the score's expectations come from _cached_vegas only."""
+    Never passed to derive(); the score's expectations come from _cached_vegas only.
+
+    WR-01: a problem in the display-only 2021+ files (validation, overlap, unreadable) must not abort
+    refresh/export. It warns on stderr and exports without the 2021+ rows (2003-2020 rows still
+    exported). Strictness on the committed files is enforced by tests/test_wintotals.py."""
     wt = cache_dir / "win_totals.csv"
     raw = pl.read_csv(wt) if wt.exists() else None
-    return wintotals.display_frame(raw, wintotals.load_display_win_totals())
+    try:
+        return wintotals.display_frame(raw, wintotals.load_display_win_totals())
+    except (ValueError, OSError, pl.exceptions.PolarsError) as e:
+        print(f"WARNING: display-only 2021+ win totals skipped ({type(e).__name__}: {e}); "
+              "team files carry only the 2003-2020 vegas_win_totals", file=sys.stderr)
+        return wintotals.display_frame(raw, wintotals.empty_display())
 
 
 DRAFT_FILES = ("draft_picks.parquet", "draft_values.csv")

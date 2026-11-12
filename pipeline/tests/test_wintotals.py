@@ -120,6 +120,21 @@ def test_display_frame_rejects_overlap():
         wintotals.display_frame(nv, pl.concat([forged, d]))
 
 
+def test_display_win_totals_degrades_on_bad_inputs(tmp_path, monkeypatch, capsys):
+    """WR-01: a broken display-only file warns and drops the 2021+ rows; 2003-2020 rows still export."""
+    cache = tmp_path / "cache"
+    cache.mkdir()
+    (cache / "win_totals.csv").write_text("season,team,line,over_odds,under_odds\n2020,KC,11.5,-110,-110\n")
+    inputs = tmp_path / "inputs"
+    inputs.mkdir()
+    for name in wintotals.FILES:
+        (inputs / name).write_text(",".join(wintotals.COLUMNS) + "\n")  # header only: "no rows"
+    monkeypatch.setattr(paths, "INPUTS_DIR", inputs)
+    out = cli._display_win_totals(cache)
+    assert "WARNING" in capsys.readouterr().err
+    assert out.rows() == [("KC", 2020, 11.5, -110, -110, "nflverse", wintotals.WIN_TOTALS_URL, True)]
+
+
 # --- guards (D-12) --------------------------------------------------------------------------------
 
 def test_guard_cached_vegas_stops_at_2020():
