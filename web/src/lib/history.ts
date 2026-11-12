@@ -134,6 +134,28 @@ export function pickHighlight(primary: string, secondary: string, bg: string, da
   return 'text'
 }
 
+/**
+ * The highlight stroke for a team: its primary (or secondary) colour when that clears 3:1 on the
+ * page background; otherwise the primary tinted toward white (dark mode) or black (light mode)
+ * in 10% steps until it does, so the highlighted team always keeps a team hue (UI review fix).
+ * Returns 'var(--text)' only when no team colour parses.
+ */
+export function highlightColor(primary: string, secondary: string, bg: string, dark = false): string {
+  const pick = pickHighlight(primary, secondary, bg, dark)
+  if (pick === 'primary') return primary.trim()
+  if (pick === 'secondary') return secondary.trim()
+  const base = parseHex(bg) ? bg.trim() : dark ? FALLBACK_BG.dark : FALLBACK_BG.light
+  const rgb = parseHex(primary) ?? parseHex(secondary)
+  if (!rgb) return 'var(--text)'
+  const target = dark ? 255 : 0
+  const hex = (c: number[]) => '#' + c.map((v) => Math.round(v).toString(16).padStart(2, '0')).join('')
+  for (let t = 0.1; t <= 1.0001; t += 0.1) {
+    const c = hex(rgb.map((v) => v + (target - v) * t))
+    if (contrastRatio(c, base) >= 3) return c
+  }
+  return 'var(--text)'
+}
+
 // ---- summary points ----
 
 /** Minimum non-null score; earliest key on ties. */

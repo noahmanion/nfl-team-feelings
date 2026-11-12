@@ -9,7 +9,7 @@
     currentPoint,
     defaultTeam,
     lowPoint,
-    pickHighlight,
+    highlightColor,
     seasonOf,
     seasonStarts,
     toRows,
@@ -78,8 +78,7 @@
     void dark
     if (!teamMeta) return 'var(--text)'
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg')
-    const pick = pickHighlight(teamMeta.primary, teamMeta.secondary, bg, dark)
-    return pick === 'primary' ? teamMeta.primary.trim() : pick === 'secondary' ? teamMeta.secondary.trim() : 'var(--text)'
+    return highlightColor(teamMeta.primary, teamMeta.secondary, bg, dark)
   })
 
   const chart = $derived.by(() => {

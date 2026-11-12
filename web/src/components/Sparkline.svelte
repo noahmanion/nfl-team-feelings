@@ -1,6 +1,6 @@
 <script lang="ts">
   import * as Plot from '@observablehq/plot'
-  import { pickHighlight } from '../lib/history'
+  import { highlightColor } from '../lib/history'
   import { CHART_FONT_PX, teamStroke, withTheme } from '../lib/plotTheme'
   import { sparkDomain } from '../lib/team'
 
@@ -31,8 +31,7 @@
     void dark
     if (!primary || !secondary) return 'var(--text)'
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg')
-    const pick = pickHighlight(primary, secondary, bg, dark)
-    return teamStroke(pick === 'primary' ? primary.trim() : pick === 'secondary' ? secondary.trim() : 'var(--text)')
+    return teamStroke(highlightColor(primary, secondary, bg, dark))
   })
 
   const label = $derived(

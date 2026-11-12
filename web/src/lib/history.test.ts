@@ -7,6 +7,7 @@ import {
   lowPoint,
   parseHex,
   pickHighlight,
+  highlightColor,
   seasonStarts,
   tickSeasons,
   toRows,
@@ -166,5 +167,24 @@ describe('defaultTeam', () => {
   })
   it('is undefined for an empty board', () => {
     expect(defaultTeam([], 'BUF')).toBeUndefined()
+  })
+})
+
+describe('highlightColor', () => {
+  it('keeps a passing team colour as-is', () => {
+    expect(highlightColor('#00338D', '#C60C30', '#ffffff')).toBe('#00338D')
+    expect(highlightColor('#FFFFFF', '#C60C30', '#ffffff')).toBe('#C60C30')
+  })
+  it('tints a failing primary until it clears 3:1 instead of dropping to text', () => {
+    // JAX teal + black on the dark page both fail; result is a lighter teal, never --text
+    const c = highlightColor('#006778', '#000000', '#141414', true)
+    expect(c).toMatch(/^#[0-9a-f]{6}$/)
+    expect(c).not.toBe('#006778')
+    expect(contrastRatio(c, '#141414')).toBeGreaterThanOrEqual(3)
+    const l = highlightColor('#FFFF00', '#FFFFFF', '#ffffff')
+    expect(contrastRatio(l, '#ffffff')).toBeGreaterThanOrEqual(3)
+  })
+  it('falls back to text only when nothing parses', () => {
+    expect(highlightColor('navy', 'nope', '#ffffff')).toBe('var(--text)')
   })
 })
