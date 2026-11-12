@@ -89,6 +89,9 @@ Recent decisions affecting current work:
 - [Phase ?]: Phase 12-01: brand.test reads CSS via node:fs because vitest stubs CSS ?raw imports
 - [Phase 12]: 12-03: createRawSnippet works under svelte/server SSR for snippet-children tests; withTheme T hides merged theme keys (cast in tests)
 
+- [Phase 12]: Vercel ignored-build command hardened (project setting): `P=${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}; git cat-file -e "$P^{commit}" && git diff --quiet "$P" HEAD -- . || exit 1`; the old one exited 128 (deploy ERROR) when the previous SHA was outside Vercel's shallow clone (pushes of >10 commits)
+- [Phase 12]: Editorial redesign shipped: Inter + IBM Plex Mono via Fontsource, shared plotTheme/ChartFrame, TeamLogo (96px derivatives, light disc in dark, chip fallback, VITE_LOGOS=off strips dist/logos), era names in lib/teamNames.ts; highlightColor tints low-contrast team colors instead of falling back to --text
+
 ### Pending Todos
 
 None yet.
