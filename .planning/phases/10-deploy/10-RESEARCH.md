@@ -341,10 +341,10 @@ curl -s -A 'facebookexternalhit/1.1' $U/ | grep og:title                     # c
 | A3 | `create_git_project` may or may not trigger an initial deployment | Pattern 4 | Low. Step 5 handles both cases |
 | A4 | Vercel MCP tool names/shapes (`create_git_project`, update project, `list_deployments`, `get_project`, `web_fetch_vercel_url`) match CONTEXT | Pattern 4 | Medium. The executor should inspect the tool schemas and use `vercel api` CLI fallbacks if a tool is missing (but the CLI token is invalid, so it's human_needed) |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Does `create_git_project` accept `commandForIgnoringBuildStep` / `nodeVersion` directly?** The REST create endpoint takes the former but not the latter. Recommendation: create the project minimal, then do separate update calls (Pattern 4).
-2. **Does project creation auto-deploy?** Unknown. Check `list_deployments` right after creation.
+1. **Does `create_git_project` accept `commandForIgnoringBuildStep` / `nodeVersion` directly?** The REST create endpoint takes the former but not the latter. Recommendation: create the project minimal, then do separate update calls (Pattern 4). RESOLVED: create minimal, then `update_project` (10-02 Task 1).
+2. **Does project creation auto-deploy?** Unknown. Check `list_deployments` right after creation. RESOLVED: 10-02 Task 2 checks `list_deployments` and redeploys if needed.
 
 ## Environment Availability
 

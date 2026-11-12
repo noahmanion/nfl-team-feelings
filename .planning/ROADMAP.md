@@ -59,7 +59,11 @@ Plans:
   2. Pushing a `web/` or data change to `main` redeploys automatically, and a pipeline-only commit is skipped by the ignored-build step
   3. Every page shows a "data through" freshness stamp and a footer saying it's an unofficial fan project, not affiliated with the NFL, with data from nflverse
   4. Pasting the site URL into a link-preview tool shows the site-wide title, description and share-card tags
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 10-01-PLAN.md — Repo changes: Node 24 pin, site-origin resolver + Vite plugin, share tags, og-default.png, always-on disclaimer footer
+- [ ] 10-02-PLAN.md — Orchestrator deploy: push, create Vercel project (root web, Node 24.x), READY prod deploy, ignore step, prod verification, record URL
 
 ### Phase 11: Pipeline Data & Guards
 **Goal**: The pipeline exports everything v2's new views need (verified forfeits, display-only win totals, EPA, local logos) while frozen v1 scores are provably unchanged
