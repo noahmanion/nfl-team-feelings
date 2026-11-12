@@ -2,9 +2,9 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Public Site
-status: verifying
-stopped_at: Phase 13 UI-SPEC approved
-last_updated: "2026-11-12T05:52:24.373Z"
+status: ready_to_plan
+stopped_at: Phase 13 complete (7/7) — ready to discuss Phase 14
+last_updated: 2026-11-12T06:06:52.235Z
 last_activity: 2026-11-12
 progress:
   total_phases: 6
@@ -21,13 +21,13 @@ progress:
 See: .planning/PROJECT.md (updated 2026-11-11)
 
 **Core value:** A single, honest, momentum-weighted "feel-good score" per team that is backtested to predict future performance — so "you should feel better than you do" is actually true.
-**Current focus:** Phase 13 — Explore Charts & Win Totals Display
+**Current focus:** Phase 14 — share cards & launch verification
 
 ## Current Position
 
-Phase: 13 (Explore Charts & Win Totals Display) — EXECUTING
-Plan: 7 of 7
-Status: Phase complete — ready for verification
+Phase: 14
+Plan: Not started
+Status: Ready to plan
 Last activity: 2026-11-12
 
 Progress: [██████████] 100%
@@ -36,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 49 (v1.0)
+- Total plans completed: 56 (v1.0)
 - Average duration: -
 - Total execution time: -
 
@@ -48,6 +48,7 @@ Progress: [██████████] 100%
 | 10 | 2 | - | - |
 | 11 | 5 | - | - |
 | 12 | 7 | - | - |
+| 13 | 7 | - | - |
 
 **Recent Trend:**
 
