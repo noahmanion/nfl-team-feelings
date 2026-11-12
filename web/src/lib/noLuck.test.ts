@@ -9,6 +9,7 @@ const sources = import.meta.glob(
     '../components/RecordScatter.svelte',
     '../components/ExploreTable.svelte',
     './explore.ts',
+    './scatterMarks.ts',
   ],
   { query: '?raw', import: 'default', eager: true },
 ) as Record<string, string>
@@ -17,8 +18,8 @@ const sources = import.meta.glob(
 const BANNED = new RegExp(['lu', 'ck'].join(''), 'i')
 
 describe('no chance framing on Explore', () => {
-  it('scans all five Explore sources', () => {
-    expect(Object.keys(sources)).toHaveLength(5)
+  it('scans all six Explore sources', () => {
+    expect(Object.keys(sources)).toHaveLength(6)
   })
 
   it('no Explore source uses the banned word', () => {
